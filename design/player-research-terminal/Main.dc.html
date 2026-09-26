@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Player Research · Overview</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07090B;font-family:'IBM Plex Sans Condensed',system-ui,sans-serif;color:#E3E7EC}
+a{color:#F2A541}a:hover{color:#FFC57A}
+button{font:inherit;background:none;border:0;margin:0;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible{outline:1px solid #F2A541;outline-offset:-1px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+input::placeholder{color:#6F7A86}
+</style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; display: flex; flex-direction: column; background: #07090B; overflow: hidden; font-size: 12px">
+
+<div style="height: 36px; flex-shrink: 0; display: flex; align-items: stretch; border-bottom: 1px solid #1E242C; background: #0B0E12">
+  <div style="width: 48px; display: flex; align-items: center; justify-content: center; border-right: 1px solid #1E242C">
+    <div class="mono" style="width: 24px; height: 24px; background: #F2A541; color: #07090B; font-weight: 600; font-size: 11px; display: flex; align-items: center; justify-content: center">NK</div>
+  </div>
+  <div style="display: flex; align-items: stretch">
+    <sc-for list="{{tickets}}" as="t" hint-placeholder-count="3">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 0 12px; border-right: 1px solid #1E242C; background: {{t.bg}}; border-top: 2px solid {{t.bd}}">
+        <span style="font-weight: 600; font-size: 12px; letter-spacing: 0.04em; color: {{t.fg}}">{{t.name}}</span>
+        <span class="mono" style="font-size: 10px; color: #7A8591">{{t.sub}}</span>
+        <button type="button" aria-label="Close ticket" style="width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; color: #6F7A86">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 1l6 6M7 1L1 7"></path></svg>
+        </button>
+      </div>
+    </sc-for>
+    <button type="button" aria-label="Open new player ticket" style="width: 36px; display: flex; align-items: center; justify-content: center; color: #9AA4AF; border-right: 1px solid #1E242C">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 0v10M0 5h10"></path></svg>
+    </button>
+  </div>
+  <div style="flex-grow: 1"></div>
+  <div style="display: flex; align-items: center; padding: 0 12px; gap: 8px">
+    <label for="q" class="sr">Search</label>
+    <div style="display: flex; align-items: center; gap: 8px; width: 300px; height: 24px; padding: 0 8px; box-sizing: border-box; background: #07090B; border: 1px solid #262E37">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#7A8591" stroke-width="1.3"><circle cx="5" cy="5" r="4"></circle><path d="M8 8l3.5 3.5"></path></svg>
+      <input id="q" type="text" placeholder="Player, team, ticker…" style="flex-grow: 1; min-width: 0; background: none; border: 0; color: #E3E7EC; font: inherit; font-size: 12px; outline: none">
+      <span class="mono" style="font-size: 10px; color: #7A8591; border: 1px solid #262E37; padding: 0 4px">/</span>
+    </div>
+  </div>
+  <div class="mono" style="display: flex; align-items: center; gap: 16px; padding: 0 14px; border-left: 1px solid #1E242C; font-size: 10.5px; color: #9AA4AF">
+    <span style="display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 3px; background: #5AA9FF"></span>KALSHI LIVE</span>
+    <span>NFLVERSE · 6H CACHE</span>
+    <span style="color: #E3E7EC">SAT 26 SEP 16:27 ET</span>
+  </div>
+</div>
+
+<div style="flex-grow: 1; min-height: 0; display: flex">
+
+<div style="width: 48px; flex-shrink: 0; border-right: 1px solid #1E242C; background: #0B0E12; display: flex; flex-direction: column; align-items: center; padding-top: 6px; gap: 2px">
+  <button type="button" aria-label="Player research" style="width: 48px; height: 40px; display: flex; align-items: center; justify-content: center; color: #F2A541; background: #141920">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"></circle><path d="M12 12l4.5 4.5"></path></svg>
+  </button>
+  <button type="button" aria-label="Book and positions" style="width: 48px; height: 40px; display: flex; align-items: center; justify-content: center; color: #7A8591">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 15V9M6.5 15V5M11 15V8M15.5 15V2"></path></svg>
+  </button>
+  <button type="button" aria-label="Weekly slate" style="width: 48px; height: 40px; display: flex; align-items: center; justify-content: center; color: #7A8591">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3.5" width="14" height="12.5"></rect><path d="M2 7.5h14M6 1.5v4M12 1.5v4"></path></svg>
+  </button>
+  <button type="button" aria-label="Correlation map" style="width: 48px; height: 40px; display: flex; align-items: center; justify-content: center; color: #7A8591">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="4" r="2"></circle><circle cx="14" cy="5" r="2"></circle><circle cx="8" cy="14" r="2"></circle><path d="M5.7 5.2l1.6 7M12.3 6.3l-3 6.1M6 4.2h6"></path></svg>
+  </button>
+  <button type="button" aria-label="Alerts" style="width: 48px; height: 40px; display: flex; align-items: center; justify-content: center; color: #7A8591">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 13V8a5 5 0 0110 0v5l1.5 1.5h-13z"></path><path d="M7 16.5h4"></path></svg>
+  </button>
+  <div style="flex-grow: 1"></div>
+  <button type="button" aria-label="Settings" style="width: 48px; height: 40px; display: flex; align-items: center; justify-content: center; color: #7A8591; margin-bottom: 6px">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 5h9M14 5h2M2 13h3M8 13h8"></path><circle cx="12.5" cy="5" r="1.6"></circle><circle cx="6.5" cy="13" r="1.6"></circle></svg>
+  </button>
+</div>
+
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">
+
+<div style="height: 60px; flex-shrink: 0; display: flex; align-items: stretch; border-bottom: 1px solid #1E242C; background: #0B0E12">
+  <div style="display: flex; flex-direction: column; justify-content: center; padding: 0 16px; min-width: 250px; border-right: 1px solid #1E242C">
+    <div style="display: flex; align-items: baseline; gap: 10px">
+      <span style="font-size: 20px; font-weight: 600; letter-spacing: 0.02em">JALEN HURTS</span>
+      <span class="mono" style="font-size: 11px; color: #F2A541">QB #1</span>
+    </div>
+    <div class="mono" style="font-size: 10.5px; color: #9AA4AF; margin-top: 2px">PHI · AWAY @ CHI · SUN 28 SEP</div>
+  </div>
+  <sc-for list="{{kpis}}" as="k" hint-placeholder-count="8">
+    <div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 14px; border-right: 1px solid #1E242C">
+      <span style="font-size: 10px; letter-spacing: 0.08em; color: #7A8591; white-space: nowrap">{{k.label}}</span>
+      <span class="mono" style="font-size: 13px; color: {{k.fg}}; white-space: nowrap">{{k.value}}</span>
+    </div>
+  </sc-for>
+</div>
+
+<div style="flex-grow: 1; min-height: 0; padding: 8px; display: grid; grid-template-columns: 760px minmax(0, 1fr); gap: 8px">
+
+<div style="display: flex; flex-direction: column; gap: 8px; min-height: 0">
+
+<div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; background: #101318; border: 1px solid #1E242C">
+  <div style="height: 30px; flex-shrink: 0; display: flex; align-items: stretch; background: #0D1014; border-bottom: 1px solid #1E242C; padding-left: 10px; gap: 4px">
+    <span style="display: flex; align-items: center; font-size: 10px; letter-spacing: 0.1em; color: #7A8591; font-weight: 600; margin-right: 8px">MARKETS</span>
+    <sc-for list="{{mktTabs}}" as="t" hint-placeholder-count="4">
+      <button type="button" onClick="{{t.pick}}" style="padding: 0 8px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: {{t.fg}}; border-bottom: 2px solid {{t.bd}}; border-top: 2px solid transparent">{{t.label}}<span class="mono" style="font-size: 10px; color: #7A8591">{{t.count}}</span></button>
+    </sc-for>
+    <div style="flex-grow: 1"></div>
+    <div class="mono" style="display: flex; align-items: center; gap: 12px; padding: 0 10px; font-size: 10px; color: #7A8591">
+      <span style="display: flex; align-items: center; gap: 4px"><span style="color: #9AA4AF">◆</span>REF LINE</span>
+      <span style="display: flex; align-items: center; gap: 4px"><span style="width: 8px; height: 8px; background: rgba(242,165,65,0.35)"></span>HELD</span>
+      <span style="display: flex; align-items: center; gap: 4px"><span style="color: #FF7A45">SPR</span>≥10¢</span>
+    </div>
+  </div>
+
+  <sc-if value="{{isPlayer}}" hint-placeholder-val="{{true}}">
+  <div style="flex-grow: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 4px 8px 8px">
+    <sc-for list="{{ladderCols}}" as="col" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; min-width: 0">
+        <div class="mono" style="height: 18px; display: grid; grid-template-columns: 50px 30px 30px 28px minmax(0, 1fr) 44px 36px; align-items: center; font-size: 9.5px; letter-spacing: 0.06em; color: #7A8591; border-bottom: 1px solid #262E37">
+          <span>LINE</span><span style="text-align: right">BID</span><span style="text-align: right">ASK</span><span style="text-align: right">SPR</span><span style="padding-left: 10px">IMPLIED %</span><span style="text-align: right">VOL</span><span style="text-align: right">POS</span>
+        </div>
+        <sc-for list="{{col.groups}}" as="g" hint-placeholder-count="4">
+          <div style="height: 18px; display: flex; align-items: center; gap: 8px; background: #0B0E12; border-bottom: 1px solid #1A2027; padding: 0 4px">
+            <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: #C9D1D9">{{g.upper}}</span>
+            <div style="flex-grow: 1"></div>
+            <span class="mono" style="font-size: 9.5px; color: #7A8591">{{g.medLabel}} <span style="color: #E3E7EC">{{g.med}}</span></span>
+            <sc-if value="{{g.hasLast}}" hint-placeholder-val="{{false}}"><span class="mono" style="font-size: 9.5px; color: #7A8591">LAST v CHI <span style="color: #F2A541">{{g.last}}</span></span></sc-if>
+          </div>
+          <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="4">
+            <div class="mono" style="height: 17px; display: grid; grid-template-columns: 50px 30px 30px 28px minmax(0, 1fr) 44px 36px; align-items: center; font-size: 11px; border-bottom: 1px solid #151A20; background: {{r.bg}}">
+              <span style="color: #E3E7EC; padding-left: 4px">{{r.line}} <span style="color: #9AA4AF; font-size: 9px">{{r.ref}}</span></span>
+              <span style="text-align: right; color: #5AA9FF">{{r.bid}}</span>
+              <span style="text-align: right; color: #FF9F6E">{{r.ask}}</span>
+              <span style="text-align: right; color: {{r.spFg}}">{{r.sp}}</span>
+              <div style="display: flex; align-items: center; gap: 6px; padding-left: 10px">
+                <div style="flex-grow: 1; height: 7px; background: #161B22; position: relative">
+                  <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{r.w}}%; background: #2F5F92"></div>
+                  <div style="position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: #3A434E"></div>
+                </div>
+                <span style="width: 32px; text-align: right; color: #E3E7EC">{{r.imp}}</span>
+              </div>
+              <span style="text-align: right; color: {{r.volFg}}">{{r.vol}}</span>
+              <span style="text-align: right; color: #F2A541; font-weight: 600; padding-right: 2px">{{r.pos}}</span>
+            </div>
+          </sc-for>
+        </sc-for>
+        <sc-if value="{{col.showStats}}" hint-placeholder-val="{{false}}">
+          <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #1E242C; border: 1px solid #1E242C">
+            <sc-for list="{{bookStats}}" as="s" hint-placeholder-count="4">
+              <div style="background: #0D1014; padding: 7px 8px; display: flex; flex-direction: column; gap: 3px">
+                <span style="font-size: 9.5px; letter-spacing: 0.08em; color: #7A8591">{{s.label}}</span>
+                <span class="mono" style="font-size: 13px; color: {{s.fg}}">{{s.value}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{isFlat}}" hint-placeholder-val="{{false}}">
+  <div style="flex-grow: 1; min-height: 0; padding: 4px 8px 8px; display: flex; flex-direction: column">
+    <div class="mono" style="height: 18px; display: grid; grid-template-columns: 150px minmax(0, 1fr) 220px 110px; align-items: center; font-size: 9.5px; letter-spacing: 0.06em; color: #7A8591; border-bottom: 1px solid #262E37">
+      <span style="padding-left: 4px">PLAYER / TEAM</span><span>MARKET</span><span>IMPLIED %</span><span style="text-align: right">LINKED TO HURTS</span>
+    </div>
+    <sc-for list="{{flatRows}}" as="r" hint-placeholder-count="7">
+      <div class="mono" style="height: 20px; display: grid; grid-template-columns: 150px minmax(0, 1fr) 220px 110px; align-items: center; font-size: 11px; border-bottom: 1px solid #151A20">
+        <span style="padding-left: 4px; color: #E3E7EC">{{r.who}}</span>
+        <span style="color: #9AA4AF">{{r.market}}</span>
+        <div style="display: flex; align-items: center; gap: 6px">
+          <div style="flex-grow: 1; height: 7px; background: #161B22; position: relative"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{r.w}}%; background: #2F5F92"></div></div>
+          <span style="width: 36px; text-align: right">{{r.imp}}</span>
+        </div>
+        <span style="text-align: right; color: #F2A541">{{r.links}}</span>
+      </div>
+    </sc-for>
+    <div class="mono" style="padding: 8px 4px; font-size: 10.5px; color: #7A8591">{{flatNote}}</div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{isSeason}}" hint-placeholder-val="{{false}}">
+  <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; color: #7A8591">
+    <span style="font-size: 13px; color: #9AA4AF">8 season-long props</span>
+    <span class="mono" style="font-size: 10.5px">Not priced in this snapshot · same ladder layout as player props</span>
+  </div>
+  </sc-if>
+</div>
+
+<div style="height: 230px; flex-shrink: 0; display: flex; flex-direction: column; background: #101318; border: 1px solid #1E242C">
+  <div style="height: 30px; flex-shrink: 0; display: flex; align-items: stretch; background: #0D1014; border-bottom: 1px solid #1E242C; padding-left: 10px; gap: 2px">
+    <span style="display: flex; align-items: center; font-size: 10px; letter-spacing: 0.1em; color: #7A8591; font-weight: 600; margin-right: 8px">IMPLIED CURVE</span>
+    <sc-for list="{{curveTabs}}" as="t" hint-placeholder-count="8">
+      <button type="button" onClick="{{t.pick}}" style="padding: 0 7px; display: flex; align-items: center; font-size: 11.5px; color: {{t.fg}}; border-bottom: 2px solid {{t.bd}}; border-top: 2px solid transparent">{{t.label}}</button>
+    </sc-for>
+    <div style="flex-grow: 1"></div>
+    <div class="mono" style="display: flex; align-items: center; gap: 14px; padding: 0 10px; font-size: 10.5px; color: #7A8591">
+      <span>MED <span style="color: #E3E7EC">{{cv.med}}</span></span>
+      <span>REF <span style="color: #E3E7EC">{{cv.ref}}</span></span>
+      <sc-if value="{{cv.hasLast}}" hint-placeholder-val="{{true}}"><span>LAST v CHI <span style="color: #F2A541">{{cv.last}}</span></span></sc-if>
+    </div>
+  </div>
+  <div style="flex-grow: 1; display: flex; padding: 8px 10px 6px 0">
+    <div class="mono" style="width: 34px; height: 150px; position: relative; font-size: 9.5px; color: #7A8591">
+      <span style="position: absolute; right: 6px; top: 2px">100</span>
+      <span style="position: absolute; right: 6px; top: 38px">75</span>
+      <span style="position: absolute; right: 6px; top: 71px">50</span>
+      <span style="position: absolute; right: 6px; top: 105px">25</span>
+      <span style="position: absolute; right: 6px; top: 138px">0</span>
+    </div>
+    <div style="display: flex; flex-direction: column">
+      <div style="width: 712px; height: 150px; position: relative; background: #0D1014">
+        <svg width="712" height="150" viewBox="0 0 712 150" style="position: absolute; left: 0; top: 0">
+          <path d="M10 42.5H702M10 109.5H702" stroke="#1A2027" stroke-width="1"></path>
+          <path d="M10 76H702" stroke="#3A434E" stroke-width="1" stroke-dasharray="3 3"></path>
+          <path d="{{cv.band}}" fill="rgba(90,169,255,0.16)" stroke="none"></path>
+          <path d="{{cv.medLine}}" stroke="#E3E7EC" stroke-width="1" stroke-dasharray="2 3"></path>
+          <path d="{{cv.lastLine}}" stroke="#F2A541" stroke-width="1.2" stroke-dasharray="5 3"></path>
+          <path d="{{cv.line}}" fill="none" stroke="#5AA9FF" stroke-width="1.6"></path>
+          <path d="{{cv.dots}}" fill="#5AA9FF"></path>
+          <path d="{{cv.refDot}}" fill="#E3E7EC"></path>
+        </svg>
+      </div>
+      <div class="mono" style="width: 712px; height: 16px; position: relative; font-size: 9.5px; color: #7A8591">
+        <sc-for list="{{cv.ticks}}" as="x" hint-placeholder-count="9">
+          <span style="position: absolute; top: 3px; width: 40px; text-align: center; left: {{x.left}}px">{{x.label}}</span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0">
+
+<div style="height: 280px; flex-shrink: 0; display: flex; flex-direction: column; background: #101318; border: 1px solid #1E242C">
+  <div style="height: 30px; flex-shrink: 0; display: flex; align-items: stretch; background: #0D1014; border-bottom: 1px solid #1E242C; padding-left: 10px; gap: 4px">
+    <span style="display: flex; align-items: center; font-size: 10px; letter-spacing: 0.1em; color: #7A8591; font-weight: 600; margin-right: 8px">BOOK &amp; RISK</span>
+    <sc-for list="{{riskTabs}}" as="t" hint-placeholder-count="3">
+      <button type="button" onClick="{{t.pick}}" style="padding: 0 8px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: {{t.fg}}; border-bottom: 2px solid {{t.bd}}; border-top: 2px solid transparent">{{t.label}}<span class="mono" style="font-size: 10px; color: #7A8591">{{t.count}}</span></button>
+    </sc-for>
+    <div style="flex-grow: 1"></div>
+    <span class="mono" style="display: flex; align-items: center; padding: 0 10px; font-size: 9.5px; letter-spacing: 0.08em; color: #F2A541">SAMPLE FILLS</span>
+  </div>
+
+  <sc-if value="{{isPos}}" hint-placeholder-val="{{true}}">
+  <div style="flex-grow: 1; display: flex; flex-direction: column; padding: 8px">
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: #1E242C; border: 1px solid #1E242C">
+      <sc-for list="{{riskStats}}" as="s" hint-placeholder-count="5">
+        <div style="background: #0D1014; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 9.5px; letter-spacing: 0.08em; color: #7A8591">{{s.label}}</span>
+          <span class="mono" style="font-size: 14px; color: {{s.fg}}">{{s.value}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div class="mono" style="margin-top: 8px; height: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 40px 40px 46px 46px 64px 64px 60px; align-items: center; font-size: 9.5px; letter-spacing: 0.06em; color: #7A8591; border-bottom: 1px solid #262E37">
+      <span>CONTRACT</span><span>SIDE</span><span style="text-align: right">QTY</span><span style="text-align: right">AVG</span><span style="text-align: right">MARK</span><span style="text-align: right">P&amp;L</span><span style="text-align: right">MAX WIN</span><span style="text-align: right">P(WIN)</span>
+    </div>
+    <sc-for list="{{positions}}" as="p" hint-placeholder-count="5">
+      <div class="mono" style="height: 22px; display: grid; grid-template-columns: minmax(0, 1fr) 40px 40px 46px 46px 64px 64px 60px; align-items: center; font-size: 11px; border-bottom: 1px solid #151A20">
+        <span style="color: #E3E7EC; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.label}}</span>
+        <span style="color: {{p.sideFg}}; font-weight: 600">{{p.side}}</span>
+        <span style="text-align: right">{{p.qty}}</span>
+        <span style="text-align: right; color: #9AA4AF">{{p.avg}}</span>
+        <span style="text-align: right">{{p.mark}}</span>
+        <span style="text-align: right; color: {{p.pnlFg}}">{{p.pnl}}</span>
+        <span style="text-align: right; color: #9AA4AF">{{p.maxWin}}</span>
+        <span style="text-align: right">{{p.pwin}}</span>
+      </div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{isCorr}}" hint-placeholder-val="{{false}}">
+  <div style="flex-grow: 1; padding: 6px 8px 8px; display: flex; flex-direction: column">
+    <div class="mono" style="height: 32px; display: grid; grid-template-columns: 120px repeat(8, minmax(0, 1fr)) 30px; align-items: end; font-size: 9px; color: #7A8591; padding-bottom: 4px; border-bottom: 1px solid #262E37">
+      <span style="letter-spacing: 0.06em">HURTS LINE ↓ / LEG →</span>
+      <sc-for list="{{legs}}" as="l" hint-placeholder-count="8">
+        <span style="text-align: center; line-height: 1.2"><span style="color: #C9D1D9">{{l.who}}</span><br>{{l.m}}</span>
+      </sc-for>
+      <span style="text-align: right">Σ</span>
+    </div>
+    <sc-for list="{{corrRows}}" as="c" hint-placeholder-count="9">
+      <div class="mono" style="height: 21px; display: grid; grid-template-columns: 120px repeat(8, minmax(0, 1fr)) 30px; align-items: center; font-size: 10.5px; border-bottom: 1px solid #151A20">
+        <span style="color: #E3E7EC">{{c.label}}</span>
+        <sc-for list="{{c.cells}}" as="x" hint-placeholder-count="8">
+          <span style="display: flex; justify-content: center"><span style="width: 22px; height: 13px; background: {{x.bg}}; color: #07090B; font-size: 9px; display: flex; align-items: center; justify-content: center">{{x.t}}</span></span>
+        </sc-for>
+        <span style="text-align: right; color: #F2A541">{{c.n}}</span>
+      </div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{isExp}}" hint-placeholder-val="{{false}}">
+  <div style="flex-grow: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px">
+    <div class="mono" style="font-size: 9.5px; letter-spacing: 0.06em; color: #7A8591; display: grid; grid-template-columns: 130px minmax(0, 1fr) 70px 70px; gap: 8px; border-bottom: 1px solid #262E37; padding-bottom: 4px">
+      <span>BY STAT</span><span>AT RISK ◀ │ ▶ TO WIN</span><span style="text-align: right">RISK</span><span style="text-align: right">WIN</span>
+    </div>
+    <sc-for list="{{exposure}}" as="e" hint-placeholder-count="5">
+      <div class="mono" style="display: grid; grid-template-columns: 130px minmax(0, 1fr) 70px 70px; gap: 8px; align-items: center; font-size: 11px; height: 22px">
+        <span style="color: #E3E7EC">{{e.label}}</span>
+        <div style="display: flex; height: 10px">
+          <div style="flex-basis: 50%; display: flex; justify-content: flex-end; border-right: 1px solid #3A434E"><div style="width: {{e.riskW}}%; background: #FF7A45"></div></div>
+          <div style="flex-basis: 50%; display: flex"><div style="width: {{e.winW}}%; background: #5AA9FF"></div></div>
+        </div>
+        <span style="text-align: right; color: #FF9F6E">{{e.risk}}</span>
+        <span style="text-align: right; color: #5AA9FF">{{e.win}}</span>
+      </div>
+    </sc-for>
+    <div class="mono" style="font-size: 10.5px; color: #7A8591; margin-top: 4px">3 of 5 positions sit on the PHI pass-game cluster (+23 structural flags).</div>
+  </div>
+  </sc-if>
+</div>
+
+<div style="height: 360px; flex-shrink: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+
+  <div style="display: flex; flex-direction: column; background: #101318; border: 1px solid #1E242C; min-width: 0">
+    <div style="height: 30px; flex-shrink: 0; display: flex; align-items: stretch; background: #0D1014; border-bottom: 1px solid #1E242C; padding-left: 10px; gap: 2px">
+      <span style="display: flex; align-items: center; font-size: 10px; letter-spacing: 0.1em; color: #7A8591; font-weight: 600; margin-right: 6px">MATCHUP</span>
+      <sc-for list="{{matchTabs}}" as="t" hint-placeholder-count="3">
+        <button type="button" onClick="{{t.pick}}" style="padding: 0 7px; display: flex; align-items: center; font-size: 11.5px; color: {{t.fg}}; border-bottom: 2px solid {{t.bd}}; border-top: 2px solid transparent">{{t.label}}</button>
+      </sc-for>
+    </div>
+    <div style="padding: 4px 8px; display: flex; flex-direction: column">
+      <div class="mono" style="height: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 56px 50px 34px; gap: 6px; align-items: center; font-size: 9.5px; letter-spacing: 0.06em; color: #7A8591; border-bottom: 1px solid #262E37">
+        <span>METRIC</span><span style="text-align: right">VALUE</span><span>RANK</span><span style="text-align: right">/32</span>
+      </div>
+      <sc-for list="{{matchRows}}" as="m" hint-placeholder-count="6">
+        <div style="height: 24px; display: grid; grid-template-columns: minmax(0, 1fr) 56px 50px 34px; gap: 6px; align-items: center; border-bottom: 1px solid #151A20">
+          <span style="font-size: 12px; color: #C9D1D9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{m.label}}</span>
+          <span class="mono" style="text-align: right; font-size: 11px; color: #E3E7EC">{{m.val}}</span>
+          <div style="height: 6px; background: #161B22; position: relative"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{m.w}}%; background: {{m.fill}}"></div></div>
+          <span class="mono" style="text-align: right; font-size: 11px; color: {{m.rankFg}}">{{m.rank}}</span>
+        </div>
+      </sc-for>
+      <div style="margin-top: 8px; font-size: 11px; line-height: 1.4; color: #9AA4AF">{{matchNote}}</div>
+      <div class="mono" style="margin-top: 8px; display: flex; gap: 12px; font-size: 9.5px; color: #7A8591">
+        <span style="display: flex; align-items: center; gap: 4px"><span style="width: 8px; height: 6px; background: #5AA9FF"></span>FAVORS HURTS</span>
+        <span style="display: flex; align-items: center; gap: 4px"><span style="width: 8px; height: 6px; background: #FF7A45"></span>AGAINST</span>
+        <span style="display: flex; align-items: center; gap: 4px"><span style="width: 8px; height: 6px; background: #4A5561"></span>NEUTRAL</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; background: #101318; border: 1px solid #1E242C; min-width: 0">
+    <div style="height: 30px; flex-shrink: 0; display: flex; align-items: stretch; background: #0D1014; border-bottom: 1px solid #1E242C; padding-left: 10px; gap: 2px">
+      <span style="display: flex; align-items: center; font-size: 10px; letter-spacing: 0.1em; color: #7A8591; font-weight: 600; margin-right: 6px">INJURIES</span>
+      <sc-for list="{{injTabs}}" as="t" hint-placeholder-count="2">
+        <button type="button" onClick="{{t.pick}}" style="padding: 0 7px; display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: {{t.fg}}; border-bottom: 2px solid {{t.bd}}; border-top: 2px solid transparent">{{t.label}}<span class="mono" style="font-size: 10px; color: #7A8591">{{t.count}}</span></button>
+      </sc-for>
+    </div>
+    <div style="padding: 4px 8px; display: flex; flex-direction: column">
+      <div class="mono" style="height: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 34px 46px; gap: 6px; align-items: center; font-size: 9.5px; letter-spacing: 0.06em; color: #7A8591; border-bottom: 1px solid #262E37">
+        <span>PLAYER</span><span>POS</span><span style="text-align: right">PRACT</span>
+      </div>
+      <sc-for list="{{injRows}}" as="i" hint-placeholder-count="10">
+        <div style="height: 22px; display: grid; grid-template-columns: minmax(0, 1fr) 34px 46px; gap: 6px; align-items: center; border-bottom: 1px solid #151A20">
+          <span style="font-size: 12px; color: #E3E7EC; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{i.name}}</span>
+          <span class="mono" style="font-size: 10.5px; color: #9AA4AF">{{i.pos}}</span>
+          <span style="display: flex; justify-content: flex-end"><span class="mono" style="font-size: 9.5px; font-weight: 600; padding: 1px 5px; color: {{i.fg}}; background: {{i.bg}}">{{i.st}}</span></span>
+        </div>
+      </sc-for>
+      <div class="mono" style="margin-top: 8px; font-size: 9.5px; color: #7A8591">DNP did not practice · LP limited · FP full</div>
+    </div>
+  </div>
+</div>
+
+<div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; background: #101318; border: 1px solid #1E242C">
+  <div style="height: 30px; flex-shrink: 0; display: flex; align-items: center; background: #0D1014; border-bottom: 1px solid #1E242C; padding: 0 10px; gap: 8px">
+    <span style="font-size: 10px; letter-spacing: 0.1em; color: #7A8591; font-weight: 600">HISTORY vs CHI</span>
+    <span class="mono" style="font-size: 10px; color: #7A8591">1 GAME</span>
+  </div>
+  <div style="padding: 4px 8px">
+    <div class="mono" style="height: 18px; display: grid; grid-template-columns: minmax(0, 1fr) repeat(5, 72px); align-items: center; font-size: 9.5px; letter-spacing: 0.06em; color: #7A8591; border-bottom: 1px solid #262E37">
+      <span></span><span style="text-align: right">PASS YD</span><span style="text-align: right">PASS TD</span><span style="text-align: right">RUSH YD</span><span style="text-align: right">REC</span><span style="text-align: right">REC YD</span>
+    </div>
+    <sc-for list="{{hist}}" as="h" hint-placeholder-count="3">
+      <div class="mono" style="height: 22px; display: grid; grid-template-columns: minmax(0, 1fr) repeat(5, 72px); align-items: center; font-size: 11px; border-bottom: 1px solid #151A20">
+        <span style="color: #9AA4AF; font-size: 10.5px">{{h.label}}</span>
+        <span style="text-align: right; color: {{h.fg}}">{{h.a}}</span>
+        <span style="text-align: right; color: {{h.fg}}">{{h.b}}</span>
+        <span style="text-align: right; color: {{h.fg}}">{{h.c}}</span>
+        <span style="text-align: right; color: {{h.fg}}">{{h.d}}</span>
+        <span style="text-align: right; color: {{h.fg}}">{{h.e}}</span>
+      </div>
+    </sc-for>
+  </div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+var C = { on: '#E3E7EC', off: '#7A8591', amber: '#F2A541', blue: '#5AA9FF', orange: '#FF7A45', muted: '#9AA4AF', neutral: '#4A5561' };
+
+var GROUPS = {
+  pyd: { name: 'Passing Yards', short: 'Pass Yds', dec: 0, last: 230, rows: [[150,81,85,83.0,0],[175,69,76,72.5,0],[200,57,62,59.5,83],[225,45,48,46.5,163],[250,30,33,31.5,81],[275,18,23,20.5,16],[300,8,12,10.0,0],[325,8,9,8.5,42],[350,1,4,2.5,66]] },
+  ptd: { name: 'Passing TDs', short: 'Pass TD', dec: 1, last: 2, rows: [[1,75,76,75.5,74],[2,40,42,41.0,333],[3,16,17,16.5,189],[4,3,6,4.5,0]] },
+  cmp: { name: 'Completions', short: 'Comp', dec: 1, last: null, rows: [[13,73,92,82.5,0],[18,50,54,52.0,0],[23,7,18,12.5,0]] },
+  att: { name: 'Pass Attempts', short: 'Att', dec: 1, last: null, rows: [[23,66,84,75.0,49],[28,50,56,53.0,0],[33,6,36,21.0,0]] },
+  int: { name: 'Interceptions', short: 'INT', dec: 1, last: null, rows: [[1,40,42,41.0,1],[2,7,13,10.0,0],[3,0,21,10.5,0]] },
+  ryd: { name: 'Rushing Yards', short: 'Rush Yds', dec: 0, last: 31, rows: [[10,80,85,82.5,17],[15,68,74,71.0,1],[20,57,63,60.0,62],[25,49,51,50.0,309],[30,37,40,38.5,859],[40,18,24,21.0,17],[50,9,15,12.0,30],[60,4,10,7.0,6],[70,1,6,3.5,0]] },
+  rat: { name: 'Rush Attempts', short: 'Rush Att', dec: 1, last: null, rows: [[4,79,86,82.5,49],[7,49,50,49.5,2],[10,13,19,16.0,0]] },
+  atd: { name: 'Anytime TD', short: 'ATD', dec: 1, last: null, rows: [[1,36,37,36.5,3001],[2,7,8,7.5,2081],[3,1,2,1.5,495]] },
+  lng: { name: 'Longest Rush', short: 'Long', dec: 1, last: null, over: true, rows: [[11.5,43,57,50.0,0]] }
+};
+
+// Sample fills so the blotter layout is exercised; the snapshot itself had no Hurts positions.
+var BOOK = [
+  { g: 'pyd', t: 225, side: 'YES', qty: 40, avg: 44 },
+  { g: 'ptd', t: 2, side: 'YES', qty: 60, avg: 38 },
+  { g: 'ryd', t: 30, side: 'NO', qty: 50, avg: 60 },
+  { g: 'atd', t: 1, side: 'YES', qty: 80, avg: 34 },
+  { g: 'int', t: 1, side: 'NO', qty: 30, avg: 57 }
+];
+
+var LEGS = [
+  { who: 'BARKLEY', m: '3+ REC', full: '3+ receptions', team: 'PHI RB', imp: 41.5 },
+  { who: 'LEMON', m: '3+ REC', full: '3+ receptions', team: 'PHI WR', imp: 50.0 },
+  { who: 'WICKS', m: '3+ REC', full: '3+ receptions', team: 'PHI WR', imp: 59.5 },
+  { who: 'SMITH', m: '70+ YD', full: '70+ receiving yards', team: 'PHI WR', imp: 51.5 },
+  { who: 'WICKS', m: '40+ YD', full: '40+ receiving yards', team: 'PHI WR', imp: 53.5 },
+  { who: 'LEMON', m: '25+ YD', full: '25+ receiving yards', team: 'PHI WR', imp: 55.5 },
+  { who: 'BARKLEY', m: '15+ YD', full: '15+ receiving yards', team: 'PHI RB', imp: 45.5 },
+  { who: 'PHI', m: 'O23.5', full: 'Team total over 23.5 pts', team: 'Team', imp: 48.0 }
+];
+
+var INJ = {
+  CHI: [['Cairo Santos','K','DNP'],['Joe Thuney','G','DNP'],['Tyson Bagent','QB','DNP'],['Caleb Williams','QB','DNP'],['Noah Sewell','LB','LP'],['Tyrique Stevenson','CB','LP'],['Shemar Turner','DE','LP'],['Grady Jarrett','DT','FP'],['Kyle Monangai','RB','FP']],
+  PHI: [['Dallas Goedert','TE','DNP'],['Marquise Brown','WR','DNP'],['Jonathan Greenard','LB','LP'],['DeVonta Smith','WR','LP'],['Tank Bigsby','RB','LP'],['Will Shipley','RB','LP'],['Saquon Barkley','RB','FP'],['Jalen Carter','DT','FP'],['Tyler Steen','G','FP'],['Andrew Mukuba','S','FP']]
+};
+
+function lineLabel(g, t) { return g.over ? 'o' + t : t + '+'; }
+function refIndex(g) {
+  var best = 0;
+  g.rows.forEach(function (r, i) { if (Math.abs(r[3] - 50) < Math.abs(g.rows[best][3] - 50)) best = i; });
+  return best;
+}
+function median(g) {
+  var rows = g.rows;
+  if (rows.length === 1) return rows[0][0];
+  if (rows[0][3] < 50) return null;
+  for (var i = 0; i < rows.length - 1; i++) {
+    var a = rows[i], b = rows[i + 1];
+    if (a[3] >= 50 && b[3] < 50) return a[0] + (b[0] - a[0]) * (a[3] - 50) / (a[3] - b[3]);
+  }
+  return rows[rows.length - 1][0];
+}
+function fmtMed(g) {
+  var m = median(g);
+  if (m === null) return 'P(' + lineLabel(g, g.rows[0][0]) + ') ' + g.rows[0][3].toFixed(1);
+  return g.dec === 0 ? String(Math.round(m)) : m.toFixed(1);
+}
+function money(c) { var d = c / 100; return (d < 0 ? '-$' : '$') + Math.abs(d).toFixed(2); }
+function signed(c) { var d = c / 100; return (d >= 0 ? '+$' : '-$') + Math.abs(d).toFixed(2); }
+function heldAt(gid, t) {
+  for (var i = 0; i < BOOK.length; i++) if (BOOK[i].g === gid && BOOK[i].t === t) return BOOK[i];
+  return null;
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    var self = this;
+    var s = Object.assign({ mkt: 'player', curve: 'pyd', risk: 'pos', match: 'def', inj: 'CHI' }, this.state || {});
+    function tabs(key, list) {
+      return list.map(function (t) {
+        var on = s[key] === t.id;
+        return { label: t.label, count: t.count || '', fg: on ? C.on : C.off, bd: on ? C.amber : 'transparent',
+          pick: function () { var o = {}; o[key] = t.id; self.setState(o); } };
+      });
+    }
+
+    // ---- ladder ----
+    var totalVol = 0, wide = 0;
+    function buildGroup(gid) {
+      var g = GROUPS[gid], ri = refIndex(g);
+      var rows = g.rows.map(function (r, i) {
+        var sp = r[2] - r[1], h = heldAt(gid, r[0]);
+        totalVol += r[4]; if (sp >= 10) wide++;
+        return {
+          line: lineLabel(g, r[0]), ref: i === ri ? '◆' : '',
+          bid: String(r[1]), ask: String(r[2]), sp: String(sp), spFg: sp >= 10 ? C.orange : C.muted,
+          imp: r[3].toFixed(1), w: r[3], vol: r[4] ? r[4].toLocaleString('en-US') : '·', volFg: r[4] ? C.muted : '#3A434E',
+          pos: h ? (h.side === 'YES' ? 'Y' : 'N') + h.qty : '',
+          bg: h ? 'rgba(242,165,65,0.10)' : 'transparent'
+        };
+      });
+      var med = median(g);
+      return { upper: g.name.toUpperCase(), medLabel: med === null ? '' : 'MED', med: fmtMed(g),
+        hasLast: g.last !== null, last: String(g.last), rows: rows };
+    }
+    var ladderCols = [
+      { groups: ['pyd','ptd','cmp','att','int'].map(buildGroup), showStats: false },
+      { groups: ['ryd','rat','atd','lng'].map(buildGroup), showStats: true }
+    ];
+    var bookStats = [
+      { label: 'PROPS', value: '32', fg: C.on },
+      { label: 'VOLUME', value: totalVol.toLocaleString('en-US'), fg: C.on },
+      { label: 'WIDE SPR', value: String(wide), fg: C.orange },
+      { label: 'REF LINES', value: '9', fg: C.on }
+    ];
+
+    // ---- flat tables ----
+    var flatRows = [], flatNote = '';
+    if (s.mkt === 'tm') {
+      flatRows = LEGS.slice(0, 7).map(function (l) {
+        return { who: l.who.charAt(0) + l.who.slice(1).toLowerCase() + ' · ' + l.team.split(' ')[1], market: l.full, imp: l.imp.toFixed(1), w: l.imp, links: '2 lines' };
+      });
+      flatNote = 'Showing 7 of 92 · reference lines correlated with Hurts pass-yds / pass-TD';
+    } else if (s.mkt === 'gm') {
+      flatRows = [{ who: 'PHI Eagles', market: 'Over 23.5 points scored', imp: '48.0', w: 48, links: '9 lines' }];
+      flatNote = 'Showing 1 of 74 · team totals, spreads and game lines load here';
+    }
+
+    // ---- curve ----
+    var cg = GROUPS[s.curve], W = 712, H = 150, pl = 24, pr = 24, pt = 8, pb = 8;
+    var t0 = cg.rows[0][0], t1 = cg.rows[cg.rows.length - 1][0];
+    function X(t) { return pl + (t - t0) / (t1 - t0) * (W - pl - pr); }
+    function Y(p) { return pt + (1 - p / 100) * (H - pt - pb); }
+    function f(n) { return n.toFixed(1); }
+    var line = '', dots = '', bidPts = [], askPts = [];
+    cg.rows.forEach(function (r, i) {
+      var x = X(r[0]), y = Y(r[3]);
+      line += (i ? 'L' : 'M') + f(x) + ' ' + f(y);
+      dots += 'M' + f(x - 2.5) + ' ' + f(y) + 'a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0';
+      bidPts.push(f(x) + ' ' + f(Y(r[1])));
+      askPts.unshift(f(x) + ' ' + f(Y(r[2])));
+    });
+    var ri = refIndex(cg), rr = cg.rows[ri], rx = X(rr[0]), ry = Y(rr[3]);
+    var m = median(cg), mx = m === null ? null : X(Math.max(t0, Math.min(t1, m)));
+    var cv = {
+      line: line, dots: dots,
+      band: 'M' + bidPts.join('L') + 'L' + askPts.join('L') + 'Z',
+      refDot: 'M' + f(rx - 4) + ' ' + f(ry) + 'l4 -4l4 4l-4 4z',
+      medLine: mx === null ? 'M0 0' : 'M' + f(mx) + ' ' + pt + 'V' + (H - pb),
+      lastLine: cg.last === null ? 'M0 0' : 'M' + f(X(Math.max(t0, Math.min(t1, cg.last)))) + ' ' + pt + 'V' + (H - pb),
+      med: fmtMed(cg), ref: lineLabel(cg, rr[0]) + ' @ ' + rr[3].toFixed(1) + '%',
+      hasLast: cg.last !== null, last: String(cg.last),
+      ticks: cg.rows.map(function (r) { return { label: lineLabel(cg, r[0]), left: Math.round(X(r[0]) - 20) }; })
+    };
+    var curveTabs = tabs('curve', ['pyd','ptd','cmp','att','int','ryd','rat','atd'].map(function (id) { return { id: id, label: GROUPS[id].short }; }));
+
+    // ---- book ----
+    var tot = { cost: 0, val: 0, maxWin: 0, qty: 0 };
+    var expo = [];
+    var positions = BOOK.map(function (b) {
+      var g = GROUPS[b.g], r = g.rows.filter(function (x) { return x[0] === b.t; })[0];
+      var mid = (r[1] + r[2]) / 2, mark = b.side === 'YES' ? mid : 100 - mid;
+      var pwin = b.side === 'YES' ? r[3] : 100 - r[3];
+      var cost = b.avg * b.qty, val = mark * b.qty, win = (100 - b.avg) * b.qty, pnl = val - cost;
+      tot.cost += cost; tot.val += val; tot.maxWin += win; tot.qty += b.qty;
+      expo.push({ label: g.short + ' ' + lineLabel(g, b.t) + ' ' + b.side, riskC: cost, winC: win });
+      return {
+        label: g.short + ' ' + lineLabel(g, b.t), side: b.side, sideFg: b.side === 'YES' ? C.blue : C.orange,
+        qty: String(b.qty), avg: b.avg + '¢', mark: mark.toFixed(1) + '¢',
+        pnl: signed(pnl), pnlFg: pnl >= 0 ? C.blue : C.orange, maxWin: money(win), pwin: pwin.toFixed(1) + '%'
+      };
+    });
+    var upnl = tot.val - tot.cost;
+    var riskStats = [
+      { label: 'CONTRACTS', value: String(tot.qty), fg: C.on },
+      { label: 'COST', value: money(tot.cost), fg: C.on },
+      { label: 'MKT VALUE', value: money(tot.val), fg: C.on },
+      { label: 'UNREAL P&L', value: signed(upnl), fg: upnl >= 0 ? C.blue : C.orange },
+      { label: 'MAX PAYOUT', value: money(tot.maxWin + tot.cost), fg: C.on }
+    ];
+    var maxE = Math.max.apply(null, expo.map(function (e) { return Math.max(e.riskC, e.winC); }));
+    var exposure = expo.map(function (e) {
+      return { label: e.label, risk: money(e.riskC), win: money(e.winC), riskW: Math.round(e.riskC / maxE * 100), winW: Math.round(e.winC / maxE * 100) };
+    });
+
+    // ---- correlation matrix: one reference line per Hurts stat family ----
+    var corrRows = ['pyd','ptd','cmp','att','int','ryd','rat','atd','lng'].map(function (gid) {
+      var g = GROUPS[gid], r = g.rows[refIndex(g)], all = gid === 'pyd' || gid === 'ptd';
+      var cells = LEGS.map(function (l, i) {
+        var hit = all || i === 7;
+        return { bg: hit ? (i === 7 ? C.amber : C.blue) : '#1A2027', t: hit ? '+' : '' };
+      });
+      return { label: g.short + ' ' + lineLabel(g, r[0]), cells: cells, n: String(all ? 8 : 1) };
+    });
+
+    // ---- matchup ----
+    function rankRow(label, val, rank, dir) {
+      if (rank === null) return { label: label, val: val, rank: '—', w: 0, fill: C.neutral, rankFg: C.off };
+      var fav = dir === 'opp' ? rank >= 21 : rank <= 11, unf = dir === 'opp' ? rank <= 11 : rank >= 21;
+      var col = fav ? C.blue : unf ? C.orange : C.neutral;
+      return { label: label, val: val, rank: '#' + rank, w: Math.round((33 - rank) / 32 * 100), fill: col, rankFg: fav ? C.blue : unf ? C.orange : C.muted };
+    }
+    var matchRows, matchNote;
+    if (s.match === 'def') {
+      matchRows = [
+        rankRow('EPA / dropback allowed', '0.202', 23, 'opp'),
+        rankRow('EPA / rush allowed', '-0.065', 15, 'opp'),
+        rankRow('Pressure rate generated', '23.2%', 13, 'opp'),
+        rankRow('Blitz rate', '18.3%', null),
+        rankRow('Avg pass rushers', '2.12', null),
+        rankRow('Defensive coordinator', 'not set', null)
+      ];
+      matchNote = 'Man/zone rate is not in the free FTN feed; blitz rate and rusher count are the public proxy. Bar length = rank (#1 longest).';
+    } else if (s.match === 'off') {
+      matchRows = [
+        rankRow('O-line pressure allowed', '24.1%', 21, 'own'),
+        rankRow('Sacks allowed', '6', 19, 'own'),
+        rankRow('Plays / game (pace)', '61.5', null)
+      ];
+      matchNote = 'PHI offense context. Target-share volatility for pass-catchers loads here when a WR/TE ticket is open.';
+    } else {
+      matchRows = [
+        rankRow('Matchup', 'PHI @ CHI', null),
+        rankRow('Spread / total', '-3.5 / 42.5', null),
+        rankRow('Rest days (opp)', '8 (8)', null),
+        rankRow('Roof / surface', 'out / grass', null),
+        rankRow('Temp · wind · gust', '63° · 4 · 6', null),
+        rankRow('Precip', '0%', null)
+      ];
+      matchNote = 'Forecast via Open-Meteo at the CHI stadium for kickoff hour.';
+    }
+
+    // ---- injuries ----
+    var ST = { DNP: [C.orange, 'rgba(255,122,69,0.14)'], LP: [C.amber, 'rgba(242,165,65,0.12)'], FP: ['#8FC1FF', 'rgba(90,169,255,0.12)'] };
+    function injCount(team) { var c = { DNP: 0, LP: 0, FP: 0 }; INJ[team].forEach(function (r) { c[r[2]]++; }); return c.DNP + '·' + c.LP + '·' + c.FP; }
+    var injRows = INJ[s.inj].map(function (r) { return { name: r[0], pos: r[1], st: r[2], fg: ST[r[2]][0], bg: ST[r[2]][1] }; });
+
+    return {
+      tickets: [
+        { name: 'HURTS', sub: 'PHI QB', fg: C.on, bg: '#141920', bd: C.amber },
+        { name: 'BARKLEY', sub: 'PHI RB', fg: C.muted, bg: 'transparent', bd: 'transparent' },
+        { name: 'C. WILLIAMS', sub: 'CHI QB', fg: C.muted, bg: 'transparent', bd: 'transparent' }
+      ],
+      kpis: [
+        { label: 'SPREAD', value: 'PHI -3.5', fg: C.on },
+        { label: 'TOTAL', value: '42.5', fg: C.on },
+        { label: 'PHI TT O23.5', value: '48.0%', fg: C.on },
+        { label: 'FORECAST', value: '63°F · W4 G6 · 0%', fg: C.on },
+        { label: 'REST', value: '8 / 8', fg: C.on },
+        { label: 'SURFACE', value: 'OUT · GRASS', fg: C.on },
+        { label: 'OPP D EPA/DB', value: '#23', fg: C.blue },
+        { label: 'CORR FLAGS', value: '23', fg: C.amber }
+      ],
+      mktTabs: tabs('mkt', [{ id: 'player', label: 'Hurts', count: '32' }, { id: 'tm', label: 'Teammates', count: '92' }, { id: 'gm', label: 'Team / Game', count: '74' }, { id: 'ss', label: 'Season', count: '8' }]),
+      isPlayer: s.mkt === 'player', isFlat: s.mkt === 'tm' || s.mkt === 'gm', isSeason: s.mkt === 'ss',
+      ladderCols: ladderCols, bookStats: bookStats, flatRows: flatRows, flatNote: flatNote,
+      curveTabs: curveTabs, cv: cv,
+      riskTabs: tabs('risk', [{ id: 'pos', label: 'Positions', count: String(BOOK.length) }, { id: 'corr', label: 'Correlation', count: '23' }, { id: 'exp', label: 'Exposure' }]),
+      isPos: s.risk === 'pos', isCorr: s.risk === 'corr', isExp: s.risk === 'exp',
+      riskStats: riskStats, positions: positions, exposure: exposure, legs: LEGS, corrRows: corrRows,
+      matchTabs: tabs('match', [{ id: 'def', label: 'CHI Def' }, { id: 'off', label: 'PHI Off' }, { id: 'env', label: 'Game' }]),
+      matchRows: matchRows, matchNote: matchNote,
+      injTabs: tabs('inj', [{ id: 'CHI', label: 'CHI', count: injCount('CHI') }, { id: 'PHI', label: 'PHI', count: injCount('PHI') }]),
+      injRows: injRows,
+      hist: [
+        { label: '2025 WK13 @ CHI · actual', a: '230', b: '2', c: '31', d: '0', e: '0', fg: C.amber },
+        { label: 'Market-implied median', a: fmtMed(GROUPS.pyd), b: fmtMed(GROUPS.ptd), c: fmtMed(GROUPS.ryd), d: '—', e: '—', fg: C.on },
+        { label: 'Actual − implied', a: '+12', b: '+0.3', c: '+6', d: '—', e: '—', fg: C.blue }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
