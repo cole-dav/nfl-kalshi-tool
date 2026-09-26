@@ -1,0 +1,11 @@
+{
+  "_note": "No nflverse/free structured feed exists for OC/DC names. This file is a manual lookup you maintain yourself -- fill in 'dc' for each team as staffs change (especially after firings/hires, which happen mid-season). Left null on purpose rather than guessed, since a wrong DC name is worse than a missing one.",
+  "ARI": {"dc": null}, "ATL": {"dc": null}, "BAL": {"dc": null}, "BUF": {"dc": null},
+  "CAR": {"dc": null}, "CHI": {"dc": null}, "CIN": {"dc": null}, "CLE": {"dc": null},
+  "DAL": {"dc": null}, "DEN": {"dc": null}, "DET": {"dc": null}, "GB": {"dc": null},
+  "HOU": {"dc": null}, "IND": {"dc": null}, "JAX": {"dc": null}, "KC": {"dc": null},
+  "LA": {"dc": null}, "LAC": {"dc": null}, "LV": {"dc": null}, "MIA": {"dc": null},
+  "MIN": {"dc": null}, "NE": {"dc": null}, "NO": {"dc": null}, "NYG": {"dc": null},
+  "NYJ": {"dc": null}, "PHI": {"dc": null}, "PIT": {"dc": null}, "SEA": {"dc": null},
+  "SF": {"dc": null}, "TB": {"dc": null}, "TEN": {"dc": null}, "WAS": {"dc": null}
+}

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NFL Player Research</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --border: #2a2f3a;
+    --text: #e6e8ec; --muted: #8b92a3; --accent: #4f8cff; --green: #34c77b;
+    --red: #f2545b; --yellow: #e0b13e;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+         margin: 0; padding: 24px; }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  h2 { font-size: 15px; color: var(--accent); margin: 0 0 10px; text-transform: uppercase; letter-spacing: .04em; }
+  .search-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  input[type=text] { flex: 1; max-width: 420px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+                      background: var(--panel2); color: var(--text); font-size: 14px; }
+  button { padding: 10px 18px; border-radius: 8px; border: none; background: var(--accent); color: white;
+           font-size: 14px; cursor: pointer; }
+  button:hover { opacity: .9; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+           margin-bottom: 16px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; }
+  tr.held { background: rgba(79, 140, 255, 0.12); }
+  tr.correlated { outline: 1px dashed var(--yellow); }
+  .badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 11px; margin-left: 6px; }
+  .badge.yes { background: rgba(52, 199, 123, .18); color: var(--green); }
+  .badge.no { background: rgba(242, 84, 91, .18); color: var(--red); }
+  .muted { color: var(--muted); }
+  .stat-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .stat-row:last-child { border-bottom: none; }
+  details { margin-bottom: 6px; }
+  summary { cursor: pointer; padding: 6px 4px; font-size: 13px; }
+  summary:hover { color: var(--accent); }
+  .note { font-size: 12px; color: var(--muted); margin-top: 8px; font-style: italic; }
+  .player-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  .player-header .name { font-size: 22px; font-weight: 600; }
+  .player-header .meta { color: var(--muted); font-size: 13px; }
+  #error { color: var(--red); margin: 10px 0; }
+  #loading { color: var(--muted); margin: 10px 0; }
+  .corr-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .corr-item .leg { color: var(--muted); margin-left: 12px; }
+  .rank-pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px;
+               font-weight: 600; margin-left: 8px; border: 1px solid; }
+  .stdev-row { font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<h1>NFL Player Research</h1>
+<div class="search-row">
+  <input type="text" id="searchInput" placeholder="Search a player, e.g. Bryce Young" />
+  <button onclick="search()">Search</button>
+</div>
+<div id="loading" style="display:none;">Loading...</div>
+<div id="error" style="display:none;"></div>
+
+<div id="result" style="display:none;">
+
+  <div class="panel">
+    <div class="player-header">
+      <span class="name" id="p-name"></span>
+      <span class="meta" id="p-meta"></span>
+    </div>
+    <div class="meta" id="p-matchup"></div>
+  </div>
+
+  <div class="panel">
+    <h2>1. Related Kalshi Markets</h2>
+    <div id="markets-own"></div>
+    <details><summary id="teammate-summary">Teammate props</summary><div id="markets-teammates"></div></details>
+    <details><summary id="team-summary">Team / game markets (spread, total, moneyline)</summary><div id="markets-team"></div></details>
+    <details><summary id="season-summary">Season-long props</summary><div id="markets-season"></div></details>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>2. Opponent Defense</h2>
+      <div id="defense"></div>
+    </div>
+    <div class="panel">
+      <h2>3. Team Context</h2>
+      <div id="team-context"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>4. Game Environment</h2>
+      <div id="environment"></div>
+    </div>
+    <div class="panel">
+      <h2>5. History vs This Opponent</h2>
+      <div id="history"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>6. Correlation Flags</h2>
+    <div id="correlations"></div>
+  </div>
+
+</div>
+
+<script>
+const fmtPct = (x) => (x === null || x === undefined) ? '--' : (x * 100).toFixed(1) + '%';
+const fmtNum = (x, d=2) => (x === null || x === undefined) ? '--' : Number(x).toFixed(d);
+const fmtPrice = (x) => (x === null || x === undefined) ? '--' : '$' + Number(x).toFixed(2);
+
+// Rank pill: green (good, rank 1) -> neutral gray (mid-pack) -> red (bad, rank N).
+// Colors are the validated status good/critical steps from the dataviz skill's
+// palette; the numeric rank is always shown as text too, never color alone.
+const RANK_GOOD = [12, 163, 12];   // #0ca30c
+const RANK_MID  = [137, 135, 129]; // #898781 (muted ink, readable on dark bg)
+const RANK_BAD  = [208, 59, 59];   // #d03b3b
+function lerp3(a, b, t) { return a.map((v, i) => Math.round(v + (b[i] - v) * t)); }
+function rankColor(rank, outOf) {
+  if (!rank || !outOf || outOf < 2) return RANK_MID;
+  const pct = (rank - 1) / (outOf - 1); // 0 = best, 1 = worst
+  return pct <= 0.5 ? lerp3(RANK_GOOD, RANK_MID, pct / 0.5) : lerp3(RANK_MID, RANK_BAD, (pct - 0.5) / 0.5);
+}
+function rankPill(rankObj) {
+  if (!rankObj || !rankObj.rank) return '';
+  const [r, g, b] = rankColor(rankObj.rank, rankObj.out_of);
+  return `<span class="rank-pill" style="color:rgb(${r},${g},${b});border-color:rgba(${r},${g},${b},.5);background:rgba(${r},${g},${b},.12)">#${rankObj.rank}/${rankObj.out_of}</span>`;
+}
+
+async function search() {
+  const name = document.getElementById('searchInput').value.trim();
+  if (!name) return;
+  document.getElementById('error').style.display = 'none';
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  try {
+    const resp = await fetch('/api/player?name=' + encodeURIComponent(name));
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'request failed');
+    render(data);
+  } catch (e) {
+    document.getElementById('error').textContent = e.message;
+    document.getElementById('error').style.display = 'block';
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+document.getElementById('searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+
+function marketRow(m, correlatedTickers) {
+  const heldCls = m.my_position ? 'held' : '';
+  const corrCls = correlatedTickers && correlatedTickers.has(m.ticker) ? 'correlated' : '';
+  const posBadge = m.my_position
+    ? `<span class="badge ${m.my_position.side === 'yes' ? 'yes' : 'no'}">${m.my_position.side.toUpperCase()} x${m.my_position.contracts} @ ${m.my_position.avg_price_cents.toFixed(0)}c</span>`
+    : '';
+  return `<tr class="${heldCls} ${corrCls}">
+    <td>${m.title}</td>
+    <td class="muted">${m.stat}</td>
+    <td>${fmtPrice(m.yes_bid)} / ${fmtPrice(m.yes_ask)}</td>
+    <td>${fmtPct(m.implied_prob_yes)}</td>
+    <td class="muted">${fmtNum(m.volume, 0)}</td>
+    <td>${posBadge}</td>
+  </tr>`;
+}
+
+function marketTable(markets, correlatedTickers) {
+  if (!markets || markets.length === 0) return '<p class="muted">None found.</p>';
+  return `<table><thead><tr><th>Market</th><th>Stat</th><th>Bid/Ask</th><th>Implied</th><th>Vol</th><th>My position</th></tr></thead>
+  <tbody>${markets.map(m => marketRow(m, correlatedTickers)).join('')}</tbody></table>`;
+}
+
+function groupBy(arr, key) {
+  const out = {};
+  for (const item of arr) {
+    const k = item[key] || 'Unknown';
+    (out[k] = out[k] || []).push(item);
+  }
+  return out;
+}
+
+function render(data) {
+  document.getElementById('result').style.display = 'block';
+  const p = data.player;
+  document.getElementById('p-name').textContent = p.name;
+  document.getElementById('p-meta').textContent =
+    `${p.position} #${p.jersey_number ?? '?'} - ${p.team}${data.opponent ? ' vs ' + data.opponent : ''}`;
+  document.getElementById('p-matchup').textContent = data.markets.matchup || '';
+
+  const correlatedTickers = new Set();
+  (data.correlations.flags || []).forEach(f => {
+    correlatedTickers.add(f.ticker);
+    f.correlated_with.forEach(c => correlatedTickers.add(c.ticker));
+  });
+
+  // Section 1: markets
+  document.getElementById('markets-own').innerHTML =
+    '<h3 style="font-size:13px;color:var(--muted);margin:0 0 6px;">' + p.name + '\'s props</h3>' +
+    marketTable(data.markets.player_props, correlatedTickers);
+
+  const teammatesByPlayer = groupBy(data.markets.teammate_props || [], 'player_name');
+  document.getElementById('markets-teammates').innerHTML = Object.entries(teammatesByPlayer)
+    .map(([name, ms]) => `<h4 style="font-size:12px;color:var(--muted);margin:10px 0 4px;">${name}</h4>${marketTable(ms, correlatedTickers)}`)
+    .join('') || '<p class="muted">None found.</p>';
+  document.getElementById('teammate-summary').textContent = `Teammate props (${(data.markets.teammate_props||[]).length})`;
+
+  const teamBySeries = groupBy(data.markets.team_game_markets || [], 'series');
+  document.getElementById('markets-team').innerHTML = Object.entries(teamBySeries)
+    .map(([series, ms]) => `<h4 style="font-size:12px;color:var(--muted);margin:10px 0 4px;">${ms[0].stat}</h4>${marketTable(ms, correlatedTickers)}`)
+    .join('') || '<p class="muted">None found.</p>';
+  document.getElementById('team-summary').textContent = `Team / game markets (${(data.markets.team_game_markets||[]).length})`;
+
+  document.getElementById('markets-season').innerHTML = marketTable(data.markets.season_props, correlatedTickers);
+  document.getElementById('season-summary').textContent = `Season-long props (${(data.markets.season_props||[]).length})`;
+
+  // Section 2: defense
+  const d = data.opponent_defense;
+  document.getElementById('defense').innerHTML = d ? `
+    <div class="stat-row"><span>Opponent</span><span>${d.team}</span></div>
+    <div class="stat-row"><span>DC</span><span>${d.dc_name || '<span class="muted">not set (see data/coordinators.json)</span>'}</span></div>
+    <div class="stat-row"><span>EPA/dropback allowed</span><span>${fmtNum(d.epa_per_dropback_allowed, 3)}${rankPill(d.epa_per_dropback_allowed_rank)}</span></div>
+    <div class="stat-row"><span>EPA/rush allowed</span><span>${fmtNum(d.epa_per_rush_allowed, 3)}${rankPill(d.epa_per_rush_allowed_rank)}</span></div>
+    <div class="stat-row"><span>Pressure rate generated</span><span>${fmtPct(d.pressure_pct_generated)}${rankPill(d.pressure_pct_generated_rank)}</span></div>
+    <div class="stat-row"><span>Blitz rate</span><span>${fmtPct(d.blitz_rate)}</span></div>
+    <div class="stat-row"><span>Avg pass rushers</span><span>${fmtNum(d.avg_pass_rushers, 2)}</span></div>
+    <div class="note">${d.coverage_scheme_note}</div>
+    <div class="note">Rank badges: #1/32 = best in the league, #32/32 = worst. Green = good, red = bad, relative to all 32 teams this season.</div>
+  ` : '<p class="muted">No opponent resolved (bye week?).</p>';
+
+  // Section 3: team context
+  const tc = data.team_context;
+  let tcHtml = tc ? `
+    <div class="stat-row"><span>Team</span><span>${tc.team}</span></div>
+    <div class="stat-row"><span>Pressure rate allowed (O-line)</span><span>${fmtPct(tc.pressure_pct_allowed)}${rankPill(tc.pressure_pct_allowed_rank)}</span></div>
+    <div class="stat-row"><span>Sacks allowed</span><span>${fmtNum(tc.sacks_allowed, 0)}${rankPill(tc.sacks_allowed_rank)}</span></div>
+    <div class="stat-row"><span>Plays/game (pace)</span><span>${fmtNum(tc.plays_per_game, 1)}</span></div>
+  ` : '';
+  if (tc && tc.target_share_by_week) {
+    tcHtml += '<h4 style="font-size:12px;color:var(--muted);margin:10px 0 4px;">Target share by week</h4>';
+    tcHtml += '<table><thead><tr><th>Wk</th><th>Targets</th><th>Tgt share</th><th>Air yd share</th><th>WOPR</th></tr></thead><tbody>';
+    tc.target_share_by_week.forEach(r => {
+      tcHtml += `<tr><td>${r.week}</td><td>${r.targets}</td><td>${fmtPct(r.target_share)}</td><td>${fmtPct(r.air_yards_share)}</td><td>${fmtNum(r.wopr,2)}</td></tr>`;
+    });
+    const sd = tc.target_share_stdev;
+    if (sd) {
+      tcHtml += `<tr class="stdev-row"><td>stdev</td><td>${fmtNum(sd.targets,2)}</td><td>${fmtPct(sd.target_share)}</td><td>${fmtPct(sd.air_yards_share)}</td><td>${fmtNum(sd.wopr,2)}</td></tr>`;
+    }
+    tcHtml += '</tbody></table>';
+  }
+  document.getElementById('team-context').innerHTML = tcHtml || '<p class="muted">N/A</p>';
+
+  // Section 4: environment
+  const env = data.game_environment;
+  let envHtml = '';
+  if (env) {
+    envHtml += `
+      <div class="stat-row"><span>Matchup</span><span>${env.away_team} @ ${env.home_team}</span></div>
+      <div class="stat-row"><span>${p.name}'s team is</span><span>${env.is_home_for_searched_team ? 'Home' : 'Away'}</span></div>
+      <div class="stat-row"><span>Rest days</span><span>${env.rest_days} (opp: ${env.opponent_rest_days})</span></div>
+      <div class="stat-row"><span>Roof / surface</span><span>${env.roof || '--'} / ${env.surface || '--'}</span></div>
+      <div class="stat-row"><span>Spread / Total</span><span>${fmtNum(env.spread_line,1)} / ${fmtNum(env.total_line,1)}</span></div>
+    `;
+    const f = env.forecast;
+    if (f) {
+      envHtml += f.forecast_available
+        ? `<div class="stat-row"><span>Forecast</span><span>${fmtNum(f.temperature_f,0)}°F, wind ${fmtNum(f.wind_speed_mph,0)}mph (gust ${fmtNum(f.wind_gusts_mph,0)}), ${fmtNum(f.precipitation_probability_pct,0)}% precip</span></div>`
+        : `<div class="stat-row"><span>Forecast</span><span class="muted">${f.note || f.error || 'N/A'}</span></div>`;
+    }
+    const injRow = (label, list) => {
+      if (!list || list.length === 0) return `<h4 style="font-size:12px;color:var(--muted);margin:10px 0 4px;">${label}</h4><p class="muted">None reported.</p>`;
+      return `<h4 style="font-size:12px;color:var(--muted);margin:10px 0 4px;">${label}</h4>
+        <table><thead><tr><th>Player</th><th>Pos</th><th>Status</th><th>Injury</th></tr></thead><tbody>
+        ${list.map(i => `<tr><td>${i.full_name}</td><td>${i.position}</td><td>${i.report_status || i.practice_status || '--'}</td><td>${i.report_primary_injury || '--'}</td></tr>`).join('')}
+        </tbody></table>`;
+    };
+    envHtml += injRow(env.home_team + ' injuries', env.injuries_home);
+    envHtml += injRow(env.away_team + ' injuries', env.injuries_away);
+  } else {
+    envHtml = '<p class="muted">No upcoming game found.</p>';
+  }
+  document.getElementById('environment').innerHTML = envHtml;
+
+  // Section 5: history
+  const hist = data.history_vs_opponent || [];
+  document.getElementById('history').innerHTML = hist.length ? `
+    <table><thead><tr><th>Season</th><th>Wk</th><th>Pass yd</th><th>Pass TD</th><th>Rush yd</th><th>Rec</th><th>Rec yd</th></tr></thead>
+    <tbody>${hist.map(h => `<tr><td>${h.season}</td><td>${h.week}</td><td>${h.passing_yards ?? '--'}</td><td>${h.passing_tds ?? '--'}</td><td>${h.rushing_yards ?? '--'}</td><td>${h.receptions ?? '--'}</td><td>${h.receiving_yards ?? '--'}</td></tr>`).join('')}</tbody></table>
+  ` : '<p class="muted">No prior meetings on record.</p>';
+
+  // Section 6: correlations
+  const flags = data.correlations.flags || [];
+  document.getElementById('correlations').innerHTML = flags.length ? flags.map(f => `
+    <div class="corr-item">
+      <strong>${f.player_name || ''} - ${f.stat}</strong> ${f.ticker}
+      ${f.correlated_with.map(c => `<div class="leg">&#8618; ${c.reason}: ${c.title} (${fmtPct(c.implied_prob_yes)})</div>`).join('')}
+    </div>
+  `).join('') : '<p class="muted">No correlated legs found.</p>';
+}
+</script>
+</body>
+</html>
