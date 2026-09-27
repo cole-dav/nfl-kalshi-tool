@@ -220,8 +220,6 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
       </div>
     </div>
     <div id="statusbar" class="mono">
-      <span id="kalshiStatus" style="display:flex;align-items:center;gap:6px"><span class="dot" style="background:var(--blue)"></span>KALSHI LIVE</span>
-      <span>NFLVERSE · CACHED</span>
       <span id="clock" style="color:var(--on)"></span>
     </div>
   </div>
@@ -519,10 +517,6 @@ function renderTopbar() {
   const remainingHtml = remainingGames.map(gameTabHtml).join('');
   const divider = html && remainingHtml ? `<div id="tabgroup-div"></div>` : '';
   wrap.innerHTML = html + divider + remainingHtml;
-  const dot = document.querySelector('#kalshiStatus .dot');
-  if (dot) dot.style.background = state.kalshiOk ? 'var(--blue)' : 'var(--orange)';
-  const label = document.querySelector('#kalshiStatus');
-  if (label) label.lastChild.textContent = state.kalshiOk ? 'KALSHI LIVE' : 'KALSHI ERROR';
 }
 
 function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
