@@ -86,8 +86,24 @@ input::placeholder{color:#6F7A86}
 #markets{height:280px;flex-grow:1}
 #curve{height:230px;flex-shrink:0}
 #book{height:280px;flex-shrink:0}
-#lowerrow{height:360px;flex-shrink:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-#history{flex-grow:1;min-height:0}
+#lowerrow{flex-grow:1;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tab.heads{color:var(--amber)}
+.tab.heads .cnt{color:var(--bg);background:var(--amber);padding:0 4px;font-weight:600}
+.gl-bar{display:flex;align-items:center;gap:10px;padding:6px 8px 4px;flex-wrap:wrap}
+.gl-bar .gl-note{font-size:10px;color:var(--dim);margin-left:auto}
+table.gl{width:100%;border-collapse:collapse;font-size:11px}
+table.gl th{position:sticky;top:0;background:var(--panel);text-align:right;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);font-weight:500;border-bottom:1px solid var(--head-rule);padding:3px 6px;white-space:nowrap}
+table.gl td{text-align:right;padding:3px 6px;border-bottom:1px solid var(--row-rule);white-space:nowrap}
+table.gl th.l,table.gl td.l{text-align:left}
+table.gl tbody tr.link{cursor:pointer}
+table.gl tbody tr.link:hover{background:var(--amber-soft)}
+table.gl tbody tr.link:hover td.go{color:var(--amber)}
+table.gl td.go{color:var(--faint);font-size:9.5px}
+table.gl tr.tot td{border-top:1px solid var(--head-rule);border-bottom:0;color:var(--label)}
+table.gl .w{color:var(--blue)}
+table.gl .lo{color:var(--orange)}
+table.gl .z{color:#3A434E}
+.vs-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin:6px 8px}
 
 table.t{width:100%;border-collapse:collapse;font-size:11px}
 table.t thead th{text-align:left;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);font-weight:500;border-bottom:1px solid var(--head-rule);padding:2px 4px;white-space:nowrap}
@@ -138,6 +154,50 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
 .backlink{color:var(--amber);cursor:pointer;font-size:11px}
 .backlink:hover{color:#FFC57A}
 .combo-block{border-bottom:1px solid var(--row-rule);padding:8px 0}
+#rightcol.combo-mode #book{height:auto;flex:5 1 0;min-height:0}
+#rightcol.combo-mode #lowerrow{height:auto;flex:1.4 1 0;min-height:0}
+.combo-legend{display:flex;align-items:center;gap:14px;font-size:10px;color:var(--dim);padding:0 0 6px}
+.combo-legend .swatch{margin-right:4px}
+.combo-colhead{display:grid;align-items:end;font-size:9px;color:var(--dim);padding-bottom:4px;border-bottom:1px solid var(--head-rule)}
+.combo-col{display:flex;flex-direction:column;align-items:center;line-height:1.25;padding:2px 0;border-top:2px solid transparent;color:var(--dim);text-align:center}
+.combo-col:hover{color:var(--on);background:#141920}
+.combo-col.on{color:var(--amber);border-top-color:var(--amber);background:var(--amber-soft)}
+.combo-col .px{color:var(--muted)}
+.combo-row{height:22px;display:grid;align-items:center;font-size:10.5px;border-bottom:1px solid var(--row-rule)}
+.combo-row.on{background:var(--amber-soft)}
+.combo-rowbtn{display:flex;align-items:center;gap:6px;height:100%;text-align:left;color:var(--on);min-width:0}
+.combo-rowbtn:hover .nm{color:var(--amber)}
+.combo-rowbtn .box{width:12px;height:12px;flex-shrink:0;border:1px solid var(--faint);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--bg)}
+.combo-row.on .combo-rowbtn .box{background:var(--amber);border-color:var(--amber)}
+.combo-rowbtn .nm{flex-grow:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.combo-rowbtn .px{color:var(--muted);padding-right:6px}
+.combo-rowbtn.inelig,.combo-col.inelig{opacity:0.45;cursor:not-allowed}
+.combo-cell{width:20px;height:13px;font-size:9px;display:flex;align-items:center;justify-content:center}
+.combo-cell.pair{outline:1px solid var(--on);outline-offset:1px}
+.combo-slip{margin:4px 8px 8px;border-top:1px solid var(--head-rule);padding-top:6px}
+.combo-slip-head{display:flex;align-items:center;gap:10px;height:22px}
+.combo-slip-grid{display:grid;align-items:center;gap:6px;border-bottom:1px solid var(--row-rule);padding:2px 0}
+.seg{display:flex}
+.seg button{font-size:9.5px;padding:1px 6px;border:1px solid var(--faint);color:var(--dim)}
+.seg button + button{border-left:0}
+.seg button.on{background:var(--amber);border-color:var(--amber);color:var(--bg);font-weight:600}
+.stepper{display:flex;align-items:center;gap:4px}
+.stepper span{min-width:44px;text-align:center}
+.stepper button{color:var(--muted);font-size:9px;padding:0 3px}
+.stepper button:disabled{color:var(--faint);cursor:default}
+.combo-x{color:var(--dim);font-size:13px}
+.combo-x:hover{color:var(--orange)}
+.combo-msg{font-size:10.5px;padding:2px 4px;color:var(--muted)}
+.combo-msg.err{color:var(--orange)}
+.combo-msg.warn{color:var(--amber)}
+.combo-stake{display:flex;align-items:center;gap:2px;font-size:11px;white-space:nowrap}
+.combo-stake input::-webkit-inner-spin-button,.combo-stake input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.combo-stake input{-moz-appearance:textfield;width:40px;min-width:0;background:var(--bg);border:1px solid var(--head-rule);color:var(--on);font-size:12px;padding:1px 3px}
+.combo-quote{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.combo-btn{white-space:nowrap;background:var(--amber);color:var(--bg);font-weight:600;font-size:11px;letter-spacing:0.04em;padding:5px 10px}
+.combo-btn:disabled{background:#1A2027;color:var(--dim);cursor:not-allowed}
+.combo-btn.armed{background:var(--orange)}
+.combo-note{font-size:10.5px;color:var(--dim)}
 .section-label{font-size:10px;letter-spacing:0.1em;color:var(--dim);font-weight:600;padding:8px 4px 4px}
 </style>
 </head>
@@ -252,7 +312,8 @@ function activeTicket() { return state.tickets.find(t => t.id === state.activeId
 
 function newTicket(query) {
   const t = { id: nextId++, query, name: query, sub: '', loading: true, error: null, data: null,
-    ui: { mkt: 'player', curve: null, risk: 'pos', match: 'def', inj: null } };
+    ui: { mkt: 'player', curve: null, risk: 'pos', match: 'def', inj: null, logSeason: null },
+    logs: {} };
   state.tickets.push(t);
   state.activeId = t.id;
   loadTicket(t);
@@ -362,10 +423,34 @@ function tickClock() {
 setInterval(tickClock, 1000);
 
 // ---------- render: top bar ----------
+// A player ticket and a game tab are "linked" when they're the same matchup
+// (home/away Kalshi codes match) and both happen to be open at once.
+function ticketMatchup(t) {
+  const env = t.data && t.data.game_environment;
+  if (!env || !env.home_team || !env.away_team) return null;
+  return { home: nflverseToKalshi(env.home_team), away: nflverseToKalshi(env.away_team) };
+}
+
+function sameMatchup(a, b) {
+  return !!a && !!b && a.home === b.home && a.away === b.away;
+}
+
+function linkedGameFor(t) {
+  const m = ticketMatchup(t);
+  if (!m) return null;
+  return state.games.find(g => sameMatchup(m, { away: g.away, home: g.home })) || null;
+}
+
+function linkedTicketsFor(g) {
+  if (!g.away || !g.home) return [];
+  return state.tickets.filter(t => sameMatchup(ticketMatchup(t), { away: g.away, home: g.home }));
+}
+
 function playerTicketHtml(t) {
   const on = t.id === state.activeId;
   const color = t.data ? teamColor(t.data.player.team_kalshi) : 'var(--border)';
-  return `<div class="ticket" data-open="${t.id}" style="cursor:pointer;background:${on ? '#141920' : 'transparent'};border-top-color:${on ? 'var(--amber)' : 'transparent'};color:${on ? 'var(--on)' : 'var(--dim)'}">
+  const topColor = linkedGameFor(t) ? color : (on ? 'var(--amber)' : 'transparent');
+  return `<div class="ticket" data-open="${t.id}" style="cursor:pointer;background:${on ? '#141920' : 'transparent'};border-top-color:${topColor};color:${on ? 'var(--on)' : 'var(--dim)'}">
     <span class="tteam" style="background:${color}"></span>
     <span class="tname">${escapeHtml(t.name)}</span>
     <span class="tsub mono">${escapeHtml(t.sub || (t.loading ? 'loading…' : t.error ? 'error' : ''))}</span>
@@ -377,10 +462,24 @@ function playerTicketHtml(t) {
 
 function gameTabHtml(g) {
   const on = g.id === state.activeGameId;
-  const bar = g.away && g.home
-    ? `linear-gradient(to bottom, ${teamColor(g.away)} 50%, ${teamColor(g.home)} 50%)`
-    : 'var(--border)';
-  return `<div class="ticket" data-open-gametab="${g.id}" style="cursor:pointer;background:${on ? '#141920' : 'transparent'};border-top-color:${on ? 'var(--amber)' : 'transparent'};color:${on ? 'var(--on)' : 'var(--dim)'}">
+  const linkedTeams = [...new Set(linkedTicketsFor(g).map(t => t.data.player.team_kalshi))];
+  // One linked team: solid top border in that team's color. Both linked
+  // (away + home both open): split the top edge left/right, away on the
+  // left and home on the right, mirroring the "AWAY @ HOME" tab order — and
+  // mute the left .tteam bar to a neutral gray since it's no longer telling
+  // you anything the top split doesn't already say. Neither: keep the
+  // two-tone left bar and fall back to the normal active/amber indicator.
+  const splitTop = linkedTeams.length === 2 && g.away && g.home
+    ? `linear-gradient(to right, ${teamColor(g.away)} 50%, ${teamColor(g.home)} 50%)`
+    : null;
+  const bar = splitTop
+    ? 'var(--faint)'
+    : g.away && g.home
+      ? `linear-gradient(to bottom, ${teamColor(g.away)} 50%, ${teamColor(g.home)} 50%)`
+      : 'var(--border)';
+  const topColor = linkedTeams.length === 1 ? teamColor(linkedTeams[0]) : (on ? 'var(--amber)' : 'transparent');
+  return `<div class="ticket" data-open-gametab="${g.id}" style="cursor:pointer;position:relative;background:${on ? '#141920' : 'transparent'};border-top-color:${splitTop ? 'transparent' : topColor};color:${on ? 'var(--on)' : 'var(--dim)'}">
+    ${splitTop ? `<span style="position:absolute;top:-2px;left:0;right:0;height:2px;background:${splitTop}"></span>` : ''}
     <span class="tteam" style="background:${bar}"></span>
     <span class="tname">${escapeHtml(g.label)}</span>
     ${g.loading || g.error ? `<span class="tsub mono">${g.loading ? 'loading…' : 'error'}</span>` : ''}
@@ -392,10 +491,34 @@ function gameTabHtml(g) {
 
 function renderTopbar() {
   const wrap = document.getElementById('tickets');
-  const playerHtml = state.tickets.map(playerTicketHtml).join('');
-  const gameHtml = state.games.map(gameTabHtml).join('');
-  const divider = playerHtml && gameHtml ? `<div id="tabgroup-div"></div>` : '';
-  wrap.innerHTML = playerHtml + divider + gameHtml;
+  // Cluster every ticket linked to the same game together with its game
+  // tab, away-team tickets on the left and home-team tickets on the right
+  // (mirroring "AWAY @ HOME"), regardless of the order tickets were opened
+  // in or other unrelated tickets interleaved between them.
+  const placedGameIds = new Set();
+  const placedTicketIds = new Set();
+  let html = '';
+  state.tickets.forEach(t => {
+    if (placedTicketIds.has(t.id)) return;
+    const g = linkedGameFor(t);
+    if (!g) {
+      html += playerTicketHtml(t);
+      placedTicketIds.add(t.id);
+      return;
+    }
+    if (placedGameIds.has(g.id)) return; // already emitted as part of its cluster
+    placedGameIds.add(g.id);
+    const linked = linkedTicketsFor(g);
+    const away = linked.filter(x => x.data.player.team_kalshi === g.away);
+    const home = linked.filter(x => x.data.player.team_kalshi === g.home);
+    away.forEach(x => placedTicketIds.add(x.id));
+    home.forEach(x => placedTicketIds.add(x.id));
+    html += away.map(playerTicketHtml).join('') + gameTabHtml(g) + home.map(playerTicketHtml).join('');
+  });
+  const remainingGames = state.games.filter(g => !placedGameIds.has(g.id));
+  const remainingHtml = remainingGames.map(gameTabHtml).join('');
+  const divider = html && remainingHtml ? `<div id="tabgroup-div"></div>` : '';
+  wrap.innerHTML = html + divider + remainingHtml;
   const dot = document.querySelector('#kalshiStatus .dot');
   if (dot) dot.style.background = state.kalshiOk ? 'var(--blue)' : 'var(--orange)';
   const label = document.querySelector('#kalshiStatus');
@@ -523,13 +646,21 @@ function renderMarkets() {
     { id: 'tm', label: 'Teammates', count: d.markets.teammate_props.length },
     { id: 'gm', label: 'Team / Game', count: d.markets.team_game_markets.length },
     { id: 'ss', label: 'Season', count: d.markets.season_props.length },
+    { id: 'log', label: 'Game Log', count: (d.game_log && d.game_log.games || []).length },
   ];
-  head.innerHTML = tabs.map(tb => `<button type="button" class="tab ${t.ui.mkt === tb.id ? 'on' : ''}" data-mkt="${tb.id}">${escapeHtml(tb.label)}<span class="cnt mono">${tb.count}</span></button>`).join('');
+  const vsCount = (d.history_vs_opponent || []).length;
+  // "Heads up" when the player has faced this opponent before.
+  if (d.opponent) tabs.push({ id: 'vs', label: `vs ${nflverseToKalshi(d.opponent)}`, count: vsCount, heads: vsCount > 0 });
+  head.innerHTML = tabs.map(tb => `<button type="button" class="tab ${t.ui.mkt === tb.id ? 'on' : ''} ${tb.heads ? 'heads' : ''}" data-mkt="${tb.id}"${tb.heads ? ` title="Has faced ${escapeHtml(tb.label.slice(3))} ${tb.count} time${tb.count === 1 ? '' : 's'}"` : ''}>${escapeHtml(tb.label)}<span class="cnt mono">${tb.count}</span></button>`).join('');
 
   if (t.ui.mkt === 'player') {
     renderLadder(body, t, d);
   } else if (t.ui.mkt === 'tm' || t.ui.mkt === 'gm' || t.ui.mkt === 'ss') {
     renderFlatMarkets(body, t, d, t.ui.mkt);
+  } else if (t.ui.mkt === 'log') {
+    renderGameLog(body, t, d);
+  } else if (t.ui.mkt === 'vs') {
+    renderVsOpponent(body, t, d);
   }
 }
 
@@ -848,8 +979,9 @@ function renderBook() {
   head.innerHTML = tabs.map(tb => `<button type="button" class="tab ${t.ui.risk === tb.id ? 'on' : ''}" data-risk="${tb.id}">${tb.label}${tb.count !== '' ? `<span class="cnt mono">${tb.count}</span>` : ''}</button>`).join('')
     + `<div style="flex-grow:1"></div>` + (held.length === 0 ? '' : '');
 
+  document.getElementById('rightcol').classList.toggle('combo-mode', t.ui.risk === 'corr');
   if (t.ui.risk === 'pos') renderPositions(body, held);
-  else if (t.ui.risk === 'corr') renderCorrelation(body, d);
+  else if (t.ui.risk === 'corr') renderCorrelation(body, d, t);
   else renderExposure(body, held);
 }
 
@@ -908,40 +1040,428 @@ function renderPositions(body, held) {
   body.innerHTML = `<div style="padding:8px">${positionsTilesHtml(rows)}<div style="margin-top:8px">${positionsTableHtml(rows)}</div></div>`;
 }
 
-function legLabel(c) {
-  const who = c.player_name ? c.player_name.split(' ').pop().toUpperCase() : (c.team_code || 'TEAM');
-  const stat = SERIES_META[c.series] ? SERIES_META[c.series].short : c.stat;
-  return `${who} ${lineLabel(SERIES_META[c.series] || {}, c.threshold)}<br>${stat}`;
+// ---------- combo builder (Correlation tab) ----------
+// The grid is the picker: rows are the searched player's stat lines, columns
+// are the teammate / team-total lines the correlation rules link them to.
+// Clicking a row label or column header toggles that line into the combo
+// slip underneath, which prices it (independent odds), checks it against
+// Kalshi's combo rules server-side, and can pull a live maker quote via RFQ.
+const COMBO_POLL_MS = 1500;
+const COMBO_POLL_MAX_MS = 45000;
+
+function loadUnitSize() { try { const v = Number(localStorage.getItem('combo.unit')); return v > 0 ? v : 10; } catch (e) { return 10; } }
+function saveUnitSize(v) { try { localStorage.setItem('combo.unit', String(v)); } catch (e) {} }
+
+function comboState(t) {
+  if (!t.combo) t.combo = { legs: [], check: null, checkSig: null, checking: false, seq: 0, timer: null,
+    quote: null, unit: loadUnitSize(), units: 1, armed: null, flash: null };
+  return t.combo;
 }
 
-function renderCorrelation(body, d) {
-  const flags = d.correlations.flags || [];
-  if (!flags.length) { body.innerHTML = `<div class="empty">No correlation flags for this player's markets.</div>`; return; }
-  const colTickers = [];
-  const colMeta = {};
-  flags.forEach(f => f.correlated_with.forEach(c => { if (!colMeta[c.ticker]) { colMeta[c.ticker] = c; colTickers.push(c.ticker); } }));
+function familyKey(m) { return m.series + '|' + (m.player_id || m.team_code || m.player_name || ''); }
+function gameMarkets(d) { return [...d.markets.player_props, ...d.markets.teammate_props, ...d.markets.team_game_markets]; }
+function marketIdx(d) {
+  if (!d._mktIdx) { d._mktIdx = {}; gameMarkets(d).forEach(m => { d._mktIdx[m.ticker] = m; }); }
+  return d._mktIdx;
+}
+function familyLadder(d, key) { return gameMarkets(d).filter(m => familyKey(m) === key).sort((a, b) => a.threshold - b.threshold); }
+function closestToCoinflip(ms) {
+  const priced = ms.filter(m => m.implied_prob_yes !== null && m.implied_prob_yes !== undefined);
+  if (!priced.length) return null;
+  return priced.reduce((a, b) => Math.abs(b.implied_prob_yes - 0.5) < Math.abs(a.implied_prob_yes - 0.5) ? b : a);
+}
+function eventOf(m) { return m.event_ticker || m.ticker.split('-').slice(0, 2).join('-'); }
+function comboEligible(d, m) {
+  const ev = d.correlations.combo_eligible_events;
+  return !ev || !ev.length || ev.includes(eventOf(m));
+}
+function legSig(legs) { return legs.map(l => l.ticker + ':' + l.side).join(','); }
 
-  let html = `<div style="padding:6px 8px 8px;display:flex;flex-direction:column;overflow:auto">
-    <div class="mono" style="display:grid;grid-template-columns:130px repeat(${colTickers.length},minmax(64px,1fr)) 30px;align-items:end;font-size:9px;color:var(--dim);padding-bottom:4px;border-bottom:1px solid var(--head-rule)">
-      <span style="letter-spacing:0.06em">REF LINE ↓ / LEG →</span>
-      ${colTickers.map(tk => `<span style="text-align:center;line-height:1.2">${legLabel(colMeta[tk])}</span>`).join('')}
-      <span class="right">Σ</span>
+function comboGrid(d) {
+  const idx = marketIdx(d);
+  const fams = {};
+  d.markets.player_props.forEach(m => { (fams[familyKey(m)] = fams[familyKey(m)] || []).push(m); });
+  const order = Object.keys(SERIES_META);
+  const rows = Object.entries(fams).map(([key, ms]) => ({ key, rep: closestToCoinflip(ms) })).filter(r => r.rep)
+    .sort((a, b) => order.indexOf(a.rep.series) - order.indexOf(b.rep.series));
+  const cols = [], colSeen = {}, links = {};
+  (d.correlations.flags || []).forEach(f => {
+    const rm = idx[f.ticker];
+    if (!rm) return;
+    const rk = familyKey(rm);
+    f.correlated_with.forEach(c => {
+      const cm = idx[c.ticker] || c;
+      const ck = familyKey(cm);
+      if (!colSeen[ck]) { colSeen[ck] = true; cols.push({ key: ck, rep: cm, reason: c.reason }); }
+      (links[rk] = links[rk] || new Set()).add(ck);
+    });
+  });
+  return { rows, cols, links };
+}
+
+function sideProb(m, side) {
+  const p = m.implied_prob_yes;
+  if (p === null || p === undefined) return null;
+  return side === 'yes' ? p : 1 - p;
+}
+function sideLine(m, side) {
+  const meta = SERIES_META[m.series] || {};
+  if (side === 'yes') return lineLabel(meta, m.threshold);
+  return 'U' + (meta.over ? m.threshold : Math.round(m.threshold + 0.5));
+}
+function whoLabel(m) {
+  return m.player_name ? m.player_name.split(' ').pop().toUpperCase() : (m.team_code || 'TEAM') + ' TT';
+}
+function statShort(m) { return SERIES_META[m.series] ? SERIES_META[m.series].short : (m.series === 'KXNFLTEAMTOTAL' ? 'Team Total' : m.stat); }
+const cents = (p) => p === null || p === undefined ? '--' : Math.round(p * 100) + '¢';
+const fmtUnits = (u) => u === null || u === undefined ? '--' : '+' + (u >= 10 ? u.toFixed(1) : u.toFixed(2)) + 'u';
+const fmtAmerican = (a) => a === null || a === undefined ? '--' : (a > 0 ? '+' : '') + a;
+function americanOdds(p) {
+  if (!p || p <= 0 || p >= 1) return null;
+  return p >= 0.5 ? Math.round(-100 * p / (1 - p)) : Math.round(100 * (1 - p) / p);
+}
+
+// Running (independent) combo odds after each leg. Prefers fresh prices from
+// the last server check when it matches the current slip.
+function comboPricing(d, cs) {
+  const idx = marketIdx(d);
+  const fresh = cs.check && cs.checkSig === legSig(cs.legs) ? cs.check.legs : null;
+  let p = 1;
+  return cs.legs.map((l, i) => {
+    const q = fresh && fresh[i].prob !== null ? fresh[i].prob : sideProb(idx[l.ticker] || {}, l.side);
+    p = (p === null || q === null) ? null : p * q;
+    return { prob: q, run: p, units: p ? 1 / p - 1 : null, american: americanOdds(p) };
+  });
+}
+
+// Background refreshes (validation results, quote polling) skip the redraw
+// while a stake input has focus so typing isn't interrupted.
+function rerenderCombo(t) {
+  if (activeTicket() !== t || t.ui.risk !== 'corr') return;
+  const a = document.activeElement;
+  if (a && a.dataset && a.dataset.comboInput) return;
+  renderBook();
+}
+
+function comboChanged(t) {
+  const cs = comboState(t);
+  cs.armed = null;
+  if (cs.quote) { stopQuotePolling(cs); if (cs.quote.rfq_id) cancelRfq(cs.quote.rfq_id); cs.quote = null; }
+  scheduleComboCheck(t);
+  renderBook();
+}
+
+function scheduleComboCheck(t) {
+  const cs = comboState(t);
+  clearTimeout(cs.timer);
+  if (!cs.legs.length) { cs.check = null; cs.checkSig = null; cs.checking = false; return; }
+  cs.checking = true;
+  cs.timer = setTimeout(async () => {
+    const seq = ++cs.seq;
+    const sig = legSig(cs.legs);
+    try {
+      const resp = await fetch('/api/combo/validate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ legs: cs.legs.map(l => ({ market_ticker: l.ticker, side: l.side })) }) });
+      const data = await resp.json();
+      if (seq !== cs.seq) return;
+      cs.check = resp.ok ? data : { ok: false, legs: [], issues: [{ level: 'error', msg: data.error || 'check failed' }] };
+    } catch (e) {
+      if (seq !== cs.seq) return;
+      cs.check = { ok: false, legs: [], issues: [{ level: 'error', msg: 'check failed: ' + e }] };
+    }
+    cs.checkSig = sig;
+    cs.checking = false;
+    rerenderCombo(t);
+  }, 250);
+}
+
+function cancelRfq(rfqId) {
+  fetch('/api/combo/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rfq_id: rfqId }) }).catch(() => {});
+}
+function stopQuotePolling(cs) { if (cs.quote && cs.quote.poll) { clearInterval(cs.quote.poll); cs.quote.poll = null; } }
+
+async function requestComboQuote(t) {
+  const cs = comboState(t);
+  const stake = cs.unit * cs.units;
+  cs.quote = { phase: 'requesting', started: Date.now() };
+  renderBook();
+  try {
+    const resp = await fetch('/api/combo/quote', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ legs: cs.legs.map(l => ({ market_ticker: l.ticker, side: l.side })), stake_dollars: stake }) });
+    const data = await resp.json();
+    if (!cs.quote || cs.quote.phase !== 'requesting') { if (resp.ok) cancelRfq(data.rfq_id); return; }
+    if (!resp.ok) { cs.quote = { phase: 'error', error: data.error || 'quote request failed' }; renderBook(); return; }
+    cs.quote = { phase: 'waiting', started: Date.now(), stake, rfq_id: data.rfq_id, market_ticker: data.market_ticker,
+      collection: data.collection, title: data.title, quotes: [], best: null, poll: null };
+    cs.quote.poll = setInterval(() => pollComboQuotes(t), COMBO_POLL_MS);
+    pollComboQuotes(t);
+  } catch (e) {
+    cs.quote = { phase: 'error', error: String(e) };
+  }
+  renderBook();
+}
+
+async function pollComboQuotes(t) {
+  const cs = comboState(t);
+  const q = cs.quote;
+  if (!q || !q.rfq_id) return;
+  if (Date.now() - q.started > COMBO_POLL_MAX_MS) {
+    stopQuotePolling(cs);
+    if (!q.quotes.length) q.phase = 'expired';
+    rerenderCombo(t);
+    return;
+  }
+  try {
+    const resp = await fetch('/api/combo/quotes?rfq_id=' + encodeURIComponent(q.rfq_id));
+    const data = await resp.json();
+    if (cs.quote !== q) return;
+    if (!resp.ok) { q.pollError = data.error; }
+    else {
+      q.pollError = null;
+      q.quotes = data.quotes || [];
+      q.best = data.best;
+      q.rfqStatus = data.rfq_status;
+      if (q.best) q.phase = 'quoted';
+    }
+  } catch (e) { q.pollError = String(e); }
+  rerenderCombo(t);
+}
+
+async function acceptComboQuote(t, quoteId) {
+  const cs = comboState(t);
+  const q = cs.quote;
+  if (!q) return;
+  stopQuotePolling(cs);
+  q.phase = 'accepting';
+  renderBook();
+  try {
+    const resp = await fetch('/api/combo/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rfq_id: q.rfq_id, quote_id: quoteId, side: 'yes' }) });
+    const data = await resp.json();
+    q.phase = resp.ok ? 'accepted' : 'error';
+    q.error = resp.ok ? null : (data.error || 'accept failed');
+    q.acceptMsg = resp.ok ? data.status : null;
+  } catch (e) { q.phase = 'error'; q.error = String(e); }
+  cs.armed = null;
+  renderBook();
+}
+
+function handleComboClick(el, t) {
+  const d = t.data, cs = comboState(t), act = el.dataset.combo, key = el.dataset.key;
+  const i = cs.legs.findIndex(l => l.key === key);
+  cs.flash = null;
+  if (act === 'toggle') {
+    if (i >= 0) cs.legs.splice(i, 1);
+    else {
+      const m = marketIdx(d)[el.dataset.ticker];
+      if (!m) return;
+      if (!comboEligible(d, m)) { cs.flash = `${statShort(m)} isn't offered in Kalshi combos.`; renderBook(); return; }
+      cs.legs.push({ key, ticker: m.ticker, side: 'yes' });
+    }
+    comboChanged(t);
+  } else if (act === 'side' && i >= 0) {
+    cs.legs[i].side = el.dataset.side; comboChanged(t);
+  } else if (act === 'step' && i >= 0) {
+    const ladder = familyLadder(d, key);
+    const j = ladder.findIndex(m => m.ticker === cs.legs[i].ticker) + Number(el.dataset.dir);
+    if (j < 0 || j >= ladder.length) return;
+    cs.legs[i].ticker = ladder[j].ticker; comboChanged(t);
+  } else if (act === 'remove' && i >= 0) {
+    cs.legs.splice(i, 1); comboChanged(t);
+  } else if (act === 'clear') {
+    cs.legs = []; comboChanged(t);
+  } else if (act === 'quote') {
+    requestComboQuote(t);
+  } else if (act === 'cancel') {
+    if (cs.quote) { stopQuotePolling(cs); if (cs.quote.rfq_id) cancelRfq(cs.quote.rfq_id); }
+    cs.quote = null; cs.armed = null; renderBook();
+  } else if (act === 'accept') {
+    // Two-step in-page confirm (no browser dialogs): first click arms, second places.
+    const qid = el.dataset.quote;
+    if (cs.armed !== qid) {
+      cs.armed = qid; renderBook();
+      setTimeout(() => { if (cs.armed === qid) { cs.armed = null; if (activeTicket() === t) renderBook(); } }, 6000);
+    } else acceptComboQuote(t, qid);
+  }
+}
+
+function handleComboInput(el, t) {
+  const cs = comboState(t);
+  const v = Number(el.value);
+  if (!(v > 0)) { renderBook(); return; }
+  if (el.dataset.comboInput === 'unit') { cs.unit = v; saveUnitSize(v); }
+  else cs.units = v;
+  if (cs.quote && cs.quote.phase !== 'accepted') {
+    // The RFQ was sized to the old stake; drop it rather than quote the wrong size.
+    stopQuotePolling(cs); if (cs.quote.rfq_id) cancelRfq(cs.quote.rfq_id); cs.quote = null;
+  }
+  renderBook();
+}
+
+function renderCorrelation(body, d, t) {
+  const cs = comboState(t);
+  const g = comboGrid(d);
+  if (!g.rows.length) { body.innerHTML = `<div class="empty">No priced props for this player.</div>`; return; }
+  const idx = marketIdx(d);
+  const sel = {};
+  cs.legs.forEach(l => { sel[l.key] = l; });
+  const shown = (key, rep) => (sel[key] && idx[sel[key].ticker]) || rep;
+  const cols = `grid-template-columns:150px repeat(${g.cols.length},minmax(46px,1fr)) 22px`;
+  const pname = d.player.name.split(' ').pop().toUpperCase();
+
+  let html = `<div style="padding:6px 8px 8px;display:flex;flex-direction:column">
+    <div class="combo-legend">
+      <span><span class="swatch" style="background:var(--blue)"></span>QB ↔ PASS-CATCHER</span>
+      <span><span class="swatch" style="background:var(--amber)"></span>TEAM TOTAL</span>
+      <span style="color:var(--muted)">Click a row or column to add it to the combo</span>
     </div>
-    ${flags.map(f => {
-      const rowLbl = (f.player_name ? f.player_name.split(' ').pop().toUpperCase() : '') + ' ' + f.stat;
-      const hitSet = new Set(f.correlated_with.map(c => c.ticker));
-      return `<div class="mono" style="height:21px;display:grid;grid-template-columns:130px repeat(${colTickers.length},minmax(64px,1fr)) 30px;align-items:center;font-size:10.5px;border-bottom:1px solid var(--row-rule)">
-        <span style="color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(rowLbl)}</span>
-        ${colTickers.map(tk => {
-          const hit = hitSet.has(tk);
-          const isTotal = hit && colMeta[tk].reason === 'same-team total over';
-          return `<span style="display:flex;justify-content:center"><span style="width:20px;height:13px;background:${hit ? (isTotal ? 'var(--amber)' : 'var(--blue)') : '#1A2027'};color:#07090B;font-size:9px;display:flex;align-items:center;justify-content:center">${hit ? '+' : ''}</span></span>`;
+    <div class="mono combo-colhead" style="${cols}">
+      <span style="letter-spacing:0.06em;align-self:end">${escapeHtml(pname)} ↓ / LEG →</span>
+      ${g.cols.map(c => {
+        const m = shown(c.key, c.rep), on = !!sel[c.key], elig = comboEligible(d, m);
+        const side = on ? sel[c.key].side : 'yes';
+        return `<button type="button" class="combo-col ${on ? 'on' : ''} ${elig ? '' : 'inelig'}" data-combo="toggle" data-key="${escapeHtml(c.key)}" data-ticker="${escapeHtml(m.ticker)}"
+          title="${escapeHtml((m.title || '') + (elig ? '' : ' · not offered in Kalshi combos'))}">
+          <span>${escapeHtml(whoLabel(m))} ${escapeHtml(sideLine(m, side))}</span><span>${escapeHtml(statShort(m))}</span><span class="px">${cents(sideProb(m, side))}</span>
+        </button>`;
+      }).join('')}
+      <span class="right" style="align-self:end">Σ</span>
+    </div>
+    ${g.rows.map(r => {
+      const m = shown(r.key, r.rep), on = !!sel[r.key], elig = comboEligible(d, m);
+      const side = on ? sel[r.key].side : 'yes';
+      const linked = g.links[r.key] || new Set();
+      return `<div class="mono combo-row ${on ? 'on' : ''}" style="${cols}">
+        <button type="button" class="combo-rowbtn ${elig ? '' : 'inelig'}" data-combo="toggle" data-key="${escapeHtml(r.key)}" data-ticker="${escapeHtml(m.ticker)}"
+          title="${escapeHtml((m.title || '') + (elig ? '' : ' · not offered in Kalshi combos'))}">
+          <span class="box">${on ? '✓' : ''}</span>
+          <span class="nm">${escapeHtml(statShort(m))} ${escapeHtml(sideLine(m, side))}</span>
+          <span class="px">${elig ? cents(sideProb(m, side)) : 'n/a'}</span>
+        </button>
+        ${g.cols.map(c => {
+          const hit = linked.has(c.key), colOn = !!sel[c.key];
+          const both = on && colOn, one = on || colOn;
+          const bg = hit ? (c.reason === 'same-team total over' ? 'var(--amber)' : 'var(--blue)') : '#1A2027';
+          const op = hit ? (both ? 1 : one ? 0.7 : 0.35) : 1;
+          const mark = hit ? (both ? '●' : '+') : (both ? '·' : '');
+          return `<span style="display:flex;justify-content:center"><span class="combo-cell ${both ? 'pair' : ''}" style="background:${bg};opacity:${op};color:${hit ? '#07090B' : 'var(--dim)'}">${mark}</span></span>`;
         }).join('')}
-        <span class="right" style="color:var(--amber)">${f.correlated_with.length}</span>
+        <span class="right" style="color:var(--amber)">${linked.size || ''}</span>
       </div>`;
     }).join('')}
   </div>`;
+  html += comboSlipHtml(d, cs);
   body.innerHTML = html;
+}
+
+function comboSlipHtml(d, cs) {
+  const idx = marketIdx(d);
+  const fresh = cs.check && cs.checkSig === legSig(cs.legs) ? cs.check : null;
+  const price = comboPricing(d, cs);
+  const fin = price.length ? price[price.length - 1] : null;
+  const stake = cs.unit * cs.units;
+  const slipCols = 'grid-template-columns:18px minmax(0,1fr) 72px 92px 40px 50px 58px 18px';
+
+  let html = `<div class="combo-slip">
+    <div class="combo-slip-head">
+      <span class="panel-title" style="margin:0">COMBO SLIP</span>
+      <span class="mono" style="font-size:10px;color:var(--dim)">${cs.legs.length} leg${cs.legs.length === 1 ? '' : 's'}${d.correlations.combo_collection ? ' · ' + escapeHtml(d.correlations.combo_collection) : ''}</span>
+      <span style="flex-grow:1"></span>
+      ${cs.checking ? `<span class="mono" style="font-size:10px;color:var(--dim)">checking…</span>` : ''}
+      ${cs.legs.length ? `<button type="button" class="backlink" data-combo="clear">clear</button>` : ''}
+    </div>`;
+  if (cs.flash) html += `<div class="combo-msg err">${escapeHtml(cs.flash)}</div>`;
+  if (!cs.legs.length) {
+    return html + `<div class="empty" style="padding:12px">No legs yet. Rows are ${escapeHtml(d.player.name)}'s lines; columns are the teammate and team-total lines they move with. A filled ● cell means both sides of a correlated pair are in your combo.</div></div>`;
+  }
+
+  html += `<div class="mono combo-slip-grid" style="${slipCols};font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+    <span>#</span><span>LEG</span><span>SIDE</span><span>LINE</span><span class="right">PROB</span><span class="right">COMBO</span><span class="right">PAYS</span><span></span>
+  </div>`;
+  cs.legs.forEach((l, i) => {
+    const m = idx[l.ticker] || { ticker: l.ticker, series: '', threshold: 0 };
+    const chk = fresh && fresh.legs[i];
+    const ladder = familyLadder(d, l.key);
+    const at = ladder.findIndex(x => x.ticker === l.ticker);
+    const p = price[i];
+    const errs = chk ? chk.errors : [], warns = chk ? chk.warnings : [];
+    html += `<div class="mono combo-slip-grid" style="${slipCols};font-size:11px;min-height:22px;${errs.length ? 'background:rgba(255,122,69,0.08)' : ''}">
+      <span style="color:${errs.length ? 'var(--orange)' : chk ? 'var(--blue)' : 'var(--dim)'}" title="${escapeHtml([...errs, ...warns].join(' · ') || (chk ? 'valid combo leg' : 'checking'))}">${errs.length ? '✗' : chk ? '✓' : '·'}</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--on)">${escapeHtml(whoLabel(m))} <span style="color:var(--muted)">${escapeHtml(statShort(m))}</span></span>
+      <span class="seg"><button type="button" class="${l.side === 'yes' ? 'on' : ''}" data-combo="side" data-side="yes" data-key="${escapeHtml(l.key)}">YES</button><button type="button" class="${l.side === 'no' ? 'on' : ''}" data-combo="side" data-side="no" data-key="${escapeHtml(l.key)}">NO</button></span>
+      <span class="stepper"><button type="button" data-combo="step" data-dir="-1" data-key="${escapeHtml(l.key)}" ${at <= 0 ? 'disabled' : ''}>◀</button><span>${escapeHtml(sideLine(m, l.side))}</span><button type="button" data-combo="step" data-dir="1" data-key="${escapeHtml(l.key)}" ${at < 0 || at >= ladder.length - 1 ? 'disabled' : ''}>▶</button></span>
+      <span class="right">${cents(p.prob)}</span>
+      <span class="right" style="color:var(--label)">${p.run === null ? '--' : (p.run * 100).toFixed(1) + '%'}</span>
+      <span class="right" style="color:var(--amber)">${fmtUnits(p.units)}</span>
+      <button type="button" class="combo-x" data-combo="remove" data-key="${escapeHtml(l.key)}" aria-label="Remove leg">×</button>
+    </div>`;
+    [...errs.map(x => ['err', x]), ...warns.map(x => ['warn', x])].forEach(([k, x]) => {
+      html += `<div class="combo-msg ${k}" style="padding-left:22px">${escapeHtml(x)}</div>`;
+    });
+  });
+  if (fresh) fresh.issues.forEach(x => { html += `<div class="combo-msg ${x.level === 'error' ? 'err' : 'warn'}">${escapeHtml(x.msg)}</div>`; });
+
+  const toWinFair = fin && fin.units !== null ? stake * fin.units : null;
+  html += `<div class="stat-tiles" style="grid-template-columns:repeat(5,minmax(0,1fr));margin-top:8px">
+    <div class="stat-tile"><span class="sl">INDEP. PROB</span><span class="sv mono">${fin && fin.run !== null ? (fin.run * 100).toFixed(1) + '%' : '--'}</span></div>
+    <div class="stat-tile"><span class="sl">FAIR ODDS</span><span class="sv mono">${fmtAmerican(fin && fin.american)}</span></div>
+    <div class="stat-tile"><span class="sl">PAYS / 1u</span><span class="sv mono" style="color:var(--amber)">${fmtUnits(fin && fin.units)}</span></div>
+    <div class="stat-tile"><span class="sl">STAKE</span><span class="sv mono combo-stake">
+      <input class="mono" type="number" min="0.5" step="0.5" value="${cs.units}" data-combo-input="units" aria-label="Units to stake">u ×
+      $<input class="mono" type="number" min="1" step="1" value="${cs.unit}" data-combo-input="unit" aria-label="Dollars per unit"></span></div>
+    <div class="stat-tile"><span class="sl">TO WIN (FAIR)</span><span class="sv mono" style="color:var(--blue)">${toWinFair === null ? '--' : money(toWinFair)}</span></div>
+  </div>`;
+  html += comboQuoteHtml(cs, fresh, fin, stake);
+  return html + `</div>`;
+}
+
+function comboQuoteHtml(cs, fresh, fin, stake) {
+  const q = cs.quote;
+  const ready = fresh && fresh.ok && !cs.checking;
+  let html = `<div class="combo-quote">`;
+  if (!q) {
+    const why = cs.checking ? 'checking legs…' : !fresh ? 'waiting for leg check' : !fresh.ok ? 'fix the ✗ legs above to request a quote' : '';
+    html += `<button type="button" class="combo-btn" data-combo="quote" ${ready ? '' : 'disabled'}>GET KALSHI QUOTE · ${money(stake)}</button>
+      <span class="combo-note">${escapeHtml(why || 'Creates the combo on Kalshi and asks market makers to price it (RFQ). Nothing is bought until you accept.')}</span>`;
+    return html + `</div>`;
+  }
+  if (q.phase === 'requesting') return html + `<span class="combo-note">Creating combo market and sending RFQ…</span></div>`;
+  if (q.phase === 'error') {
+    return html + `<span class="combo-msg err" style="padding:0">${escapeHtml(q.error)}</span>
+      <button type="button" class="backlink" data-combo="cancel">dismiss</button></div>`;
+  }
+  const secs = Math.round((Date.now() - q.started) / 1000);
+  html += `<div style="display:flex;flex-direction:column;gap:4px;width:100%">
+    <div class="mono" style="display:flex;gap:10px;align-items:center;font-size:10px;color:var(--dim)">
+      <span title="${escapeHtml(q.title || '')}">COMBO ${escapeHtml(q.market_ticker || '')}</span>
+      <span>RFQ ${escapeHtml((q.rfq_id || '').slice(0, 8))}</span>
+      <span style="flex-grow:1"></span>
+      ${q.phase === 'waiting' ? `<span>waiting for makers… ${secs}s</span>` : ''}
+      ${q.phase !== 'accepted' ? `<button type="button" class="backlink" data-combo="cancel">cancel RFQ</button>` : ''}
+    </div>`;
+  if (q.pollError) html += `<div class="combo-msg warn" style="padding:0">${escapeHtml(q.pollError)}</div>`;
+  if (q.phase === 'expired') html += `<div class="combo-msg warn" style="padding:0">No maker quoted this combo within ${COMBO_POLL_MAX_MS / 1000}s. Makers skip some leg mixes; try fewer or more mainstream legs, then request again.</div>`;
+  if (q.phase === 'accepted') html += `<div class="combo-msg" style="padding:0;color:var(--blue)">Accepted: ${escapeHtml(q.acceptMsg || '')}. Check Kalshi fills to confirm execution.</div>`;
+  const live = (q.quotes || []).filter(x => x.yes_cost).sort((a, b) => a.yes_cost - b.yes_cost);
+  if (live.length) {
+    const qc = 'grid-template-columns:70px 64px 64px 80px minmax(0,1fr) 150px';
+    html += `<div class="mono combo-slip-grid" style="${qc};font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+      <span>YES COST</span><span>ODDS</span><span class="right">PAYS</span><span class="right">TO WIN</span><span class="right">vs INDEP.</span><span></span></div>`;
+    live.forEach((x, i) => {
+      const vs = fin && fin.run ? x.yes_cost / fin.run - 1 : null;
+      const armed = cs.armed === x.id;
+      const canAccept = fresh && fresh.accept_enabled && q.phase === 'quoted' && i === 0;
+      html += `<div class="mono combo-slip-grid" style="${qc};font-size:11px;min-height:22px;${i === 0 ? 'background:var(--amber-soft)' : ''}">
+        <span>${cents(x.yes_cost)}</span><span>${fmtAmerican(x.yes_american)}</span>
+        <span class="right" style="color:var(--amber)">${fmtUnits(x.yes_units)}</span>
+        <span class="right" style="color:var(--blue)">${x.yes_units ? money(q.stake * x.yes_units) : '--'}</span>
+        <span class="right" style="color:${vs === null ? 'var(--dim)' : vs > 0 ? 'var(--ask)' : 'var(--blue)'}" title="Quote price vs. multiplying the legs' odds together. Above 0 = Kalshi prices the combo as likelier than independent (correlation) and/or maker margin.">${vs === null ? '--' : (vs > 0 ? '+' : '') + (vs * 100).toFixed(0) + '%'}</span>
+        <span class="right">${canAccept ? `<button type="button" class="combo-btn ${armed ? 'armed' : ''}" data-combo="accept" data-quote="${escapeHtml(x.id)}">${armed ? `CONFIRM ${money(q.stake)} @ ${cents(x.yes_cost)}` : 'ACCEPT YES'}</button>` : ''}</span>
+      </div>`;
+    });
+    if (fresh && !fresh.accept_enabled) html += `<div class="combo-note">Placing is off. Start the server with KALSHI_ENABLE_COMBO_ACCEPT=1 to enable ACCEPT, or place this combo in the Kalshi app.</div>`;
+  }
+  return html + `</div></div>`;
 }
 
 function renderExposure(body, held) {
@@ -1176,33 +1696,127 @@ document.addEventListener('mouseout', (e) => {
   injHideTimer = setTimeout(hideInjPop, 200);
 });
 
-// ---------- render: history ----------
-function renderHistory() {
-  const el = document.getElementById('historyBody');
-  const label = document.getElementById('historyLabel');
-  const t = activeTicket();
-  if (!t || !t.data) { el.innerHTML = ''; label.textContent = ''; return; }
-  const hist = t.data.history_vs_opponent || [];
-  const oppK = nflverseToKalshi(t.data.opponent);
-  label.textContent = `vs ${oppK} · ${hist.length} GAME${hist.length === 1 ? '' : 'S'}`;
-  if (!hist.length) { el.innerHTML = `<div class="empty">No prior meetings on record.</div>`; return; }
+// ---------- render: game log + vs opponent (markets tabs) ----------
+// Stat columns shown depend on position; every game row links to its box
+// score (ESPN, falling back to Pro Football Reference).
+const LOG_COLS = {
+  QB: [
+    { h: 'CMP', k: 'completions' }, { h: 'ATT', k: 'attempts' }, { h: 'PASS YD', k: 'passing_yards' },
+    { h: 'TD', k: 'passing_tds' }, { h: 'INT', k: 'passing_interceptions' },
+    { h: 'CAR', k: 'carries' }, { h: 'RUSH YD', k: 'rushing_yards' }, { h: 'RUSH TD', k: 'rushing_tds' },
+  ],
+  RB: [
+    { h: 'CAR', k: 'carries' }, { h: 'RUSH YD', k: 'rushing_yards' }, { h: 'RUSH TD', k: 'rushing_tds' },
+    { h: 'TGT', k: 'targets' }, { h: 'REC', k: 'receptions' }, { h: 'REC YD', k: 'receiving_yards' }, { h: 'REC TD', k: 'receiving_tds' },
+  ],
+  REC: [
+    { h: 'TGT', k: 'targets' }, { h: 'REC', k: 'receptions' }, { h: 'REC YD', k: 'receiving_yards' }, { h: 'REC TD', k: 'receiving_tds' },
+    { h: 'CAR', k: 'carries' }, { h: 'RUSH YD', k: 'rushing_yards' },
+  ],
+};
+function logColsFor(pos) {
+  const cols = LOG_COLS[pos] || (pos === 'FB' ? LOG_COLS.RB : LOG_COLS.REC);
+  return [...cols, { h: 'PPR', k: 'fantasy_points_ppr', dec: 1 }];
+}
 
-  const cols = [
-    { k: 'passing_yards', h: 'PASS YD' }, { k: 'passing_tds', h: 'PASS TD' }, { k: 'rushing_yards', h: 'RUSH YD' },
-    { k: 'receptions', h: 'REC' }, { k: 'receiving_yards', h: 'REC YD' },
-  ];
-  let html = `<div style="padding:4px 8px">
-    <div class="mono" style="height:18px;display:grid;grid-template-columns:minmax(0,1fr) repeat(${cols.length},72px);align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-      <span></span>${cols.map(c => `<span class="right">${c.h}</span>`).join('')}
-    </div>`;
-  hist.forEach(g => {
-    html += `<div class="mono" style="height:22px;display:grid;grid-template-columns:minmax(0,1fr) repeat(${cols.length},72px);align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule)">
-      <span style="color:var(--muted);font-size:10.5px">${g.season} WK${g.week}</span>
-      ${cols.map(c => `<span class="right" style="color:var(--amber)">${g[c.k] ?? '—'}</span>`).join('')}
-    </div>`;
+function fmtGameDate(iso, withYear) {
+  if (!iso) return '—';
+  const [y, m, dd] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, dd);
+  return dt.toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
+}
+
+function gameLogTableHtml(games, cols, opts) {
+  const withYear = !!opts.withYear;
+  const fmt = (v, c) => (v === null || v === undefined) ? '—' : (c.dec ? Number(v).toFixed(c.dec) : Math.round(v));
+  let html = `<table class="gl mono"><thead><tr>
+    <th class="l">${withYear ? 'DATE' : 'WK'}</th>${withYear ? '<th class="l">WK</th>' : '<th class="l">DATE</th>'}
+    <th class="l">OPP</th><th class="l">RESULT</th>
+    ${cols.map(c => `<th>${c.h}</th>`).join('')}<th></th></tr></thead><tbody>`;
+  games.forEach(g => {
+    const wk = g.season_type === 'POST' ? `P${g.week}` : g.week;
+    const opp = `${g.is_home === false ? '@' : 'vs'} ${nflverseToKalshi(g.opponent_team)}`;
+    const res = g.result ? `<span class="${g.result === 'W' ? 'w' : g.result === 'L' ? 'lo' : ''}">${g.result}</span> ${g.score}` : '—';
+    const date = fmtGameDate(g.gameday, withYear);
+    html += `<tr class="${g.url ? 'link' : ''}"${g.url ? ` data-gameurl="${escapeHtml(g.url)}" title="Open ${escapeHtml(g.url_source)} box score"` : ''}>
+      <td class="l" style="color:var(--muted)">${withYear ? date : wk}</td>
+      <td class="l" style="color:var(--muted)">${withYear ? wk : date}</td>
+      <td class="l">${opp}</td><td class="l">${res}</td>
+      ${cols.map(c => { const v = g[c.k]; return `<td class="${!v ? 'z' : ''}">${fmt(v, c)}</td>`; }).join('')}
+      <td class="go">${g.url ? escapeHtml(g.url_source) + ' ↗' : ''}</td>
+    </tr>`;
   });
-  html += `</div>`;
-  el.innerHTML = html;
+  html += `</tbody>`;
+  if (games.length > 1) {
+    const sum = (k) => games.reduce((a, g) => a + (Number(g[k]) || 0), 0);
+    const row = (label, fn) => `<tr class="tot"><td class="l" colspan="4" style="color:var(--dim);letter-spacing:0.06em;font-size:9.5px">${label}</td>
+      ${cols.map(c => `<td>${fn(c)}</td>`).join('')}<td></td></tr>`;
+    html += `<tfoot>
+      ${row('TOTAL', c => c.dec ? sum(c.k).toFixed(c.dec) : Math.round(sum(c.k)))}
+      ${row('PER GAME', c => (sum(c.k) / games.length).toFixed(1))}
+    </tfoot>`;
+  }
+  return html + `</table>`;
+}
+
+async function loadGameLog(t, season) {
+  if (t.logs[season]) return;
+  t.logs[season] = { loading: true };
+  try {
+    const resp = await fetch(`/api/gamelog?id=${encodeURIComponent(t.data.player.gsis_id)}&season=${season}`);
+    const data = await resp.json().catch(() => ({}));
+    if (resp.status === 404 && !data.error) throw new Error('Game log endpoint not found -- restart server.py to pick up the new backend.');
+    if (!resp.ok) throw new Error(data.error || 'request failed');
+    t.logs[season] = { games: data.games };
+  } catch (e) {
+    t.logs[season] = { error: String(e.message || e) };
+  }
+  if (activeTicket() === t && t.ui.mkt === 'log' && t.ui.logSeason === season) renderMarkets();
+}
+
+function renderGameLog(body, t, d) {
+  const gl = d.game_log || { season: null, seasons: [], games: [] };
+  if (gl.season && !t.logs[gl.season]) t.logs[gl.season] = { games: gl.games };
+  const season = t.ui.logSeason || gl.season;
+  t.ui.logSeason = season;
+  const entry = t.logs[season];
+  if (!entry) loadGameLog(t, season);
+
+  let html = `<div class="gl-bar">
+    <span class="seg">${gl.seasons.map(s => `<button type="button" class="${s === season ? 'on' : ''}" data-logseason="${s}">${s}</button>`).join('')}</span>
+    <span class="gl-note mono">click a game for the box score</span>
+  </div>`;
+  if (!entry || entry.loading) html += `<div class="empty">Loading ${season} game log…</div>`;
+  else if (entry.error) html += `<div class="empty" style="color:var(--orange)">${escapeHtml(entry.error)}</div>`;
+  else if (!entry.games.length) html += `<div class="empty">No games logged in ${season}.</div>`;
+  else html += `<div style="padding:0 8px 8px">${gameLogTableHtml([...entry.games].reverse(), logColsFor(d.player.position), {})}</div>`;
+  body.innerHTML = html;
+}
+
+function renderVsOpponent(body, t, d) {
+  const hist = d.history_vs_opponent || [];
+  const oppK = nflverseToKalshi(d.opponent);
+  const span = (d.game_log && d.game_log.seasons || []);
+  const since = span.length ? span[span.length - 1] : null;
+  if (!hist.length) {
+    body.innerHTML = `<div class="empty">${escapeHtml(d.player.name)} has no games vs ${oppK} on record${since ? ` since ${since}` : ''}.</div>`;
+    return;
+  }
+  const cols = logColsFor(d.player.position);
+  const wins = hist.filter(g => g.result === 'W').length, losses = hist.filter(g => g.result === 'L').length;
+  const ties = hist.filter(g => g.result === 'T').length;
+  const last = hist[hist.length - 1];
+  const tile = (l, v) => `<div class="stat-tile"><span class="sl">${l}</span><span class="sv mono">${v}</span></div>`;
+  const avg = (k) => (hist.reduce((a, g) => a + (Number(g[k]) || 0), 0) / hist.length).toFixed(1);
+  const keyStats = cols.filter(c => /YD/.test(c.h)).slice(0, 2);
+  let html = `<div class="vs-sum">
+    ${tile('MEETINGS', hist.length)}
+    ${tile('RECORD', wins + losses + ties ? `${wins}-${losses}${ties ? '-' + ties : ''}` : '—')}
+    ${tile('LAST MET', fmtGameDate(last.gameday, true))}
+    ${keyStats.map(c => tile(`AVG ${c.h}`, avg(c.k))).join('')}
+  </div>`;
+  html += `<div style="padding:0 8px 8px">${gameLogTableHtml([...hist].reverse(), cols, { withYear: true })}</div>`;
+  body.innerHTML = html;
 }
 
 // ---------- top-level render ----------
@@ -1260,7 +1874,6 @@ function renderResearch() {
   renderBook();
   renderMatchup();
   renderInjuries();
-  renderHistory();
 }
 
 // ========================================================================
@@ -1455,15 +2068,8 @@ function renderGameDetail(el, g) {
       <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600">${teamLogo(d.away, 32)}${d.away}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).away || ''}</span><span style="color:var(--dim);font-weight:400">@</span>${teamLogo(d.home, 32)}${d.home}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).home || ''}</span></span>
       <span class="mono" style="font-size:10.5px;color:var(--dim)">SPREAD ${spreadTxt} &middot; TOTAL ${totalTxt}</span>
     </div>
-    <div style="flex-grow:1;min-height:0;display:grid;grid-template-columns:220px 220px minmax(0,1fr);gap:8px;padding:0 4px 8px">
-      <div class="panel">
-        <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(d.away, 16)}${d.away} ROSTER</span><span class="mono" style="margin-left:auto;display:flex;align-items:center;padding-right:8px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim)">OVR</span></div>
-        <div class="panel-body">${rosterHtml(d.away_roster)}</div>
-      </div>
-      <div class="panel">
-        <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(d.home, 16)}${d.home} ROSTER</span><span class="mono" style="margin-left:auto;display:flex;align-items:center;padding-right:8px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim)">OVR</span></div>
-        <div class="panel-body">${rosterHtml(d.home_roster)}</div>
-      </div>
+    <div style="flex-grow:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 340px;gap:8px;padding:0 4px 8px">
+      ${(d.matchups || []).map(matchupPanelHtml).join('')}
       <div class="panel">
         <div class="panel-head"><span class="panel-title">GAME &amp; COMBO MARKETS</span></div>
         <div class="panel-body">${combosHtml(d.combos, d.away, d.home)}</div>
@@ -1476,17 +2082,103 @@ function ovrColor(ovr) {
   return ovr >= 90 ? 'var(--amber)' : ovr >= 80 ? 'var(--blue)' : ovr >= 70 ? 'var(--on)' : 'var(--dim)';
 }
 
-function rosterHtml(roster) {
-  if (!roster || !roster.length) return `<div class="empty">No roster data.</div>`;
-  return roster.map(p => {
-    const m = p.madden;
-    const tip = m ? `Madden ${m.iteration || ''}: ${m.ovr} OVR${m.archetype ? ' · ' + m.archetype : ''}${m.speed ? ' · ' + m.speed + ' SPD' : ''}` : 'No Madden rating found';
-    return `<div class="roster-player mono" data-open-player="${escapeHtml(p.full_name)}" style="height:22px;display:flex;align-items:center;gap:8px;padding:0 8px;border-bottom:1px solid var(--row-rule);font-size:11px">
-    <span style="width:28px;flex-shrink:0;color:var(--dim)">${p.position}</span>
-    <span style="flex-grow:1;color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.full_name)}</span>
-    <span title="${escapeHtml(tip)}" style="width:22px;flex-shrink:0;text-align:right;font-weight:600;color:${m ? ovrColor(m.ovr) : 'var(--faint)'}">${m ? m.ovr : '·'}</span>
+// Player rank tag: FantasyPros weekly ECR position rank for offense,
+// Defensive Power Index role rank for defense (colored by DPI percentile).
+function rankInfo(r) {
+  if (!r) return null;
+  if (r.kind === 'ecr') {
+    return { txt: r.label, color: 'var(--muted)',
+      tip: `FantasyPros weekly ECR ${r.label} (avg rank ${r.ecr}${r.sd !== null ? ', sd ' + r.sd : ''}; best ${r.best} / worst ${r.worst}) ${r.opp || ''}` };
+  }
+  return {
+    txt: r.label + (r.qualified ? '' : '*'),
+    color: !r.qualified ? 'var(--dim)' : r.dpi >= 90 ? 'var(--amber)' : r.dpi >= 70 ? 'var(--blue)' : r.dpi >= 40 ? 'var(--on)' : 'var(--dim)',
+    tip: `Defensive Power Index ${r.dpi}/100 (percentile vs ${r.role_count} qualified ${r.role})` +
+      (r.qualified ? ` · ${r.label}` : ` · not ranked yet: ${r.snaps} snaps`) +
+      (r.traits && r.traits.length ? ` · best: ${r.traits.join(', ')}` : ''),
+  };
+}
+
+function maddenTip(m) {
+  return m ? `Madden ${m.iteration || ''}: ${m.ovr} OVR${m.archetype ? ' · ' + m.archetype : ''}${m.speed ? ' · ' + m.speed + ' SPD' : ''}` : 'No Madden rating found';
+}
+
+function edgeColor(e) {
+  return e === null || e === undefined ? 'var(--dim)' : e >= 5 ? 'var(--blue)' : e <= -5 ? 'var(--orange)' : 'var(--muted)';
+}
+const signed = (e, dec = 0) => e === null || e === undefined ? '--' : (e > 0 ? '+' : '') + Number(e).toFixed(dec);
+
+// Last name for compact backup lists, skipping suffixes ("Samuel Jr." not "Jr.").
+const shortName = (n) => { const w = n.split(' '); const last = w[w.length - 1]; return w.length > 2 && /^(jr|sr|ii|iii|iv|v)\.?$/i.test(last) ? w[w.length - 2] : last; };
+
+// One depth-chart slot: starter (clickable, with rank tag) and the backups
+// behind him with their OVRs. `align` mirrors the defense side toward the center.
+function depthCellHtml(players, align) {
+  if (!players || !players.length) return `<div style="color:var(--faint);text-align:${align}">—</div>`;
+  const [st, ...backups] = players;
+  const rk = rankInfo(st.rank);
+  const rkHtml = rk ? `<span title="${escapeHtml(rk.tip)}" style="font-size:9.5px;color:${rk.color}">${escapeHtml(rk.txt)}</span>` : '';
+  const name = `<span class="roster-player" data-open-player="${escapeHtml(st.full_name)}" style="color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(st.full_name)}</span>`;
+  const img = st.headshot_url
+    ? `<img src="${escapeHtml(st.headshot_url)}" alt="" loading="lazy" data-open-player="${escapeHtml(st.full_name)}" class="roster-player" style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#161B22;object-fit:cover" onerror="this.style.visibility='hidden'">`
+    : `<span style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#161B22"></span>`;
+  const bk = backups.map((p, i) => `<span class="roster-player" data-open-player="${escapeHtml(p.full_name)}" title="${escapeHtml(maddenTip(p.madden))}">${i + 2} ${escapeHtml(shortName(p.full_name))} <span style="color:${p.madden ? ovrColor(p.madden.ovr) : 'var(--faint)'}">${p.madden ? p.madden.ovr : '·'}</span></span>`).join(' · ');
+  return `<div style="min-width:0;display:flex;align-items:center;gap:8px;${align === 'right' ? 'flex-direction:row-reverse' : ''}">
+    ${img}
+    <div style="min-width:0;display:flex;flex-direction:column;align-items:${align === 'right' ? 'flex-end' : 'flex-start'}">
+      <div style="display:flex;align-items:baseline;gap:6px;max-width:100%;${align === 'right' ? 'flex-direction:row-reverse' : ''}">${name}${rkHtml}</div>
+      ${bk ? `<div style="font-size:9.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${bk}</div>` : ''}
+    </div>
   </div>`;
-  }).join('');
+}
+
+function ovrHtml(players) {
+  const m = players && players[0] ? players[0].madden : null;
+  return `<span title="${escapeHtml(maddenTip(m))}" style="text-align:center;font-weight:600;font-size:12px;color:${m ? ovrColor(m.ovr) : 'var(--faint)'}">${m ? m.ovr : '·'}</span>`;
+}
+
+// Team A offense vs team B defense: each offensive starter lined up across
+// from the defender he usually faces, Madden OVR both sides, and the gap
+// (positive = offense edge).
+function matchupPanelHtml(mu) {
+  const grid = 'display:grid;grid-template-columns:34px minmax(0,1fr) 26px 40px 26px minmax(0,1fr) 34px;gap:6px;align-items:center';
+  let html = `<div class="panel">
+    <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(mu.offense_team, 16)}${mu.offense_team} OFF <span style="color:var(--dim);font-weight:400">vs</span> ${teamLogo(mu.defense_team, 16)}${mu.defense_team} DEF</span><span class="mono" style="margin-left:auto;display:flex;align-items:center;padding-right:8px;font-size:9.5px;color:var(--dim)">${mu.scheme} BASE · 11 PERS</span></div>
+    <div class="panel-body mono" style="font-size:11px">
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:6px 8px;border-bottom:1px solid var(--head-rule)">
+        ${mu.summary.map(u => `<div title="Avg Madden OVR of paired starters: ${u.off_label} ${u.off_avg ?? '--'} vs ${u.def_label} ${u.def_avg ?? '--'}" style="display:flex;flex-direction:column;gap:2px;padding:4px 6px;background:var(--panel-head)">
+          <span style="font-size:9.5px;letter-spacing:0.06em;color:var(--dim)">${u.unit}</span>
+          <span><span style="color:var(--on)">${u.off_avg ?? '--'}</span> <span style="color:var(--dim)">v</span> <span style="color:var(--on)">${u.def_avg ?? '--'}</span> <b style="color:${edgeColor(u.edge)};font-weight:600">${signed(u.edge, 1)}</b></span>
+        </div>`).join('')}
+      </div>
+      <div style="${grid};height:18px;padding:0 8px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+        <span>POS</span><span>${mu.offense_team} OFFENSE</span><span style="text-align:center">OVR</span><span style="text-align:center">EDGE</span><span style="text-align:center">OVR</span><span style="text-align:right">${mu.defense_team} DEFENSE</span><span style="text-align:right">POS</span>
+      </div>`;
+  let unit = null;
+  mu.rows.forEach(r => {
+    if (r.unit !== unit) {
+      unit = r.unit;
+      html += `<div style="padding:6px 8px 2px;font-size:9.5px;letter-spacing:0.08em;color:var(--label)">${unit}</div>`;
+    }
+    const e = r.edge;
+    html += `<div style="${grid};min-height:38px;padding:3px 8px;border-bottom:1px solid var(--row-rule)">
+      <span style="color:var(--dim)">${r.off_pos}</span>
+      ${depthCellHtml(r.offense, 'left')}
+      ${ovrHtml(r.offense)}
+      <span style="text-align:center;font-weight:600;color:${edgeColor(e)};background:${e >= 5 ? 'rgba(90,169,255,0.12)' : e <= -5 ? 'rgba(255,122,69,0.12)' : 'transparent'};padding:2px 0">${signed(e)}</span>
+      ${ovrHtml(r.defense)}
+      ${depthCellHtml(r.defense, 'right')}
+      <span style="text-align:right;color:var(--dim)">${r.def_pos || ''}</span>
+    </div>`;
+  });
+  if (mu.extras && mu.extras.length) {
+    html += `<div style="padding:6px 8px;font-size:10px;color:var(--dim)">ALSO IN BASE D: ${mu.extras.map(x => {
+      const p = x.defense[0];
+      return `${x.def_pos} <span class="roster-player" data-open-player="${escapeHtml(p.full_name)}" style="color:var(--label)">${escapeHtml(p.full_name)}</span> <span style="color:${p.madden ? ovrColor(p.madden.ovr) : 'var(--faint)'}">${p.madden ? p.madden.ovr : '·'}</span>`;
+    }).join(' · ')}</div>`;
+  }
+  html += `<div style="padding:4px 8px 8px;font-size:9.5px;color:var(--faint)">EDGE = offense OVR − defender OVR · typical alignment, not snap charting</div></div></div>`;
+  return html;
 }
 
 // The outcome(s) priced closest to 50% within one market -- the "main line".
@@ -1680,13 +2372,6 @@ function buildGridSkeleton(grid) {
           <div id="injBody" class="panel-body"></div>
         </div>
       </div>
-      <div id="history" class="panel">
-        <div class="panel-head" style="align-items:center">
-          <span class="panel-title">HISTORY</span>
-          <span id="historyLabel" class="mono" style="font-size:10px;color:var(--dim)"></span>
-        </div>
-        <div id="historyBody" class="panel-body"></div>
-      </div>
     </div>`;
 }
 
@@ -1705,7 +2390,13 @@ document.addEventListener('click', (e) => {
   const backSlateT = e.target.closest('[data-back-slate]');
   const openGameTabT = e.target.closest('[data-open-gametab]');
   const closeGameTabT = e.target.closest('[data-close-gametab]');
+  const comboT = e.target.closest('[data-combo]');
+  const logSeasonT = e.target.closest('[data-logseason]');
+  const gameUrlT = e.target.closest('[data-gameurl]');
   const t = activeTicket();
+  if (gameUrlT) { window.open(gameUrlT.dataset.gameurl, '_blank', 'noopener'); return; }
+  if (logSeasonT && t) { t.ui.logSeason = Number(logSeasonT.dataset.logseason); renderMarkets(); return; }
+  if (comboT && t && t.data) { if (!comboT.disabled) handleComboClick(comboT, t); return; }
   if (closeT) { e.stopPropagation(); closeTicket(Number(closeT.dataset.close)); return; }
   if (closeGameTabT) { e.stopPropagation(); closeGameTab(Number(closeGameTabT.dataset.closeGametab)); return; }
   if (railT) { state.module = railT.dataset.module; render(); return; }
@@ -1808,6 +2499,11 @@ function submitSearch(v) {
   hideSuggest();
   state.module = 'research'; newTicket(v); qEl.value = '';
 }
+
+document.addEventListener('change', (e) => {
+  const t = activeTicket();
+  if (t && e.target.dataset && e.target.dataset.comboInput) handleComboInput(e.target, t);
+});
 
 qEl.addEventListener('input', () => { loadPlayers(); sugg.items = matchPlayers(qEl.value); sugg.idx = -1; renderSuggest(); });
 qEl.addEventListener('blur', () => setTimeout(hideSuggest, 120));

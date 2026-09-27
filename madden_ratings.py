@@ -3,8 +3,8 @@ Madden overall ratings for the game-view rosters.
 
 EA's public drop-api still serves the previous game's ratings, so this reads
 the current-edition data embedded (__NEXT_DATA__) in EA's own ratings page,
-one request per team via its `?team=<EA team id>` filter. Results are cached
-in memory and on disk for 12h (EA updates ratings weekly).
+one request per team via its `?team=<EA team id>` filter. EA updates ratings
+weekly, so results are cached in memory and on disk for 7 days.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ import requests
 
 PAGE_URL = "https://www.ea.com/games/madden-nfl/ratings"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/128 Safari/537.36"}
-CACHE_SECONDS = 12 * 3600
+CACHE_SECONDS = 7 * 24 * 3600
 CACHE_PATH = os.path.join(os.path.dirname(__file__), "cache", "madden_ratings.json")
 
 # EA team labels ("NY Jets", "Los Angeles Rams") end in the nickname, which is
@@ -111,6 +111,12 @@ def team_ratings(team: str) -> list[dict]:
         _mem[team] = {"ts": time.time(), "players": players}
         _save_disk(_mem)
         return players
+
+
+def warm() -> None:
+    """Fetch any team whose ratings are missing or older than a week."""
+    for team in NICKNAME_TO_NFLVERSE.values():
+        team_ratings(team)
 
 
 def _norm(name: str) -> str:

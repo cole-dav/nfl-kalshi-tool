@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 
-import madden_ratings as mr
+import depth_matchups as dm
 import nflverse_data as nd
 from kalshi_markets import MarketIndex
 
@@ -50,6 +50,5 @@ def build_game_detail(event_ticker: str) -> dict:
         **core,
         "records": {"away": records.get(away_nflverse, "0-0"), "home": records.get(home_nflverse, "0-0")},
         "combos": combos,
-        "away_roster": mr.attach_ratings(nd.team_roster(away_nflverse), away_nflverse),
-        "home_roster": mr.attach_ratings(nd.team_roster(home_nflverse), home_nflverse),
+        "matchups": dm.game_matchups(away_nflverse, home_nflverse),
     }
