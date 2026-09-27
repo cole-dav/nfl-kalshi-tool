@@ -59,6 +59,21 @@ def _cache_write(path: str, params: dict | None, data: dict) -> None:
         json.dump(data, f)
 
 
+def public_get(path: str, params: dict | None = None) -> dict[str, Any]:
+    """Unauthenticated GET for public market-data endpoints (markets, events,
+    multivariate collections). Shares the signed client's disk cache; `path`
+    is the same /trade-api/v2/... form."""
+    cached = _cache_read(path, params)
+    if cached is not None:
+        return cached
+    host = KALSHI_BASE_URL.split("/trade-api", 1)[0]
+    resp = requests.get(host + path, params=params, timeout=20)
+    resp.raise_for_status()
+    data = resp.json()
+    _cache_write(path, params, data)
+    return data
+
+
 def _load_private_key():
     key_path = os.environ.get("KALSHI_PRIVATE_KEY_PATH")
     if not key_path:
@@ -128,7 +143,8 @@ class KalshiClient:
                 headers = self._headers(method, path)
                 resp = self._session.request(method, url, headers=headers, timeout=20, **kwargs)
                 resp.raise_for_status()
-                return resp.json()
+                # accept/delete endpoints answer 204 with no body
+                return resp.json() if resp.content else {}
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                 last_exc = e
             except requests.exceptions.HTTPError as e:
@@ -147,6 +163,18 @@ class KalshiClient:
         data = self._request("GET", path, params=params)
         _cache_write(path, params, data)
         return data
+
+    # Writes are never cached and never retried: a timed-out POST may still
+    # have landed (e.g. an RFQ was created), and blindly re-sending it would
+    # double-submit.
+    def post(self, path: str, body: dict) -> dict[str, Any]:
+        return self._request("POST", path, max_retries=1, json=body)
+
+    def put(self, path: str, body: dict) -> dict[str, Any]:
+        return self._request("PUT", path, max_retries=1, json=body)
+
+    def delete(self, path: str) -> dict[str, Any]:
+        return self._request("DELETE", path, max_retries=1)
 
     # -- market discovery -------------------------------------------------
 

@@ -138,6 +138,51 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
 .backlink{color:var(--amber);cursor:pointer;font-size:11px}
 .backlink:hover{color:#FFC57A}
 .combo-block{border-bottom:1px solid var(--row-rule);padding:8px 0}
+#rightcol.combo-mode #book{height:auto;flex:5 1 0;min-height:0}
+#rightcol.combo-mode #lowerrow{height:auto;flex:1.4 1 0;min-height:0}
+#rightcol.combo-mode #history{display:none}
+.combo-legend{display:flex;align-items:center;gap:14px;font-size:10px;color:var(--dim);padding:0 0 6px}
+.combo-legend .swatch{margin-right:4px}
+.combo-colhead{display:grid;align-items:end;font-size:9px;color:var(--dim);padding-bottom:4px;border-bottom:1px solid var(--head-rule)}
+.combo-col{display:flex;flex-direction:column;align-items:center;line-height:1.25;padding:2px 0;border-top:2px solid transparent;color:var(--dim);text-align:center}
+.combo-col:hover{color:var(--on);background:#141920}
+.combo-col.on{color:var(--amber);border-top-color:var(--amber);background:var(--amber-soft)}
+.combo-col .px{color:var(--muted)}
+.combo-row{height:22px;display:grid;align-items:center;font-size:10.5px;border-bottom:1px solid var(--row-rule)}
+.combo-row.on{background:var(--amber-soft)}
+.combo-rowbtn{display:flex;align-items:center;gap:6px;height:100%;text-align:left;color:var(--on);min-width:0}
+.combo-rowbtn:hover .nm{color:var(--amber)}
+.combo-rowbtn .box{width:12px;height:12px;flex-shrink:0;border:1px solid var(--faint);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--bg)}
+.combo-row.on .combo-rowbtn .box{background:var(--amber);border-color:var(--amber)}
+.combo-rowbtn .nm{flex-grow:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.combo-rowbtn .px{color:var(--muted);padding-right:6px}
+.combo-rowbtn.inelig,.combo-col.inelig{opacity:0.45;cursor:not-allowed}
+.combo-cell{width:20px;height:13px;font-size:9px;display:flex;align-items:center;justify-content:center}
+.combo-cell.pair{outline:1px solid var(--on);outline-offset:1px}
+.combo-slip{margin:4px 8px 8px;border-top:1px solid var(--head-rule);padding-top:6px}
+.combo-slip-head{display:flex;align-items:center;gap:10px;height:22px}
+.combo-slip-grid{display:grid;align-items:center;gap:6px;border-bottom:1px solid var(--row-rule);padding:2px 0}
+.seg{display:flex}
+.seg button{font-size:9.5px;padding:1px 6px;border:1px solid var(--faint);color:var(--dim)}
+.seg button + button{border-left:0}
+.seg button.on{background:var(--amber);border-color:var(--amber);color:var(--bg);font-weight:600}
+.stepper{display:flex;align-items:center;gap:4px}
+.stepper span{min-width:44px;text-align:center}
+.stepper button{color:var(--muted);font-size:9px;padding:0 3px}
+.stepper button:disabled{color:var(--faint);cursor:default}
+.combo-x{color:var(--dim);font-size:13px}
+.combo-x:hover{color:var(--orange)}
+.combo-msg{font-size:10.5px;padding:2px 4px;color:var(--muted)}
+.combo-msg.err{color:var(--orange)}
+.combo-msg.warn{color:var(--amber)}
+.combo-stake{display:flex;align-items:center;gap:2px;font-size:11px;white-space:nowrap}
+.combo-stake input::-webkit-inner-spin-button,.combo-stake input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.combo-stake input{-moz-appearance:textfield;width:40px;min-width:0;background:var(--bg);border:1px solid var(--head-rule);color:var(--on);font-size:12px;padding:1px 3px}
+.combo-quote{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.combo-btn{white-space:nowrap;background:var(--amber);color:var(--bg);font-weight:600;font-size:11px;letter-spacing:0.04em;padding:5px 10px}
+.combo-btn:disabled{background:#1A2027;color:var(--dim);cursor:not-allowed}
+.combo-btn.armed{background:var(--orange)}
+.combo-note{font-size:10.5px;color:var(--dim)}
 .section-label{font-size:10px;letter-spacing:0.1em;color:var(--dim);font-weight:600;padding:8px 4px 4px}
 </style>
 </head>
@@ -848,8 +893,9 @@ function renderBook() {
   head.innerHTML = tabs.map(tb => `<button type="button" class="tab ${t.ui.risk === tb.id ? 'on' : ''}" data-risk="${tb.id}">${tb.label}${tb.count !== '' ? `<span class="cnt mono">${tb.count}</span>` : ''}</button>`).join('')
     + `<div style="flex-grow:1"></div>` + (held.length === 0 ? '' : '');
 
+  document.getElementById('rightcol').classList.toggle('combo-mode', t.ui.risk === 'corr');
   if (t.ui.risk === 'pos') renderPositions(body, held);
-  else if (t.ui.risk === 'corr') renderCorrelation(body, d);
+  else if (t.ui.risk === 'corr') renderCorrelation(body, d, t);
   else renderExposure(body, held);
 }
 
@@ -908,40 +954,428 @@ function renderPositions(body, held) {
   body.innerHTML = `<div style="padding:8px">${positionsTilesHtml(rows)}<div style="margin-top:8px">${positionsTableHtml(rows)}</div></div>`;
 }
 
-function legLabel(c) {
-  const who = c.player_name ? c.player_name.split(' ').pop().toUpperCase() : (c.team_code || 'TEAM');
-  const stat = SERIES_META[c.series] ? SERIES_META[c.series].short : c.stat;
-  return `${who} ${lineLabel(SERIES_META[c.series] || {}, c.threshold)}<br>${stat}`;
+// ---------- combo builder (Correlation tab) ----------
+// The grid is the picker: rows are the searched player's stat lines, columns
+// are the teammate / team-total lines the correlation rules link them to.
+// Clicking a row label or column header toggles that line into the combo
+// slip underneath, which prices it (independent odds), checks it against
+// Kalshi's combo rules server-side, and can pull a live maker quote via RFQ.
+const COMBO_POLL_MS = 1500;
+const COMBO_POLL_MAX_MS = 45000;
+
+function loadUnitSize() { try { const v = Number(localStorage.getItem('combo.unit')); return v > 0 ? v : 10; } catch (e) { return 10; } }
+function saveUnitSize(v) { try { localStorage.setItem('combo.unit', String(v)); } catch (e) {} }
+
+function comboState(t) {
+  if (!t.combo) t.combo = { legs: [], check: null, checkSig: null, checking: false, seq: 0, timer: null,
+    quote: null, unit: loadUnitSize(), units: 1, armed: null, flash: null };
+  return t.combo;
 }
 
-function renderCorrelation(body, d) {
-  const flags = d.correlations.flags || [];
-  if (!flags.length) { body.innerHTML = `<div class="empty">No correlation flags for this player's markets.</div>`; return; }
-  const colTickers = [];
-  const colMeta = {};
-  flags.forEach(f => f.correlated_with.forEach(c => { if (!colMeta[c.ticker]) { colMeta[c.ticker] = c; colTickers.push(c.ticker); } }));
+function familyKey(m) { return m.series + '|' + (m.player_id || m.team_code || m.player_name || ''); }
+function gameMarkets(d) { return [...d.markets.player_props, ...d.markets.teammate_props, ...d.markets.team_game_markets]; }
+function marketIdx(d) {
+  if (!d._mktIdx) { d._mktIdx = {}; gameMarkets(d).forEach(m => { d._mktIdx[m.ticker] = m; }); }
+  return d._mktIdx;
+}
+function familyLadder(d, key) { return gameMarkets(d).filter(m => familyKey(m) === key).sort((a, b) => a.threshold - b.threshold); }
+function closestToCoinflip(ms) {
+  const priced = ms.filter(m => m.implied_prob_yes !== null && m.implied_prob_yes !== undefined);
+  if (!priced.length) return null;
+  return priced.reduce((a, b) => Math.abs(b.implied_prob_yes - 0.5) < Math.abs(a.implied_prob_yes - 0.5) ? b : a);
+}
+function eventOf(m) { return m.event_ticker || m.ticker.split('-').slice(0, 2).join('-'); }
+function comboEligible(d, m) {
+  const ev = d.correlations.combo_eligible_events;
+  return !ev || !ev.length || ev.includes(eventOf(m));
+}
+function legSig(legs) { return legs.map(l => l.ticker + ':' + l.side).join(','); }
 
-  let html = `<div style="padding:6px 8px 8px;display:flex;flex-direction:column;overflow:auto">
-    <div class="mono" style="display:grid;grid-template-columns:130px repeat(${colTickers.length},minmax(64px,1fr)) 30px;align-items:end;font-size:9px;color:var(--dim);padding-bottom:4px;border-bottom:1px solid var(--head-rule)">
-      <span style="letter-spacing:0.06em">REF LINE ↓ / LEG →</span>
-      ${colTickers.map(tk => `<span style="text-align:center;line-height:1.2">${legLabel(colMeta[tk])}</span>`).join('')}
-      <span class="right">Σ</span>
+function comboGrid(d) {
+  const idx = marketIdx(d);
+  const fams = {};
+  d.markets.player_props.forEach(m => { (fams[familyKey(m)] = fams[familyKey(m)] || []).push(m); });
+  const order = Object.keys(SERIES_META);
+  const rows = Object.entries(fams).map(([key, ms]) => ({ key, rep: closestToCoinflip(ms) })).filter(r => r.rep)
+    .sort((a, b) => order.indexOf(a.rep.series) - order.indexOf(b.rep.series));
+  const cols = [], colSeen = {}, links = {};
+  (d.correlations.flags || []).forEach(f => {
+    const rm = idx[f.ticker];
+    if (!rm) return;
+    const rk = familyKey(rm);
+    f.correlated_with.forEach(c => {
+      const cm = idx[c.ticker] || c;
+      const ck = familyKey(cm);
+      if (!colSeen[ck]) { colSeen[ck] = true; cols.push({ key: ck, rep: cm, reason: c.reason }); }
+      (links[rk] = links[rk] || new Set()).add(ck);
+    });
+  });
+  return { rows, cols, links };
+}
+
+function sideProb(m, side) {
+  const p = m.implied_prob_yes;
+  if (p === null || p === undefined) return null;
+  return side === 'yes' ? p : 1 - p;
+}
+function sideLine(m, side) {
+  const meta = SERIES_META[m.series] || {};
+  if (side === 'yes') return lineLabel(meta, m.threshold);
+  return 'U' + (meta.over ? m.threshold : Math.round(m.threshold + 0.5));
+}
+function whoLabel(m) {
+  return m.player_name ? m.player_name.split(' ').pop().toUpperCase() : (m.team_code || 'TEAM') + ' TT';
+}
+function statShort(m) { return SERIES_META[m.series] ? SERIES_META[m.series].short : (m.series === 'KXNFLTEAMTOTAL' ? 'Team Total' : m.stat); }
+const cents = (p) => p === null || p === undefined ? '--' : Math.round(p * 100) + '¢';
+const fmtUnits = (u) => u === null || u === undefined ? '--' : '+' + (u >= 10 ? u.toFixed(1) : u.toFixed(2)) + 'u';
+const fmtAmerican = (a) => a === null || a === undefined ? '--' : (a > 0 ? '+' : '') + a;
+function americanOdds(p) {
+  if (!p || p <= 0 || p >= 1) return null;
+  return p >= 0.5 ? Math.round(-100 * p / (1 - p)) : Math.round(100 * (1 - p) / p);
+}
+
+// Running (independent) combo odds after each leg. Prefers fresh prices from
+// the last server check when it matches the current slip.
+function comboPricing(d, cs) {
+  const idx = marketIdx(d);
+  const fresh = cs.check && cs.checkSig === legSig(cs.legs) ? cs.check.legs : null;
+  let p = 1;
+  return cs.legs.map((l, i) => {
+    const q = fresh && fresh[i].prob !== null ? fresh[i].prob : sideProb(idx[l.ticker] || {}, l.side);
+    p = (p === null || q === null) ? null : p * q;
+    return { prob: q, run: p, units: p ? 1 / p - 1 : null, american: americanOdds(p) };
+  });
+}
+
+// Background refreshes (validation results, quote polling) skip the redraw
+// while a stake input has focus so typing isn't interrupted.
+function rerenderCombo(t) {
+  if (activeTicket() !== t || t.ui.risk !== 'corr') return;
+  const a = document.activeElement;
+  if (a && a.dataset && a.dataset.comboInput) return;
+  renderBook();
+}
+
+function comboChanged(t) {
+  const cs = comboState(t);
+  cs.armed = null;
+  if (cs.quote) { stopQuotePolling(cs); if (cs.quote.rfq_id) cancelRfq(cs.quote.rfq_id); cs.quote = null; }
+  scheduleComboCheck(t);
+  renderBook();
+}
+
+function scheduleComboCheck(t) {
+  const cs = comboState(t);
+  clearTimeout(cs.timer);
+  if (!cs.legs.length) { cs.check = null; cs.checkSig = null; cs.checking = false; return; }
+  cs.checking = true;
+  cs.timer = setTimeout(async () => {
+    const seq = ++cs.seq;
+    const sig = legSig(cs.legs);
+    try {
+      const resp = await fetch('/api/combo/validate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ legs: cs.legs.map(l => ({ market_ticker: l.ticker, side: l.side })) }) });
+      const data = await resp.json();
+      if (seq !== cs.seq) return;
+      cs.check = resp.ok ? data : { ok: false, legs: [], issues: [{ level: 'error', msg: data.error || 'check failed' }] };
+    } catch (e) {
+      if (seq !== cs.seq) return;
+      cs.check = { ok: false, legs: [], issues: [{ level: 'error', msg: 'check failed: ' + e }] };
+    }
+    cs.checkSig = sig;
+    cs.checking = false;
+    rerenderCombo(t);
+  }, 250);
+}
+
+function cancelRfq(rfqId) {
+  fetch('/api/combo/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rfq_id: rfqId }) }).catch(() => {});
+}
+function stopQuotePolling(cs) { if (cs.quote && cs.quote.poll) { clearInterval(cs.quote.poll); cs.quote.poll = null; } }
+
+async function requestComboQuote(t) {
+  const cs = comboState(t);
+  const stake = cs.unit * cs.units;
+  cs.quote = { phase: 'requesting', started: Date.now() };
+  renderBook();
+  try {
+    const resp = await fetch('/api/combo/quote', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ legs: cs.legs.map(l => ({ market_ticker: l.ticker, side: l.side })), stake_dollars: stake }) });
+    const data = await resp.json();
+    if (!cs.quote || cs.quote.phase !== 'requesting') { if (resp.ok) cancelRfq(data.rfq_id); return; }
+    if (!resp.ok) { cs.quote = { phase: 'error', error: data.error || 'quote request failed' }; renderBook(); return; }
+    cs.quote = { phase: 'waiting', started: Date.now(), stake, rfq_id: data.rfq_id, market_ticker: data.market_ticker,
+      collection: data.collection, title: data.title, quotes: [], best: null, poll: null };
+    cs.quote.poll = setInterval(() => pollComboQuotes(t), COMBO_POLL_MS);
+    pollComboQuotes(t);
+  } catch (e) {
+    cs.quote = { phase: 'error', error: String(e) };
+  }
+  renderBook();
+}
+
+async function pollComboQuotes(t) {
+  const cs = comboState(t);
+  const q = cs.quote;
+  if (!q || !q.rfq_id) return;
+  if (Date.now() - q.started > COMBO_POLL_MAX_MS) {
+    stopQuotePolling(cs);
+    if (!q.quotes.length) q.phase = 'expired';
+    rerenderCombo(t);
+    return;
+  }
+  try {
+    const resp = await fetch('/api/combo/quotes?rfq_id=' + encodeURIComponent(q.rfq_id));
+    const data = await resp.json();
+    if (cs.quote !== q) return;
+    if (!resp.ok) { q.pollError = data.error; }
+    else {
+      q.pollError = null;
+      q.quotes = data.quotes || [];
+      q.best = data.best;
+      q.rfqStatus = data.rfq_status;
+      if (q.best) q.phase = 'quoted';
+    }
+  } catch (e) { q.pollError = String(e); }
+  rerenderCombo(t);
+}
+
+async function acceptComboQuote(t, quoteId) {
+  const cs = comboState(t);
+  const q = cs.quote;
+  if (!q) return;
+  stopQuotePolling(cs);
+  q.phase = 'accepting';
+  renderBook();
+  try {
+    const resp = await fetch('/api/combo/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rfq_id: q.rfq_id, quote_id: quoteId, side: 'yes' }) });
+    const data = await resp.json();
+    q.phase = resp.ok ? 'accepted' : 'error';
+    q.error = resp.ok ? null : (data.error || 'accept failed');
+    q.acceptMsg = resp.ok ? data.status : null;
+  } catch (e) { q.phase = 'error'; q.error = String(e); }
+  cs.armed = null;
+  renderBook();
+}
+
+function handleComboClick(el, t) {
+  const d = t.data, cs = comboState(t), act = el.dataset.combo, key = el.dataset.key;
+  const i = cs.legs.findIndex(l => l.key === key);
+  cs.flash = null;
+  if (act === 'toggle') {
+    if (i >= 0) cs.legs.splice(i, 1);
+    else {
+      const m = marketIdx(d)[el.dataset.ticker];
+      if (!m) return;
+      if (!comboEligible(d, m)) { cs.flash = `${statShort(m)} isn't offered in Kalshi combos.`; renderBook(); return; }
+      cs.legs.push({ key, ticker: m.ticker, side: 'yes' });
+    }
+    comboChanged(t);
+  } else if (act === 'side' && i >= 0) {
+    cs.legs[i].side = el.dataset.side; comboChanged(t);
+  } else if (act === 'step' && i >= 0) {
+    const ladder = familyLadder(d, key);
+    const j = ladder.findIndex(m => m.ticker === cs.legs[i].ticker) + Number(el.dataset.dir);
+    if (j < 0 || j >= ladder.length) return;
+    cs.legs[i].ticker = ladder[j].ticker; comboChanged(t);
+  } else if (act === 'remove' && i >= 0) {
+    cs.legs.splice(i, 1); comboChanged(t);
+  } else if (act === 'clear') {
+    cs.legs = []; comboChanged(t);
+  } else if (act === 'quote') {
+    requestComboQuote(t);
+  } else if (act === 'cancel') {
+    if (cs.quote) { stopQuotePolling(cs); if (cs.quote.rfq_id) cancelRfq(cs.quote.rfq_id); }
+    cs.quote = null; cs.armed = null; renderBook();
+  } else if (act === 'accept') {
+    // Two-step in-page confirm (no browser dialogs): first click arms, second places.
+    const qid = el.dataset.quote;
+    if (cs.armed !== qid) {
+      cs.armed = qid; renderBook();
+      setTimeout(() => { if (cs.armed === qid) { cs.armed = null; if (activeTicket() === t) renderBook(); } }, 6000);
+    } else acceptComboQuote(t, qid);
+  }
+}
+
+function handleComboInput(el, t) {
+  const cs = comboState(t);
+  const v = Number(el.value);
+  if (!(v > 0)) { renderBook(); return; }
+  if (el.dataset.comboInput === 'unit') { cs.unit = v; saveUnitSize(v); }
+  else cs.units = v;
+  if (cs.quote && cs.quote.phase !== 'accepted') {
+    // The RFQ was sized to the old stake; drop it rather than quote the wrong size.
+    stopQuotePolling(cs); if (cs.quote.rfq_id) cancelRfq(cs.quote.rfq_id); cs.quote = null;
+  }
+  renderBook();
+}
+
+function renderCorrelation(body, d, t) {
+  const cs = comboState(t);
+  const g = comboGrid(d);
+  if (!g.rows.length) { body.innerHTML = `<div class="empty">No priced props for this player.</div>`; return; }
+  const idx = marketIdx(d);
+  const sel = {};
+  cs.legs.forEach(l => { sel[l.key] = l; });
+  const shown = (key, rep) => (sel[key] && idx[sel[key].ticker]) || rep;
+  const cols = `grid-template-columns:150px repeat(${g.cols.length},minmax(46px,1fr)) 22px`;
+  const pname = d.player.name.split(' ').pop().toUpperCase();
+
+  let html = `<div style="padding:6px 8px 8px;display:flex;flex-direction:column">
+    <div class="combo-legend">
+      <span><span class="swatch" style="background:var(--blue)"></span>QB ↔ PASS-CATCHER</span>
+      <span><span class="swatch" style="background:var(--amber)"></span>TEAM TOTAL</span>
+      <span style="color:var(--muted)">Click a row or column to add it to the combo</span>
     </div>
-    ${flags.map(f => {
-      const rowLbl = (f.player_name ? f.player_name.split(' ').pop().toUpperCase() : '') + ' ' + f.stat;
-      const hitSet = new Set(f.correlated_with.map(c => c.ticker));
-      return `<div class="mono" style="height:21px;display:grid;grid-template-columns:130px repeat(${colTickers.length},minmax(64px,1fr)) 30px;align-items:center;font-size:10.5px;border-bottom:1px solid var(--row-rule)">
-        <span style="color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(rowLbl)}</span>
-        ${colTickers.map(tk => {
-          const hit = hitSet.has(tk);
-          const isTotal = hit && colMeta[tk].reason === 'same-team total over';
-          return `<span style="display:flex;justify-content:center"><span style="width:20px;height:13px;background:${hit ? (isTotal ? 'var(--amber)' : 'var(--blue)') : '#1A2027'};color:#07090B;font-size:9px;display:flex;align-items:center;justify-content:center">${hit ? '+' : ''}</span></span>`;
+    <div class="mono combo-colhead" style="${cols}">
+      <span style="letter-spacing:0.06em;align-self:end">${escapeHtml(pname)} ↓ / LEG →</span>
+      ${g.cols.map(c => {
+        const m = shown(c.key, c.rep), on = !!sel[c.key], elig = comboEligible(d, m);
+        const side = on ? sel[c.key].side : 'yes';
+        return `<button type="button" class="combo-col ${on ? 'on' : ''} ${elig ? '' : 'inelig'}" data-combo="toggle" data-key="${escapeHtml(c.key)}" data-ticker="${escapeHtml(m.ticker)}"
+          title="${escapeHtml((m.title || '') + (elig ? '' : ' · not offered in Kalshi combos'))}">
+          <span>${escapeHtml(whoLabel(m))} ${escapeHtml(sideLine(m, side))}</span><span>${escapeHtml(statShort(m))}</span><span class="px">${cents(sideProb(m, side))}</span>
+        </button>`;
+      }).join('')}
+      <span class="right" style="align-self:end">Σ</span>
+    </div>
+    ${g.rows.map(r => {
+      const m = shown(r.key, r.rep), on = !!sel[r.key], elig = comboEligible(d, m);
+      const side = on ? sel[r.key].side : 'yes';
+      const linked = g.links[r.key] || new Set();
+      return `<div class="mono combo-row ${on ? 'on' : ''}" style="${cols}">
+        <button type="button" class="combo-rowbtn ${elig ? '' : 'inelig'}" data-combo="toggle" data-key="${escapeHtml(r.key)}" data-ticker="${escapeHtml(m.ticker)}"
+          title="${escapeHtml((m.title || '') + (elig ? '' : ' · not offered in Kalshi combos'))}">
+          <span class="box">${on ? '✓' : ''}</span>
+          <span class="nm">${escapeHtml(statShort(m))} ${escapeHtml(sideLine(m, side))}</span>
+          <span class="px">${elig ? cents(sideProb(m, side)) : 'n/a'}</span>
+        </button>
+        ${g.cols.map(c => {
+          const hit = linked.has(c.key), colOn = !!sel[c.key];
+          const both = on && colOn, one = on || colOn;
+          const bg = hit ? (c.reason === 'same-team total over' ? 'var(--amber)' : 'var(--blue)') : '#1A2027';
+          const op = hit ? (both ? 1 : one ? 0.7 : 0.35) : 1;
+          const mark = hit ? (both ? '●' : '+') : (both ? '·' : '');
+          return `<span style="display:flex;justify-content:center"><span class="combo-cell ${both ? 'pair' : ''}" style="background:${bg};opacity:${op};color:${hit ? '#07090B' : 'var(--dim)'}">${mark}</span></span>`;
         }).join('')}
-        <span class="right" style="color:var(--amber)">${f.correlated_with.length}</span>
+        <span class="right" style="color:var(--amber)">${linked.size || ''}</span>
       </div>`;
     }).join('')}
   </div>`;
+  html += comboSlipHtml(d, cs);
   body.innerHTML = html;
+}
+
+function comboSlipHtml(d, cs) {
+  const idx = marketIdx(d);
+  const fresh = cs.check && cs.checkSig === legSig(cs.legs) ? cs.check : null;
+  const price = comboPricing(d, cs);
+  const fin = price.length ? price[price.length - 1] : null;
+  const stake = cs.unit * cs.units;
+  const slipCols = 'grid-template-columns:18px minmax(0,1fr) 72px 92px 40px 50px 58px 18px';
+
+  let html = `<div class="combo-slip">
+    <div class="combo-slip-head">
+      <span class="panel-title" style="margin:0">COMBO SLIP</span>
+      <span class="mono" style="font-size:10px;color:var(--dim)">${cs.legs.length} leg${cs.legs.length === 1 ? '' : 's'}${d.correlations.combo_collection ? ' · ' + escapeHtml(d.correlations.combo_collection) : ''}</span>
+      <span style="flex-grow:1"></span>
+      ${cs.checking ? `<span class="mono" style="font-size:10px;color:var(--dim)">checking…</span>` : ''}
+      ${cs.legs.length ? `<button type="button" class="backlink" data-combo="clear">clear</button>` : ''}
+    </div>`;
+  if (cs.flash) html += `<div class="combo-msg err">${escapeHtml(cs.flash)}</div>`;
+  if (!cs.legs.length) {
+    return html + `<div class="empty" style="padding:12px">No legs yet. Rows are ${escapeHtml(d.player.name)}'s lines; columns are the teammate and team-total lines they move with. A filled ● cell means both sides of a correlated pair are in your combo.</div></div>`;
+  }
+
+  html += `<div class="mono combo-slip-grid" style="${slipCols};font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+    <span>#</span><span>LEG</span><span>SIDE</span><span>LINE</span><span class="right">PROB</span><span class="right">COMBO</span><span class="right">PAYS</span><span></span>
+  </div>`;
+  cs.legs.forEach((l, i) => {
+    const m = idx[l.ticker] || { ticker: l.ticker, series: '', threshold: 0 };
+    const chk = fresh && fresh.legs[i];
+    const ladder = familyLadder(d, l.key);
+    const at = ladder.findIndex(x => x.ticker === l.ticker);
+    const p = price[i];
+    const errs = chk ? chk.errors : [], warns = chk ? chk.warnings : [];
+    html += `<div class="mono combo-slip-grid" style="${slipCols};font-size:11px;min-height:22px;${errs.length ? 'background:rgba(255,122,69,0.08)' : ''}">
+      <span style="color:${errs.length ? 'var(--orange)' : chk ? 'var(--blue)' : 'var(--dim)'}" title="${escapeHtml([...errs, ...warns].join(' · ') || (chk ? 'valid combo leg' : 'checking'))}">${errs.length ? '✗' : chk ? '✓' : '·'}</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--on)">${escapeHtml(whoLabel(m))} <span style="color:var(--muted)">${escapeHtml(statShort(m))}</span></span>
+      <span class="seg"><button type="button" class="${l.side === 'yes' ? 'on' : ''}" data-combo="side" data-side="yes" data-key="${escapeHtml(l.key)}">YES</button><button type="button" class="${l.side === 'no' ? 'on' : ''}" data-combo="side" data-side="no" data-key="${escapeHtml(l.key)}">NO</button></span>
+      <span class="stepper"><button type="button" data-combo="step" data-dir="-1" data-key="${escapeHtml(l.key)}" ${at <= 0 ? 'disabled' : ''}>◀</button><span>${escapeHtml(sideLine(m, l.side))}</span><button type="button" data-combo="step" data-dir="1" data-key="${escapeHtml(l.key)}" ${at < 0 || at >= ladder.length - 1 ? 'disabled' : ''}>▶</button></span>
+      <span class="right">${cents(p.prob)}</span>
+      <span class="right" style="color:var(--label)">${p.run === null ? '--' : (p.run * 100).toFixed(1) + '%'}</span>
+      <span class="right" style="color:var(--amber)">${fmtUnits(p.units)}</span>
+      <button type="button" class="combo-x" data-combo="remove" data-key="${escapeHtml(l.key)}" aria-label="Remove leg">×</button>
+    </div>`;
+    [...errs.map(x => ['err', x]), ...warns.map(x => ['warn', x])].forEach(([k, x]) => {
+      html += `<div class="combo-msg ${k}" style="padding-left:22px">${escapeHtml(x)}</div>`;
+    });
+  });
+  if (fresh) fresh.issues.forEach(x => { html += `<div class="combo-msg ${x.level === 'error' ? 'err' : 'warn'}">${escapeHtml(x.msg)}</div>`; });
+
+  const toWinFair = fin && fin.units !== null ? stake * fin.units : null;
+  html += `<div class="stat-tiles" style="grid-template-columns:repeat(5,minmax(0,1fr));margin-top:8px">
+    <div class="stat-tile"><span class="sl">INDEP. PROB</span><span class="sv mono">${fin && fin.run !== null ? (fin.run * 100).toFixed(1) + '%' : '--'}</span></div>
+    <div class="stat-tile"><span class="sl">FAIR ODDS</span><span class="sv mono">${fmtAmerican(fin && fin.american)}</span></div>
+    <div class="stat-tile"><span class="sl">PAYS / 1u</span><span class="sv mono" style="color:var(--amber)">${fmtUnits(fin && fin.units)}</span></div>
+    <div class="stat-tile"><span class="sl">STAKE</span><span class="sv mono combo-stake">
+      <input class="mono" type="number" min="0.5" step="0.5" value="${cs.units}" data-combo-input="units" aria-label="Units to stake">u ×
+      $<input class="mono" type="number" min="1" step="1" value="${cs.unit}" data-combo-input="unit" aria-label="Dollars per unit"></span></div>
+    <div class="stat-tile"><span class="sl">TO WIN (FAIR)</span><span class="sv mono" style="color:var(--blue)">${toWinFair === null ? '--' : money(toWinFair)}</span></div>
+  </div>`;
+  html += comboQuoteHtml(cs, fresh, fin, stake);
+  return html + `</div>`;
+}
+
+function comboQuoteHtml(cs, fresh, fin, stake) {
+  const q = cs.quote;
+  const ready = fresh && fresh.ok && !cs.checking;
+  let html = `<div class="combo-quote">`;
+  if (!q) {
+    const why = cs.checking ? 'checking legs…' : !fresh ? 'waiting for leg check' : !fresh.ok ? 'fix the ✗ legs above to request a quote' : '';
+    html += `<button type="button" class="combo-btn" data-combo="quote" ${ready ? '' : 'disabled'}>GET KALSHI QUOTE · ${money(stake)}</button>
+      <span class="combo-note">${escapeHtml(why || 'Creates the combo on Kalshi and asks market makers to price it (RFQ). Nothing is bought until you accept.')}</span>`;
+    return html + `</div>`;
+  }
+  if (q.phase === 'requesting') return html + `<span class="combo-note">Creating combo market and sending RFQ…</span></div>`;
+  if (q.phase === 'error') {
+    return html + `<span class="combo-msg err" style="padding:0">${escapeHtml(q.error)}</span>
+      <button type="button" class="backlink" data-combo="cancel">dismiss</button></div>`;
+  }
+  const secs = Math.round((Date.now() - q.started) / 1000);
+  html += `<div style="display:flex;flex-direction:column;gap:4px;width:100%">
+    <div class="mono" style="display:flex;gap:10px;align-items:center;font-size:10px;color:var(--dim)">
+      <span title="${escapeHtml(q.title || '')}">COMBO ${escapeHtml(q.market_ticker || '')}</span>
+      <span>RFQ ${escapeHtml((q.rfq_id || '').slice(0, 8))}</span>
+      <span style="flex-grow:1"></span>
+      ${q.phase === 'waiting' ? `<span>waiting for makers… ${secs}s</span>` : ''}
+      ${q.phase !== 'accepted' ? `<button type="button" class="backlink" data-combo="cancel">cancel RFQ</button>` : ''}
+    </div>`;
+  if (q.pollError) html += `<div class="combo-msg warn" style="padding:0">${escapeHtml(q.pollError)}</div>`;
+  if (q.phase === 'expired') html += `<div class="combo-msg warn" style="padding:0">No maker quoted this combo within ${COMBO_POLL_MAX_MS / 1000}s. Makers skip some leg mixes; try fewer or more mainstream legs, then request again.</div>`;
+  if (q.phase === 'accepted') html += `<div class="combo-msg" style="padding:0;color:var(--blue)">Accepted: ${escapeHtml(q.acceptMsg || '')}. Check Kalshi fills to confirm execution.</div>`;
+  const live = (q.quotes || []).filter(x => x.yes_cost).sort((a, b) => a.yes_cost - b.yes_cost);
+  if (live.length) {
+    const qc = 'grid-template-columns:70px 64px 64px 80px minmax(0,1fr) 150px';
+    html += `<div class="mono combo-slip-grid" style="${qc};font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+      <span>YES COST</span><span>ODDS</span><span class="right">PAYS</span><span class="right">TO WIN</span><span class="right">vs INDEP.</span><span></span></div>`;
+    live.forEach((x, i) => {
+      const vs = fin && fin.run ? x.yes_cost / fin.run - 1 : null;
+      const armed = cs.armed === x.id;
+      const canAccept = fresh && fresh.accept_enabled && q.phase === 'quoted' && i === 0;
+      html += `<div class="mono combo-slip-grid" style="${qc};font-size:11px;min-height:22px;${i === 0 ? 'background:var(--amber-soft)' : ''}">
+        <span>${cents(x.yes_cost)}</span><span>${fmtAmerican(x.yes_american)}</span>
+        <span class="right" style="color:var(--amber)">${fmtUnits(x.yes_units)}</span>
+        <span class="right" style="color:var(--blue)">${x.yes_units ? money(q.stake * x.yes_units) : '--'}</span>
+        <span class="right" style="color:${vs === null ? 'var(--dim)' : vs > 0 ? 'var(--ask)' : 'var(--blue)'}" title="Quote price vs. multiplying the legs' odds together. Above 0 = Kalshi prices the combo as likelier than independent (correlation) and/or maker margin.">${vs === null ? '--' : (vs > 0 ? '+' : '') + (vs * 100).toFixed(0) + '%'}</span>
+        <span class="right">${canAccept ? `<button type="button" class="combo-btn ${armed ? 'armed' : ''}" data-combo="accept" data-quote="${escapeHtml(x.id)}">${armed ? `CONFIRM ${money(q.stake)} @ ${cents(x.yes_cost)}` : 'ACCEPT YES'}</button>` : ''}</span>
+      </div>`;
+    });
+    if (fresh && !fresh.accept_enabled) html += `<div class="combo-note">Placing is off. Start the server with KALSHI_ENABLE_COMBO_ACCEPT=1 to enable ACCEPT, or place this combo in the Kalshi app.</div>`;
+  }
+  return html + `</div></div>`;
 }
 
 function renderExposure(body, held) {
@@ -1705,7 +2139,9 @@ document.addEventListener('click', (e) => {
   const backSlateT = e.target.closest('[data-back-slate]');
   const openGameTabT = e.target.closest('[data-open-gametab]');
   const closeGameTabT = e.target.closest('[data-close-gametab]');
+  const comboT = e.target.closest('[data-combo]');
   const t = activeTicket();
+  if (comboT && t && t.data) { if (!comboT.disabled) handleComboClick(comboT, t); return; }
   if (closeT) { e.stopPropagation(); closeTicket(Number(closeT.dataset.close)); return; }
   if (closeGameTabT) { e.stopPropagation(); closeGameTab(Number(closeGameTabT.dataset.closeGametab)); return; }
   if (railT) { state.module = railT.dataset.module; render(); return; }
@@ -1808,6 +2244,11 @@ function submitSearch(v) {
   hideSuggest();
   state.module = 'research'; newTicket(v); qEl.value = '';
 }
+
+document.addEventListener('change', (e) => {
+  const t = activeTicket();
+  if (t && e.target.dataset && e.target.dataset.comboInput) handleComboInput(e.target, t);
+});
 
 qEl.addEventListener('input', () => { loadPlayers(); sugg.items = matchPlayers(qEl.value); sugg.idx = -1; renderSuggest(); });
 qEl.addEventListener('blur', () => setTimeout(hideSuggest, 120));

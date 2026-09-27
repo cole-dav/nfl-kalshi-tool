@@ -19,6 +19,7 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import combo
 import player_research as pr
 import positions_overview as po
 import injury_news as inj
@@ -147,12 +148,68 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"internal error: {e}"}, status=500)
             return
 
+        if parsed.path == "/api/combo/quotes":
+            rfq_id = (parse_qs(parsed.query).get("rfq_id") or [""])[0].strip()
+            if not rfq_id:
+                self._send_json({"error": "missing 'rfq_id' query param"}, status=400)
+                return
+            self._combo_call(lambda: combo.get_quotes(rfq_id))
+            return
+
         if parsed.path == "/api/positions":
             try:
                 self._send_json(po.build_positions_overview())
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"internal error: {e}"}, status=500)
+            return
+
+        self.send_response(404)
+        self.end_headers()
+
+    def _read_json(self) -> dict:
+        length = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(length) if length else b"{}"
+        return json.loads(raw or b"{}")
+
+    def _combo_call(self, fn):
+        """Run a combo action, surfacing Kalshi's own error text (e.g.
+        INSUFFICIENT_BALANCE, 409 open RFQ) instead of a bare 500."""
+        try:
+            self._send_json(fn())
+        except combo.ComboError as e:
+            self._send_json({"error": str(e)}, status=400)
+        except RuntimeError as e:  # missing KALSHI_* credentials
+            self._send_json({"error": f"Kalshi credentials missing on the server: {e}"}, status=503)
+        except Exception as e:
+            resp = getattr(e, "response", None)
+            if resp is not None:
+                self._send_json({"error": f"Kalshi {resp.status_code}: {resp.text[:400]}"}, status=502)
+                return
+            traceback.print_exc()
+            self._send_json({"error": f"internal error: {e}"}, status=500)
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        try:
+            body = self._read_json()
+        except (ValueError, json.JSONDecodeError):
+            self._send_json({"error": "body must be JSON"}, status=400)
+            return
+        legs = body.get("legs") or []
+
+        if parsed.path == "/api/combo/validate":
+            self._combo_call(lambda: combo.validate(legs))
+            return
+        if parsed.path == "/api/combo/quote":
+            self._combo_call(lambda: combo.request_quote(legs, float(body.get("stake_dollars") or 0)))
+            return
+        if parsed.path == "/api/combo/cancel":
+            self._combo_call(lambda: combo.cancel_rfq(str(body.get("rfq_id") or "")))
+            return
+        if parsed.path == "/api/combo/accept":
+            self._combo_call(lambda: combo.accept_quote(
+                str(body.get("rfq_id") or ""), str(body.get("quote_id") or ""), str(body.get("side") or "")))
             return
 
         self.send_response(404)

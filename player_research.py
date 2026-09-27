@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
+import combo
 import nflverse_data as nd
 import weather as wx
 from kalshi_book import KalshiClient, position_from_kalshi
@@ -24,6 +25,7 @@ def _quote_dict(pm) -> dict:
     q = pm.quote
     return {
         "ticker": pm.ticker,
+        "event_ticker": pm.event_ticker,
         "series": pm.series,
         "stat": pm.stat_label,
         "title": q.title,
@@ -90,7 +92,7 @@ def resolve_and_build(name: str) -> dict:
     team_context_section = _build_team_context_section(team_nflverse, gsis_id, position)
     environment_section = _build_environment_section(next_game) if next_game else None
     history_section = _build_history_section(gsis_id, opponent) if opponent else None
-    correlation_section = _build_correlation_section(markets_section)
+    correlation_section = _build_correlation_section(markets_section, team_kalshi)
     try:
         season_pace = nd.player_season_pace(gsis_id, team_nflverse)
     except Exception:
@@ -287,16 +289,21 @@ def _closest_to_coinflip(markets: list[dict]) -> dict | None:
     return min(priced, key=lambda m: abs(m["implied_prob_yes"] - 0.5))
 
 
-def _build_correlation_section(markets_section: dict) -> dict:
+def _build_correlation_section(markets_section: dict, team_kalshi: str) -> dict:
     """Structural correlation flags: WR/TE/RB 'over' props correlate with the
     team's QB passing 'over' props and that team's team-total 'over' market.
 
     To stay readable, each correlated player+stat family is collapsed to one
     representative threshold (closest to a coinflip) rather than listing
-    every strike price."""
+    every strike price.
+
+    Also reports which of this game's events Kalshi accepts as combo legs, so
+    the combo builder can grey out ineligible stats up front."""
     player_props = markets_section.get("player_props", [])
     teammate_props = markets_section.get("teammate_props", [])
-    team_game_markets = markets_section.get("team_game_markets", [])
+    # Only the player's own team total -- both teams' totals share a series,
+    # so without this the "same-team" leg could be the opponent's.
+    team_game_markets = [m for m in markets_section.get("team_game_markets", []) if m.get("team_code") == team_kalshi]
 
     def family_key(m):
         return (m.get("player_name"), m["series"])
@@ -329,7 +336,12 @@ def _build_correlation_section(markets_section: dict) -> dict:
             related.extend({"reason": "same-team QB passing over", **q} for q in qb_reps if q["ticker"] != m["ticker"])
         if m["series"] in ("KXNFLPASSYDS", "KXNFLPASSTDS"):
             related.extend({"reason": "same-team pass-catcher over", **q} for q in skill_reps if q["ticker"] != m["ticker"])
-        related.extend({"reason": "same-team total over", "player_name": None, **q} for q in team_total_overs)
+        # Interceptions run the other way: more INTs usually means fewer points.
+        if m["series"] != "KXNFLPASSINT":
+            related.extend({"reason": "same-team total over", "player_name": None, **q} for q in team_total_overs)
         if related:
             flags.append({"ticker": m["ticker"], "player_name": m.get("player_name"), "stat": m["stat"], "correlated_with": related})
-    return {"flags": flags}
+
+    event = markets_section.get("event_ticker")
+    eligible = combo.eligible_events_for_game(event.split("-", 1)[1]) if event else {"collection": None, "events": []}
+    return {"flags": flags, "combo_collection": eligible["collection"], "combo_eligible_events": eligible["events"]}
