@@ -34,6 +34,13 @@ Open http://127.0.0.1:8765 and search a player.
 - `nflverse_data.py` -- cached nflreadpy loaders + derived metrics (defense
   EPA/dropback, pressure rates, pace, target share, injuries, matchup history).
   Local parquet cache in `cache/`, refreshed every 6h.
+- `team_tendencies.py` -- NFL Savant-style team tendencies from pbp (3-and-out,
+  red-zone TD%, 1Q/1H/2H scoring, neutral pass rate/PROE, pass rate when up or
+  down 8+, pace, where each defense forces targets/runs) with league ranks, plus
+  a rule-based game-script read per matchup using Kalshi spread/total. Shown on
+  the game page under TENDENCIES & SCRIPT. Coverage shells/man-zone come from
+  nflverse participation, which is only published for completed seasons, so
+  they're last season's.
 - `weather.py` -- Open-Meteo forecast lookup for the game's stadium.
 - `player_research.py` -- ties it all together into one JSON payload per player.
 - `combo.py` -- combo (parlay) builder backend: leg validation against Kalshi's

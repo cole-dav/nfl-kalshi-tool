@@ -28,6 +28,7 @@ import player_research as pr
 import positions_overview as po
 import injury_news as inj
 import nflverse_data as nd
+import team_tendencies as tt
 import week_overview as wo
 import player_volume as pvol
 
@@ -39,7 +40,7 @@ def _cache_warmer():
     """Keep nflverse data, rankings and Madden ratings loaded in memory and
     refetch them here when they go stale, so page requests never wait on it."""
     while True:
-        for warm in (nd.warm, prk.warm, mr.warm):
+        for warm in (nd.warm, prk.warm, mr.warm, tt.warm):
             try:
                 warm()
             except Exception:

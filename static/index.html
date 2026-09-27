@@ -2061,15 +2061,18 @@ function renderGameDetail(el, g) {
 
   const spreadTxt = d.spread ? `${d.spread.team} ${d.spread.line >= 0 ? '-' : '+'}${Math.abs(d.spread.line).toFixed(1)} (${(d.spread.implied_prob_yes * 100).toFixed(0)}%)` : '--';
   const totalTxt = d.total ? `${d.total.line.toFixed(1)} (${(d.total.implied_prob_yes * 100).toFixed(0)}%)` : '--';
+  const view = g.view || 'depth';
+  const viewTabs = [{ id: 'depth', label: 'DEPTH MATCHUPS' }, { id: 'tend', label: 'TENDENCIES & SCRIPT' }];
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 4px">
       <span class="backlink" data-back-slate="1">&larr; ALL GAMES</span>
       <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600">${teamLogo(d.away, 32)}${d.away}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).away || ''}</span><span style="color:var(--dim);font-weight:400">@</span>${teamLogo(d.home, 32)}${d.home}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).home || ''}</span></span>
       <span class="mono" style="font-size:10.5px;color:var(--dim)">SPREAD ${spreadTxt} &middot; TOTAL ${totalTxt}</span>
+      <span style="margin-left:auto;display:flex;align-self:stretch">${viewTabs.map(v => `<button type="button" class="tab small ${view === v.id ? 'on' : ''}" data-game-view="${v.id}">${v.label}</button>`).join('')}</span>
     </div>
     <div style="flex-grow:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 340px;gap:8px;padding:0 4px 8px">
-      ${(d.matchups || []).map(matchupPanelHtml).join('')}
+      ${view === 'tend' ? tendencyPanelsHtml(d.tendencies) : (d.matchups || []).map(matchupPanelHtml).join('')}
       <div class="panel">
         <div class="panel-head"><span class="panel-title">GAME &amp; COMBO MARKETS</span></div>
         <div class="panel-body">${combosHtml(d.combos, d.away, d.home)}</div>
@@ -2179,6 +2182,81 @@ function matchupPanelHtml(mu) {
   }
   html += `<div style="padding:4px 8px 8px;font-size:9.5px;color:var(--faint)">EDGE = offense OVR − defender OVR · typical alignment, not snap charting</div></div></div>`;
   return html;
+}
+
+// Tendencies view: one panel per offense vs the opposing defense. Script
+// reads on top (rule-based, regressed toward last season), then every metric
+// with the offense's value/rank next to what the defense allows.
+function fmtTend(v, fmt) {
+  if (v === null || v === undefined) return '--';
+  if (fmt === 'pct') return (v * 100).toFixed(1) + '%';
+  if (fmt === 'pp') return (v > 0 ? '+' : '') + v.toFixed(1);
+  return v.toFixed(fmt === 'f2' ? 2 : 1);
+}
+
+// Rank color from the offense's point of view: blue = favors the offense.
+function tendRankColor(rank, better, side) {
+  if (!rank || !better) return 'var(--dim)';
+  const good = rank <= 8, bad = rank >= 25;
+  const favorsOff = side === 'off' ? good : bad;
+  const hurtsOff = side === 'off' ? bad : good;
+  return favorsOff ? 'var(--blue)' : hurtsOff ? 'var(--orange)' : 'var(--muted)';
+}
+
+const TEND_TAG_COLOR = { SCRIPT: 'var(--amber)', '1H': '#8FC1FF', DRIVES: 'var(--muted)', 'RED ZONE': 'var(--orange)', TARGETS: 'var(--blue)', RUSHING: '#7FD1A8' };
+
+function tendencyPanelsHtml(td) {
+  if (!td || td.error) return `<div class="panel" style="grid-column:span 2"><div class="empty">${escapeHtml((td && td.error) || 'No tendency data.')}</div></div>`;
+  return td.sides.map(s => tendencyPanelHtml(td, s)).join('');
+}
+
+function tendencyPanelHtml(td, s) {
+  const off = td.teams[s.offense], dfn = td.teams[s.defense];
+  const offK = nflverseToKalshi(s.offense), defK = nflverseToKalshi(s.defense);
+  const grid = 'display:grid;grid-template-columns:minmax(0,1fr) 58px 26px 58px 26px 50px;gap:6px;align-items:center';
+  const cell = (m, fmt, better, side) => {
+    const tip = m && m.ly !== undefined && m.ly !== null ? `${td.prior_season}: ${fmtTend(m.ly, fmt)}` : `no ${td.prior_season} value`;
+    return `<span class="right" title="${escapeHtml(tip)}" style="color:var(--on)">${fmtTend(m && m.value, fmt)}</span>
+      <span class="right" style="font-size:10px;color:${tendRankColor(m && m.rank, better, side)}">${m && m.rank ? '#' + m.rank : ''}</span>`;
+  };
+  const reads = (s.reads || []).map(r => `<div style="display:flex;gap:8px;padding:5px 8px;border-bottom:1px solid var(--row-rule);font-size:11.5px;line-height:1.4">
+      <span class="mono" style="flex-shrink:0;width:62px;font-size:9.5px;letter-spacing:0.06em;padding-top:2px;color:${TEND_TAG_COLOR[r.tag] || 'var(--dim)'}">${escapeHtml(r.tag)}</span>
+      <span class="mono" style="flex-shrink:0;width:10px;padding-top:1px;color:${r.lean === 'up' ? 'var(--blue)' : r.lean === 'down' ? 'var(--orange)' : 'var(--faint)'}">${r.lean === 'up' ? '▲' : r.lean === 'down' ? '▼' : '·'}</span>
+      <span style="color:var(--label)">${escapeHtml(r.text)}</span>
+    </div>`).join('');
+  const cov = dfn.coverage;
+  const covHtml = cov ? `<div class="mono" style="padding:6px 8px;font-size:10px;color:var(--dim);border-bottom:1px solid var(--head-rule)">${defK} COVERAGE (${cov.season}, dropbacks): <span style="color:var(--label)">MAN ${fmtTend(cov.man_rate, 'pct')} · ZONE ${fmtTend(cov.man_rate === null ? null : 1 - cov.man_rate, 'pct')}</span> · ${cov.top_shells.map(x => `${escapeHtml(x.shell)} ${fmtTend(x.pct, 'pct')}`).join(' · ')}</div>` : '';
+
+  let rows = '', group = null;
+  td.metrics.forEach(m => {
+    if (m.group !== group) {
+      group = m.group;
+      rows += `<div style="padding:6px 8px 2px;font-size:9.5px;letter-spacing:0.08em;color:var(--label)">${group}</div>`;
+    }
+    const o = off.off[m.key], d = dfn.def[m.key];
+    rows += `<div class="mono" style="${grid};height:21px;padding:0 8px;font-size:11px;border-bottom:1px solid var(--row-rule)">
+      <span style="font-family:inherit;font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(m.label)}</span>
+      ${cell(o, m.fmt, m.off_better, 'off')}
+      ${cell(d, m.fmt, m.def_better, 'def')}
+      <span class="right" style="color:var(--dim)">${fmtTend(o && o.lg, m.fmt)}</span>
+    </div>`;
+  });
+
+  return `<div class="panel">
+    <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(offK, 16)}${offK} OFF <span style="color:var(--dim);font-weight:400">vs</span> ${teamLogo(defK, 16)}${defK} DEF</span>
+      <span class="mono" style="margin-left:auto;display:flex;align-items:center;padding-right:8px;font-size:9.5px;color:var(--dim)">${td.season} · ${off.games}G / ${dfn.games}G</span></div>
+    <div class="panel-body">
+      <div style="padding:6px 8px 2px;font-size:9.5px;letter-spacing:0.08em;color:var(--label)">SCRIPT READ</div>
+      ${reads || `<div class="empty">No reads (need spread/total + data).</div>`}
+      <div style="padding:3px 8px 6px;font-size:9.5px;color:var(--faint)">Reads regress ${td.season} rates toward ${td.prior_season} (weighted as ${off.prior_weight_games} games). ▲ = more volume/scoring for ${offK}, ▼ = less.</div>
+      ${covHtml}
+      <div class="mono" style="${grid};height:18px;padding:0 8px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule);position:sticky;top:0;background:var(--panel)">
+        <span>METRIC</span><span class="right">${offK} OFF</span><span class="right">RK</span><span class="right">${defK} ALLOWS</span><span class="right">RK</span><span class="right">LG</span>
+      </div>
+      ${rows}
+      <div style="padding:6px 8px 8px;font-size:9.5px;color:var(--faint)">Rank #1 = best for that side (or highest, for pure tendencies like pass rate). Blue = favors ${offK}'s offense, orange = favors ${defK}'s defense. Hover a value for ${td.prior_season}. Neutral = WP 20–80%, outside the last 2 min of each half. 3-and-out = punt with no first down.</div>
+    </div>
+  </div>`;
 }
 
 // The outcome(s) priced closest to 50% within one market -- the "main line".
@@ -2410,6 +2488,8 @@ document.addEventListener('click', (e) => {
   if (gameT) { openGameDetail(gameT.dataset.openGame); return; }
   if (playerT) { openPlayerFromDrilldown(playerT.dataset.openPlayer); return; }
   if (backSlateT) { backToSlateList(); return; }
+  const gameViewT = e.target.closest('[data-game-view]');
+  if (gameViewT) { const g = activeGameTab(); if (g) { g.view = gameViewT.dataset.gameView; renderSlate(); } return; }
   if (e.target.id === 'newticket') { state.module = 'research'; document.getElementById('q').focus(); return; }
 });
 
