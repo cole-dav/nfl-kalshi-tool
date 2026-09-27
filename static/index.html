@@ -295,7 +295,7 @@ function teamColor(code) { return TEAM_COLORS[code] || 'var(--border)'; }
 // ---------- state ----------
 let nextId = 1;
 const state = {
-  tickets: [], activeId: null, kalshiOk: true, module: 'research',
+  tickets: [], activeId: null, kalshiOk: true, module: 'slate',
   games: [], activeGameId: null,
   slate: { loading: false, error: null, games: null, view: 'list' },
   book: { loading: false, error: null, data: null },
@@ -1653,7 +1653,8 @@ function placeInjPop(row) {
 }
 
 function showInjPop(row) {
-  const r = row._inj; if (!r) return;
+  const r = row._inj || (row.dataset.inj ? JSON.parse(row.dataset.inj) : null);
+  if (!r) return;
   if (injHoverRow) injHoverRow.classList.remove('hov');
   injHoverRow = row; row.classList.add('hov');
   const injury = [r.report_primary_injury || r.practice_primary_injury, r.report_secondary_injury].filter(Boolean).join(', ');
@@ -2119,6 +2120,12 @@ function depthCellHtml(players, align) {
   const rk = rankInfo(st.rank);
   const rkHtml = rk ? `<span title="${escapeHtml(rk.tip)}" style="font-size:9.5px;color:${rk.color}">${escapeHtml(rk.txt)}</span>` : '';
   const name = `<span class="roster-player" data-open-player="${escapeHtml(st.full_name)}" style="color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(st.full_name)}</span>`;
+  const injHtml = (() => {
+    if (!st.injury) return '';
+    const stat = practiceStatus(st.injury);
+    const style = INJ_STYLE[stat] || [C.muted, 'transparent'];
+    return `<span class="mono pill" data-injp="1" data-inj="${escapeHtml(JSON.stringify(st.injury))}" style="cursor:default;font-size:9px;flex-shrink:0;color:${style[0]};background:${style[1]}">${stat}</span>`;
+  })();
   const img = st.headshot_url
     ? `<img src="${escapeHtml(st.headshot_url)}" alt="" loading="lazy" data-open-player="${escapeHtml(st.full_name)}" class="roster-player" style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#161B22;object-fit:cover" onerror="this.style.visibility='hidden'">`
     : `<span style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#161B22"></span>`;
@@ -2126,7 +2133,7 @@ function depthCellHtml(players, align) {
   return `<div style="min-width:0;display:flex;align-items:center;gap:8px;${align === 'right' ? 'flex-direction:row-reverse' : ''}">
     ${img}
     <div style="min-width:0;display:flex;flex-direction:column;align-items:${align === 'right' ? 'flex-end' : 'flex-start'}">
-      <div style="display:flex;align-items:baseline;gap:6px;max-width:100%;${align === 'right' ? 'flex-direction:row-reverse' : ''}">${name}${rkHtml}</div>
+      <div style="display:flex;align-items:baseline;gap:6px;max-width:100%;${align === 'right' ? 'flex-direction:row-reverse' : ''}">${name}${injHtml}${rkHtml}</div>
       ${bk ? `<div style="font-size:9.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${bk}</div>` : ''}
     </div>
   </div>`;
@@ -2145,7 +2152,7 @@ function matchupPanelHtml(mu) {
   let html = `<div class="panel">
     <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(mu.offense_team, 16)}${mu.offense_team} OFF <span style="color:var(--dim);font-weight:400">vs</span> ${teamLogo(mu.defense_team, 16)}${mu.defense_team} DEF</span><span class="mono" style="margin-left:auto;display:flex;align-items:center;padding-right:8px;font-size:9.5px;color:var(--dim)">${mu.scheme} BASE · 11 PERS</span></div>
     <div class="panel-body mono" style="font-size:11px">
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:6px 8px;border-bottom:1px solid var(--head-rule)">
+      <div style="display:grid;grid-template-columns:repeat(${mu.summary.length},minmax(0,1fr));gap:6px;padding:6px 8px;border-bottom:1px solid var(--head-rule)">
         ${mu.summary.map(u => `<div title="Avg Madden OVR of paired starters: ${u.off_label} ${u.off_avg ?? '--'} vs ${u.def_label} ${u.def_avg ?? '--'}" style="display:flex;flex-direction:column;gap:2px;padding:4px 6px;background:var(--panel-head)">
           <span style="font-size:9.5px;letter-spacing:0.06em;color:var(--dim)">${u.unit}</span>
           <span><span style="color:var(--on)">${u.off_avg ?? '--'}</span> <span style="color:var(--dim)">v</span> <span style="color:var(--on)">${u.def_avg ?? '--'}</span> <b style="color:${edgeColor(u.edge)};font-weight:600">${signed(u.edge, 1)}</b></span>
@@ -2270,11 +2277,15 @@ async function loadBook(force) {
 }
 
 // Book-module matchup strings come straight from Kalshi's event sub_title
-// ("AWAY vs HOME", team codes) -- parse it back out to pull each team's logo.
+// ("AWAY vs HOME (date)", team codes) -- parse it back out to pull each
+// team's logo. The date parenthetical rides along on the home side only
+// (e.g. "CAR vs CLE (Sep 27)"), so it has to be stripped there or the "home"
+// code is never a valid team code and its logo silently fails to load.
 function matchupTitleHtml(matchup) {
   const parts = (matchup || '').split(' vs ');
   if (parts.length !== 2) return escapeHtml(matchup || '');
-  const [away, home] = parts.map(s => s.trim());
+  const away = parts[0].trim();
+  const home = parts[1].split('(')[0].trim();
   return `<span style="display:flex;align-items:center;gap:6px">${teamLogo(away, 18)}<span>${escapeHtml(away)}</span><span style="color:var(--dim)">@</span>${teamLogo(home, 18)}<span>${escapeHtml(home)}</span></span>`;
 }
 
