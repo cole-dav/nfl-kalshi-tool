@@ -36,10 +36,18 @@ input::placeholder{color:#6F7A86}
 .ticket .tname{font-weight:600;font-size:12px;letter-spacing:0.04em}
 .ticket .tsub{font-size:10px;color:var(--dim)}
 .ticket .tclose{width:16px;height:16px;display:flex;align-items:center;justify-content:center;color:#6F7A86}
+.ticket .tteam{width:3px;align-self:stretch;flex-shrink:0;margin:0 -4px 0 -12px}
+#tabgroup-div{width:1px;flex-shrink:0;background:var(--border);margin:8px 0}
 #newticket{width:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted);border-right:1px solid var(--border)}
 #searchwrap{flex-grow:1;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;gap:8px}
-#searchbox{display:flex;align-items:center;gap:8px;width:300px;height:24px;padding:0 8px;background:var(--bg);border:1px solid var(--head-rule)}
+#searchbox{position:relative;display:flex;align-items:center;gap:8px;width:300px;height:24px;padding:0 8px;background:var(--bg);border:1px solid var(--head-rule)}
 #q{flex-grow:1;min-width:0;background:none;border:0;color:var(--on);font:inherit;font-size:12px;outline:none}
+#suggest{position:absolute;top:23px;left:-1px;right:-1px;z-index:50;background:var(--chrome);border:1px solid var(--head-rule);max-height:320px;overflow-y:auto}
+#suggest .sg{display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:12px;color:var(--label);cursor:pointer}
+#suggest .sg.on,#suggest .sg:hover{background:var(--amber-soft);color:var(--on)}
+#suggest .sg .nm{flex-grow:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#suggest .sg .nm b{color:var(--amber);font-weight:600}
+#suggest .sg .meta{font-size:10px;color:var(--dim)}
 #statusbar{display:flex;align-items:center;gap:16px;padding:0 14px;border-left:1px solid var(--border);font-size:10.5px;color:var(--muted);flex-shrink:0}
 .dot{width:6px;height:6px;border-radius:3px;display:inline-block}
 
@@ -50,7 +58,9 @@ input::placeholder{color:#6F7A86}
 
 /* context strip */
 #ctx{height:60px;flex-shrink:0;display:flex;align-items:stretch;border-bottom:1px solid var(--border);background:var(--chrome);overflow-x:auto}
-#ctx .who{display:flex;flex-direction:column;justify-content:center;padding:0 16px;min-width:230px;flex-shrink:0;border-right:1px solid var(--border)}
+#ctx .who{display:flex;align-items:center;gap:10px;padding:0 16px;min-width:230px;flex-shrink:0;border-right:1px solid var(--border)}
+#ctx .who .headshot{width:44px;height:44px;flex-shrink:0;border-radius:2px;background:#161B22;object-fit:cover;object-position:top}
+#ctx .who .whotext{display:flex;flex-direction:column;justify-content:center}
 #ctx .who .name{font-size:20px;font-weight:600;letter-spacing:0.02em}
 #ctx .who .pos{font-size:11px;color:var(--amber)}
 #ctx .who .sub{font-size:10.5px;color:var(--muted);margin-top:2px}
@@ -97,6 +107,38 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
 .rankbar-fill{position:absolute;left:0;top:0;bottom:0}
 .pill{font-size:9.5px;font-weight:600;padding:1px 5px}
 .empty{padding:16px;color:var(--dim);font-size:12px;text-align:center}
+.slot-head{display:flex;align-items:baseline;gap:10px;padding:14px 2px 6px;border-bottom:1px solid var(--head-rule);margin-bottom:8px}
+.slot-head:first-child{padding-top:2px}
+.slot-head .sn{font-size:11px;letter-spacing:0.1em;color:var(--amber);font-weight:600}
+.slot-head .sc{font-size:10px;color:var(--dim)}
+.game-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.game-card{cursor:pointer;background:var(--panel);border:1px solid var(--border);display:flex;flex-direction:column}
+.game-card:hover{border-color:var(--amber-ring);background:#12161C}
+.game-card .gc-top{height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:var(--panel-head);border-bottom:1px solid var(--border);font-size:10px;color:var(--dim);letter-spacing:0.04em}
+.game-card .gc-team{height:44px;display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:10px;padding:0 10px}
+.game-card .gc-team + .gc-team{border-top:1px solid var(--row-rule)}
+.game-card .gc-code{font-size:15px;font-weight:600;letter-spacing:0.03em}
+.game-card .gc-rec{font-size:10.5px;color:var(--dim);margin-left:8px}
+.game-card .gc-ml{font-size:13px;text-align:right}
+.game-card .gc-foot{height:26px;display:flex;align-items:center;gap:14px;padding:0 10px;border-top:1px solid var(--border);font-size:10.5px;color:var(--label)}
+.game-card .gc-foot .k{color:var(--dim);margin-right:4px}
+.roster-player{cursor:pointer}
+.inj-row{cursor:default}
+.inj-row:hover,.inj-row.hov{background:var(--amber-soft)}
+#injPop{position:fixed;z-index:60;width:340px;max-height:360px;overflow-y:auto;background:var(--chrome);border:1px solid var(--amber-ring);box-shadow:0 8px 24px rgba(0,0,0,0.5);font-size:12px}
+#injPop .ip-head{padding:8px 10px;border-bottom:1px solid var(--head-rule);background:var(--panel-head)}
+#injPop .ip-name{font-weight:600;font-size:13px}
+#injPop .ip-meta{margin-top:3px;font-size:10.5px;color:var(--muted)}
+#injPop .ip-sec{padding:6px 10px 2px;font-size:9.5px;letter-spacing:0.08em;color:var(--dim)}
+#injPop a.ip-item{display:block;padding:6px 10px;border-bottom:1px solid var(--row-rule);color:var(--label);text-decoration:none}
+#injPop a.ip-item:hover{background:var(--amber-soft);color:var(--on)}
+#injPop .ip-src{margin-top:2px;font-size:10px;color:var(--dim)}
+#injPop .ip-src b{color:var(--amber);font-weight:500}
+.roster-player:hover{color:var(--amber)}
+.backlink{color:var(--amber);cursor:pointer;font-size:11px}
+.backlink:hover{color:#FFC57A}
+.combo-block{border-bottom:1px solid var(--row-rule);padding:8px 0}
+.section-label{font-size:10px;letter-spacing:0.1em;color:var(--dim);font-weight:600;padding:8px 4px 4px}
 </style>
 </head>
 <body>
@@ -112,8 +154,9 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
       <label for="q" class="sr">Search</label>
       <div id="searchbox">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#7A8591" stroke-width="1.3"><circle cx="5" cy="5" r="4"></circle><path d="M8 8l3.5 3.5"></path></svg>
-        <input id="q" type="text" placeholder="Player name…">
+        <input id="q" type="text" placeholder="Player name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-controls="suggest" aria-expanded="false">
         <span class="mono" style="font-size:10px;color:var(--dim);border:1px solid var(--head-rule);padding:0 4px">/</span>
+        <div id="suggest" role="listbox" hidden></div>
       </div>
     </div>
     <div id="statusbar" class="mono">
@@ -125,13 +168,13 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
 
   <div style="flex-grow:1;min-height:0;display:flex">
     <div id="rail">
-      <button class="railbtn active" type="button" aria-label="Player research">
+      <button class="railbtn" type="button" data-module="research" aria-label="Player research">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"></circle><path d="M12 12l4.5 4.5"></path></svg>
       </button>
-      <button class="railbtn" type="button" aria-label="Book and positions (not built)" title="Not built yet">
+      <button class="railbtn" type="button" data-module="book" aria-label="Book and positions">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 15V9M6.5 15V5M11 15V8M15.5 15V2"></path></svg>
       </button>
-      <button class="railbtn" type="button" aria-label="Weekly slate (not built)" title="Not built yet">
+      <button class="railbtn" type="button" data-module="slate" aria-label="Weekly slate">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3.5" width="14" height="12.5"></rect><path d="M2 7.5h14M6 1.5v4M12 1.5v4"></path></svg>
       </button>
       <button class="railbtn" type="button" aria-label="Correlation map (not built)" title="Not built yet">
@@ -149,7 +192,10 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
     <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column;position:relative">
       <div id="ctx"></div>
       <div id="grid"></div>
-      <div id="overlay" style="display:none;position:absolute;left:0;right:0;top:60px;bottom:0;background:var(--bg);align-items:center;justify-content:center;font-size:12px;color:var(--dim)"></div>
+      <div id="slateView" style="display:none;flex-direction:column;flex-grow:1;min-height:0"></div>
+      <div id="bookView" style="display:none;flex-direction:column;flex-grow:1;min-height:0;overflow:auto;padding:8px"></div>
+      <div id="injPop" hidden></div>
+      <div id="overlay" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);align-items:center;justify-content:center;font-size:12px;color:var(--dim)"></div>
     </div>
   </div>
 </div>
@@ -174,9 +220,33 @@ const SERIES_META = {
   KXNFLLONGRSH:  { short:'Long Rush', name:'Longest Rush',         dec:1, col:'right', over:true },
 };
 
+// Team primary brand colors, keyed by Kalshi team code.
+const TEAM_COLORS = {
+  ARI:'#97233F', ATL:'#A71930', BAL:'#241773', BUF:'#00338D', CAR:'#0085CA',
+  CHI:'#0B162A', CIN:'#FB4F14', CLE:'#311D00', DAL:'#041E42', DEN:'#FB4F14',
+  DET:'#0076B6', GB:'#203731',  HOU:'#03202F', IND:'#002C5F', JAC:'#101820',
+  KC:'#E31837',  LAC:'#0080C6', LAR:'#003594', LV:'#000000',  MIA:'#008E97',
+  MIN:'#4F2683', NE:'#002244',  NO:'#D3BC8D',  NYG:'#0B2265', NYJ:'#125740',
+  PHI:'#004C54', PIT:'#FFB612', SEA:'#002244', SF:'#AA0000',  TB:'#D50A0A',
+  TEN:'#4B92DB', WAS:'#5A1414',
+};
+function teamColor(code) { return TEAM_COLORS[code] || 'var(--border)'; }
+
 // ---------- state ----------
 let nextId = 1;
-const state = { tickets: [], activeId: null, kalshiOk: true };
+const state = {
+  tickets: [], activeId: null, kalshiOk: true, module: 'research',
+  games: [], activeGameId: null,
+  slate: { loading: false, error: null, games: null, view: 'list' },
+  book: { loading: false, error: null, data: null },
+};
+
+function openPlayerFromDrilldown(name) {
+  const existing = state.tickets.find(t => t.data && t.data.player.name.toLowerCase() === name.toLowerCase());
+  if (existing) { state.activeId = existing.id; state.module = 'research'; render(); return; }
+  state.module = 'research';
+  newTicket(name);
+}
 
 function activeTicket() { return state.tickets.find(t => t.id === state.activeId) || null; }
 
@@ -292,18 +362,40 @@ function tickClock() {
 setInterval(tickClock, 1000);
 
 // ---------- render: top bar ----------
+function playerTicketHtml(t) {
+  const on = t.id === state.activeId;
+  const color = t.data ? teamColor(t.data.player.team_kalshi) : 'var(--border)';
+  return `<div class="ticket" data-open="${t.id}" style="cursor:pointer;background:${on ? '#141920' : 'transparent'};border-top-color:${on ? 'var(--amber)' : 'transparent'};color:${on ? 'var(--on)' : 'var(--dim)'}">
+    <span class="tteam" style="background:${color}"></span>
+    <span class="tname">${escapeHtml(t.name)}</span>
+    <span class="tsub mono">${escapeHtml(t.sub || (t.loading ? 'loading…' : t.error ? 'error' : ''))}</span>
+    <button type="button" class="tclose" data-close="${t.id}" aria-label="Close ticket">
+      <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 1l6 6M7 1L1 7"></path></svg>
+    </button>
+  </div>`;
+}
+
+function gameTabHtml(g) {
+  const on = g.id === state.activeGameId;
+  const bar = g.away && g.home
+    ? `linear-gradient(to bottom, ${teamColor(g.away)} 50%, ${teamColor(g.home)} 50%)`
+    : 'var(--border)';
+  return `<div class="ticket" data-open-gametab="${g.id}" style="cursor:pointer;background:${on ? '#141920' : 'transparent'};border-top-color:${on ? 'var(--amber)' : 'transparent'};color:${on ? 'var(--on)' : 'var(--dim)'}">
+    <span class="tteam" style="background:${bar}"></span>
+    <span class="tname">${escapeHtml(g.label)}</span>
+    ${g.loading || g.error ? `<span class="tsub mono">${g.loading ? 'loading…' : 'error'}</span>` : ''}
+    <button type="button" class="tclose" data-close-gametab="${g.id}" aria-label="Close game tab">
+      <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 1l6 6M7 1L1 7"></path></svg>
+    </button>
+  </div>`;
+}
+
 function renderTopbar() {
   const wrap = document.getElementById('tickets');
-  wrap.innerHTML = state.tickets.map(t => {
-    const on = t.id === state.activeId;
-    return `<div class="ticket" data-open="${t.id}" style="cursor:pointer;background:${on ? '#141920' : 'transparent'};border-top-color:${on ? 'var(--amber)' : 'transparent'};color:${on ? 'var(--on)' : 'var(--dim)'}">
-      <span class="tname">${escapeHtml(t.name)}</span>
-      <span class="tsub mono">${escapeHtml(t.sub || (t.loading ? 'loading…' : t.error ? 'error' : ''))}</span>
-      <button type="button" class="tclose" data-close="${t.id}" aria-label="Close ticket">
-        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 1l6 6M7 1L1 7"></path></svg>
-      </button>
-    </div>`;
-  }).join('');
+  const playerHtml = state.tickets.map(playerTicketHtml).join('');
+  const gameHtml = state.games.map(gameTabHtml).join('');
+  const divider = playerHtml && gameHtml ? `<div id="tabgroup-div"></div>` : '';
+  wrap.innerHTML = playerHtml + divider + gameHtml;
   const dot = document.querySelector('#kalshiStatus .dot');
   if (dot) dot.style.background = state.kalshiOk ? 'var(--blue)' : 'var(--orange)';
   const label = document.querySelector('#kalshiStatus');
@@ -362,11 +454,14 @@ function renderContext() {
 
   el.innerHTML = `
     <div class="who">
-      <div style="display:flex;align-items:baseline;gap:10px">
-        <span class="name">${escapeHtml(p.name.toUpperCase())}</span>
-        <span class="pos mono">${p.position} #${p.jersey_number ?? '?'}</span>
+      ${p.headshot_url ? `<img class="headshot" src="${escapeHtml(p.headshot_url)}" alt="" onerror="this.style.visibility='hidden'">` : ''}
+      <div class="whotext">
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span class="name">${escapeHtml(p.name.toUpperCase())}</span>
+          <span class="pos mono">${p.position} #${p.jersey_number ?? '?'}</span>
+        </div>
+        <div class="sub mono">${escapeHtml(gameLabel)}${dateLabel ? ' · ' + dateLabel : ''}</div>
       </div>
-      <div class="sub mono">${escapeHtml(gameLabel)}${dateLabel ? ' · ' + dateLabel : ''}</div>
     </div>
     ${kpis.map(k => `<div class="kpi"><span class="kl">${k.l}</span><span class="kv mono" style="color:${k.fg || 'var(--on)'}">${escapeHtml(k.v)}</span></div>`).join('')}
   `;
@@ -516,6 +611,11 @@ function renderFlatMarkets(body, t, d, which) {
     body.innerHTML = `<div class="empty">No markets found here.</div>`;
     return;
   }
+  if (which === 'ss') { renderSeasonMarkets(body, d, rows, note); return; }
+  if (which === 'tm') {
+    renderMarketsGroupedByName(body, rows, correlated, note);
+    return;
+  }
   const sorted = [...rows].sort((a, b) => Math.abs((a.implied_prob_yes ?? 0.5) - 0.5) - Math.abs((b.implied_prob_yes ?? 0.5) - 0.5));
   let html = `<div style="padding:4px 8px 8px;display:flex;flex-direction:column">
     <div class="mono" style="height:18px;display:grid;grid-template-columns:150px minmax(0,1fr) 200px 90px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
@@ -537,6 +637,111 @@ function renderFlatMarkets(body, t, d, which) {
     </div>`;
   });
   html += `<div class="mono" style="padding:8px 4px;font-size:10.5px;color:var(--dim)">${note}</div></div>`;
+  body.innerHTML = html;
+}
+
+function renderMarketsGroupedByName(body, rows, correlated, note) {
+  const groups = new Map();
+  rows.forEach(r => {
+    const key = r.player_name || r.team_code || '—';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  });
+  const names = [...groups.keys()].sort((a, b) => a.localeCompare(b));
+
+  let html = `<div style="padding:4px 8px 8px;display:flex;flex-direction:column">
+    <div class="mono" style="height:18px;display:grid;grid-template-columns:minmax(0,1fr) 200px 90px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+      <span style="padding-left:4px">MARKET</span><span>IMPLIED %</span><span class="right">LINKED</span>
+    </div>`;
+  names.forEach(name => {
+    const group = groups.get(name).sort((a, b) => Math.abs((a.implied_prob_yes ?? 0.5) - 0.5) - Math.abs((b.implied_prob_yes ?? 0.5) - 0.5));
+    html += `<div class="ladder-group">
+      <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--label)">${escapeHtml(name.toUpperCase())}</span>
+      <div style="flex-grow:1"></div>
+      <span class="mono" style="font-size:9.5px;color:var(--dim)">${group.length} MARKET${group.length === 1 ? '' : 'S'}</span>
+    </div>`;
+    group.forEach(r => {
+      const imp = (r.implied_prob_yes ?? 0) * 100;
+      const linked = correlated.has(r.ticker);
+      const heldStyle = r.my_position ? 'background:var(--amber-soft)' : '';
+      html += `<div class="mono" style="height:20px;display:grid;grid-template-columns:minmax(0,1fr) 200px 90px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule);${heldStyle}">
+        <span style="padding-left:4px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.title)}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="bar-track"><div class="bar-fill" style="width:${imp}%"></div></div>
+          <span style="width:36px;text-align:right">${imp.toFixed(1)}</span>
+        </div>
+        <span class="right" style="color:${linked ? 'var(--amber)' : 'var(--dim)'}">${linked ? 'linked' : '—'}</span>
+      </div>`;
+    });
+  });
+  html += `<div class="mono" style="padding:8px 4px;font-size:10.5px;color:var(--dim)">${note}</div></div>`;
+  body.innerHTML = html;
+}
+
+// Season series -> nflverse season-total key + the weekly series whose
+// market median gives a next-game expectation.
+const SEASON_SERIES_MAP = {
+  KXNFLSEASONPASSYDS: { stat: 'passing_yards',   weekly: 'KXNFLPASSYDS', dec: 0 },
+  KXNFLSEASONRECYDS:  { stat: 'receiving_yards', weekly: 'KXNFLRECYDS',  dec: 0 },
+  KXNFLSEASONRSHYDS:  { stat: 'rushing_yards',   weekly: 'KXNFLRSHYDS',  dec: 0 },
+  KXNFLSEASONREC:     { stat: 'receptions',      weekly: 'KXNFLREC',     dec: 1 },
+  KXNFLSEASONPASSTDS: { stat: 'passing_tds',     weekly: 'KXNFLPASSTDS', dec: 2 },
+  KXNFLSEASONRSHTD:   { stat: 'rushing_tds',     weekly: null,           dec: 2 },
+  KXNFLSEASONRECTD:   { stat: 'receiving_tds',   weekly: null,           dec: 2 },
+};
+
+// Expected stat for the next game: weekly market median when this game's
+// ladder exists, else the player's season per-game average.
+function nextGameExpected(d, map, pace) {
+  if (map.weekly && SERIES_META[map.weekly]) {
+    const rows = groupRows(d.markets.player_props, map.weekly);
+    const m = rows.length ? median(rows) : null;
+    if (m !== null) return { value: SERIES_META[map.weekly].over ? m : m + 0.5, src: 'mkt' };
+  }
+  if (pace && pace.games_played) return { value: (pace.totals[map.stat] || 0) / pace.games_played, src: 'avg' };
+  return null;
+}
+
+function renderSeasonMarkets(body, d, rows, note) {
+  const pace = d.season_pace;
+  const fmtN = (v, dec) => dec === 0 ? Math.round(v).toLocaleString('en-US') : v.toFixed(dec);
+  const sorted = [...rows].sort((a, b) => (a.series || '').localeCompare(b.series || '') || a.threshold - b.threshold);
+  const grid = 'grid-template-columns:minmax(0,1fr) 170px 120px 100px';
+  let html = `<div style="padding:4px 8px 8px;display:flex;flex-direction:column">
+    <div class="mono" style="min-height:18px;display:grid;${grid};align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+      <span style="padding-left:4px">MARKET</span><span>IMPLIED %</span><span class="right">NEED / GAME</span><span class="right">NEXT G EXP</span>
+    </div>`;
+  sorted.forEach(r => {
+    const imp = (r.implied_prob_yes ?? 0) * 100;
+    const heldStyle = r.my_position ? 'background:var(--amber-soft)' : '';
+    const map = SEASON_SERIES_MAP[r.series];
+    let needHtml = '<span style="color:var(--dim)">—</span>', expHtml = needHtml;
+    if (map && pace) {
+      const target = Math.round(r.threshold + 0.5);
+      const have = pace.totals[map.stat] || 0;
+      const left = pace.team_games_remaining;
+      if (have >= target) needHtml = `<span style="color:var(--blue)">HIT</span>`;
+      else if (!left) needHtml = `<span style="color:var(--orange)">0 G LEFT</span>`;
+      else needHtml = `<span style="color:var(--on)">${fmtN((target - have) / left, map.dec === 0 ? 1 : 2)}</span>`;
+      const exp = nextGameExpected(d, map, pace);
+      if (exp) expHtml = `<span style="color:var(--on)">${fmtN(exp.value, map.dec === 0 ? 1 : 2)}</span> <span style="color:var(--dim);font-size:9px">${exp.src}</span>`;
+    }
+    html += `<div class="mono" style="min-height:20px;padding:2px 0;display:grid;${grid};align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule);${heldStyle}">
+      <span style="padding-left:4px;color:var(--muted);white-space:normal">${escapeHtml(r.title)}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="bar-track"><div class="bar-fill" style="width:${imp}%"></div></div>
+        <span style="width:36px;text-align:right">${imp.toFixed(1)}</span>
+      </div>
+      <span class="right">${needHtml}</span>
+      <span class="right" style="padding-right:2px">${expHtml}</span>
+    </div>`;
+  });
+  const paceNote = pace
+    ? ` Need/game = (target − ${pace.season} season-to-date) ÷ ${pace.team_games_remaining} team games left` +
+      (pace.bye_week ? ` (bye wk ${pace.bye_week}${pace.bye_upcoming ? ' still ahead, excluded' : ' already past'})` : '') +
+      `. ${pace.games_played} GP. Next G: mkt = weekly ladder median, avg = season per-game avg.`
+    : ' Season-to-date stats unavailable.';
+  html += `<div class="mono" style="padding:8px 4px;font-size:10.5px;color:var(--dim)">${note}${paceNote}</div></div>`;
   body.innerHTML = html;
 }
 
@@ -648,26 +853,32 @@ function renderBook() {
   else renderExposure(body, held);
 }
 
-function renderPositions(body, held) {
-  if (!held.length) { body.innerHTML = `<div class="empty">No open Kalshi positions on this player's markets.</div>`; return; }
-  let cost = 0, val = 0, maxWin = 0, qty = 0;
-  const rows = held.map(m => {
-    const pm = positionMath(m);
-    cost += pm.costC; val += pm.valC; maxWin += pm.winC; qty += pm.qty;
-    return { label: m.stat + ' ' + lineLabel(SERIES_META[m.series] || {}, m.threshold), side: pm.side.toUpperCase(),
-      sideFg: pm.side === 'yes' ? 'var(--blue)' : 'var(--orange)', qty: pm.qty, avg: pm.avg.toFixed(0) + '¢',
-      mark: pm.mark.toFixed(1) + '¢', pnl: signedMoney(pm.pnlC / 100), pnlFg: pm.pnlC >= 0 ? 'var(--blue)' : 'var(--orange)',
-      maxWin: money(pm.winC / 100), pwin: pm.pwin.toFixed(1) + '%' };
-  });
-  const upnl = val - cost;
-  const tiles = [
-    { l: 'CONTRACTS', v: String(qty) }, { l: 'COST', v: money(cost / 100) }, { l: 'MKT VALUE', v: money(val / 100) },
-    { l: 'UNREAL P&L', v: signedMoney(upnl / 100), fg: upnl >= 0 ? 'var(--blue)' : 'var(--orange)' },
-    { l: 'MAX PAYOUT', v: money((maxWin + cost) / 100) },
-  ];
-  body.innerHTML = `<div style="padding:8px">
-    <div class="stat-tiles" style="margin-top:0">${tiles.map(x => `<div class="stat-tile"><span class="sl">${x.l}</span><span class="sv mono" style="color:${x.fg || 'var(--on)'}">${x.v}</span></div>`).join('')}</div>
-    <div class="mono" style="margin-top:8px;height:18px;display:grid;grid-template-columns:minmax(0,1fr) 40px 40px 46px 46px 64px 64px 60px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+// Generic: build a display row + accumulator-friendly numbers for one held
+// position. `label` is caller-supplied since ticket markets (SERIES_META-based
+// short labels) and Book-module markets (arbitrary series, full titles) name
+// things differently.
+function buildPositionRow(m, label) {
+  const pm = positionMath(m);
+  return {
+    label, side: pm.side.toUpperCase(), sideFg: pm.side === 'yes' ? 'var(--blue)' : 'var(--orange)',
+    qty: pm.qty, avg: pm.avg.toFixed(0) + '¢', mark: pm.mark.toFixed(1) + '¢',
+    pnl: signedMoney(pm.pnlC / 100), pnlFg: pm.pnlC >= 0 ? 'var(--blue)' : 'var(--orange)',
+    maxWin: money(pm.winC / 100), pwin: pm.pwin.toFixed(1) + '%',
+    costC: pm.costC, valC: pm.valC, winC: pm.winC,
+  };
+}
+
+// Width of the longest string in IBM Plex Mono (0.6em advance) at `fontPx`.
+// Tables cap themselves at their content width so leftover space trails the
+// row instead of opening a gap between the label and its numbers.
+function monoTextPx(strs, fontPx) {
+  return Math.ceil(Math.max(0, ...strs.map(x => String(x ?? '').length)) * fontPx * 0.6) + 12;
+}
+
+const POS_NUM_COLS_PX = 40 + 40 + 46 + 46 + 64 + 64 + 60;
+function positionsTableHtml(rows, labelPx) {
+  labelPx = labelPx || monoTextPx(rows.map(p => p.label), 11);
+  return `<div style="max-width:${labelPx + POS_NUM_COLS_PX}px"><div class="mono" style="height:18px;display:grid;grid-template-columns:minmax(0,1fr) 40px 40px 46px 46px 64px 64px 60px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
       <span>CONTRACT</span><span>SIDE</span><span class="right">QTY</span><span class="right">AVG</span><span class="right">MARK</span><span class="right">P&amp;L</span><span class="right">MAX WIN</span><span class="right">P(WIN)</span>
     </div>
     ${rows.map(p => `<div class="mono" style="height:22px;display:grid;grid-template-columns:minmax(0,1fr) 40px 40px 46px 46px 64px 64px 60px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule)">
@@ -676,8 +887,25 @@ function renderPositions(body, held) {
       <span class="right">${p.qty}</span><span class="right" style="color:var(--muted)">${p.avg}</span>
       <span class="right">${p.mark}</span><span class="right" style="color:${p.pnlFg}">${p.pnl}</span>
       <span class="right" style="color:var(--muted)">${p.maxWin}</span><span class="right">${p.pwin}</span>
-    </div>`).join('')}
-  </div>`;
+    </div>`).join('')}</div>`;
+}
+
+function positionsTilesHtml(rows) {
+  let cost = 0, val = 0, maxWin = 0, qty = 0;
+  rows.forEach(p => { cost += p.costC; val += p.valC; maxWin += p.winC; qty += p.qty; });
+  const upnl = val - cost;
+  const tiles = [
+    { l: 'CONTRACTS', v: String(qty) }, { l: 'COST', v: money(cost / 100) }, { l: 'MKT VALUE', v: money(val / 100) },
+    { l: 'UNREAL P&L', v: signedMoney(upnl / 100), fg: upnl >= 0 ? 'var(--blue)' : 'var(--orange)' },
+    { l: 'MAX PAYOUT', v: money((maxWin + cost) / 100) },
+  ];
+  return `<div class="stat-tiles" style="margin-top:0;grid-template-columns:repeat(${tiles.length},minmax(0,1fr))">${tiles.map(x => `<div class="stat-tile"><span class="sl">${x.l}</span><span class="sv mono" style="color:${x.fg || 'var(--on)'}">${x.v}</span></div>`).join('')}</div>`;
+}
+
+function renderPositions(body, held) {
+  if (!held.length) { body.innerHTML = `<div class="empty">No open Kalshi positions on this player's markets.</div>`; return; }
+  const rows = held.map(m => buildPositionRow(m, m.stat + ' ' + lineLabel(SERIES_META[m.series] || {}, m.threshold)));
+  body.innerHTML = `<div style="padding:8px">${positionsTilesHtml(rows)}<div style="margin-top:8px">${positionsTableHtml(rows)}</div></div>`;
 }
 
 function legLabel(c) {
@@ -834,6 +1062,7 @@ function practiceStatus(row) {
 }
 
 function renderInjuries() {
+  if (typeof hideInjPop === 'function') hideInjPop();
   const head = document.getElementById('injTabs');
   const body = document.getElementById('injBody');
   const t = activeTicket();
@@ -856,17 +1085,96 @@ function renderInjuries() {
     <div class="mono" style="height:18px;display:grid;grid-template-columns:minmax(0,1fr) 34px 46px;gap:6px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
       <span>PLAYER</span><span>POS</span><span class="right">PRACT</span>
     </div>
-    ${rows.length ? rows.map(r => {
+    ${rows.length ? rows.map((r, i) => {
       const st = practiceStatus(r); const style = INJ_STYLE[st] || [C.muted, 'transparent'];
-      return `<div style="height:22px;display:grid;grid-template-columns:minmax(0,1fr) 34px 46px;gap:6px;align-items:center;border-bottom:1px solid var(--row-rule)">
+      return `<div class="inj-row" data-injp="${i}" style="height:22px;display:grid;grid-template-columns:minmax(0,1fr) 34px 46px;gap:6px;align-items:center;border-bottom:1px solid var(--row-rule)">
         <span style="font-size:12px;color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.full_name)}</span>
         <span class="mono" style="font-size:10.5px;color:var(--muted)">${r.position}</span>
         <span style="display:flex;justify-content:flex-end"><span class="mono pill" style="color:${style[0]};background:${style[1]}">${st}</span></span>
       </div>`;
     }).join('') : `<div class="empty">None reported.</div>`}
-    <div class="mono" style="margin-top:8px;font-size:9.5px;color:var(--dim)">DNP did not practice · LP limited · FP full</div>
+    <div class="mono" style="margin-top:8px;font-size:9.5px;color:var(--dim)">DNP did not practice · LP limited · FP full · hover for news</div>
   </div>`;
+  body.querySelectorAll('[data-injp]').forEach(el => { el._inj = rows[Number(el.dataset.injp)]; });
 }
+
+// ---------- injury news popover ----------
+// Hovering an injury row shows the report detail plus recent headlines with
+// sources. The popover stays open while the pointer moves into it so links
+// are clickable.
+const injNews = {};  // name -> Promise<items>
+const injPop = document.getElementById('injPop');
+let injHoverRow = null, injHideTimer = null;
+
+function fetchInjNews(name) {
+  if (!injNews[name]) {
+    injNews[name] = fetch('/api/injury_news?name=' + encodeURIComponent(name))
+      .then(r => r.json()).then(d => { if (d.error) throw new Error(d.error); return d.items || []; })
+      .catch(err => { delete injNews[name]; throw err; });
+  }
+  return injNews[name];
+}
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const h = (Date.now() - new Date(iso).getTime()) / 3.6e6;
+  if (h < 1) return `${Math.max(1, Math.round(h * 60))}m ago`;
+  if (h < 48) return `${Math.round(h)}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
+function placeInjPop(row) {
+  const r = row.getBoundingClientRect();
+  const w = 340, pad = 8;
+  let left = r.left - w - 6;
+  if (left < pad) left = Math.min(r.right + 6, window.innerWidth - w - pad);
+  const top = Math.max(pad, Math.min(r.top - 4, window.innerHeight - injPop.offsetHeight - pad));
+  injPop.style.left = left + 'px'; injPop.style.top = top + 'px';
+}
+
+function showInjPop(row) {
+  const r = row._inj; if (!r) return;
+  if (injHoverRow) injHoverRow.classList.remove('hov');
+  injHoverRow = row; row.classList.add('hov');
+  const injury = [r.report_primary_injury || r.practice_primary_injury, r.report_secondary_injury].filter(Boolean).join(', ');
+  const meta = [r.position, injury || 'injury n/a', r.report_status ? `Game status: ${r.report_status}` : null, r.practice_status].filter(Boolean);
+  const head = `<div class="ip-head"><div class="ip-name">${escapeHtml(r.full_name)}</div><div class="ip-meta mono">${meta.map(escapeHtml).join(' · ')}</div></div>
+    <div class="ip-sec mono">RECENT NEWS · 14D</div>`;
+  injPop.innerHTML = head + `<div class="empty">Loading…</div>`;
+  injPop.hidden = false; placeInjPop(row);
+  fetchInjNews(r.full_name).then(items => {
+    if (injHoverRow !== row) return;
+    injPop.innerHTML = head + (items.length ? items.map(it => `<a class="ip-item" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">
+        <div>${escapeHtml(it.title)}</div>
+        <div class="ip-src mono"><b>${escapeHtml(it.source || 'unknown')}</b> · ${timeAgo(it.published)}</div>
+      </a>`).join('') : `<div class="empty">No recent injury news found.</div>`)
+      + `<div class="mono" style="padding:6px 10px;font-size:9.5px;color:var(--faint)">via Google News</div>`;
+    placeInjPop(row);
+  }).catch(() => {
+    if (injHoverRow === row) injPop.innerHTML = head + `<div class="empty">News lookup failed.</div>`;
+  });
+}
+
+function hideInjPop() {
+  injPop.hidden = true;
+  if (injHoverRow) injHoverRow.classList.remove('hov');
+  injHoverRow = null;
+}
+
+document.addEventListener('mouseover', (e) => {
+  const row = e.target.closest('[data-injp]');
+  if (row || e.target.closest('#injPop')) clearTimeout(injHideTimer);
+  if (row && row !== injHoverRow) showInjPop(row);
+});
+window.addEventListener('scroll', (e) => { if (!injPop.contains(e.target)) hideInjPop(); }, true);
+document.addEventListener('mouseout', (e) => {
+  const from = e.target.closest('[data-injp], #injPop');
+  if (!from) return;
+  const to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('[data-injp], #injPop');
+  if (to) return;
+  clearTimeout(injHideTimer);
+  injHideTimer = setTimeout(hideInjPop, 200);
+});
 
 // ---------- render: history ----------
 function renderHistory() {
@@ -907,12 +1215,31 @@ function hideOverlay() {
   document.getElementById('overlay').style.display = 'none';
 }
 
+// Three modules share the rail: Research (ticket-based player pages, the
+// original build), Slate (week overview + game drill-down), Book (positions
+// overview). Only one is visible at a time; each owns its own DOM subtree so
+// switching between them never tears down another module's state.
+function render() {
+  renderTopbar();
+  document.querySelectorAll('.railbtn[data-module]').forEach(b => b.classList.toggle('active', b.dataset.module === state.module));
+  document.getElementById('ctx').style.display = state.module === 'research' ? '' : 'none';
+  document.getElementById('grid').style.display = state.module === 'research' ? '' : 'none';
+  document.getElementById('slateView').style.display = state.module === 'slate' ? 'flex' : 'none';
+  document.getElementById('bookView').style.display = state.module === 'book' ? 'flex' : 'none';
+
+  if (state.module === 'research') renderResearch();
+  else {
+    hideOverlay();
+    if (state.module === 'slate') renderSlate();
+    else if (state.module === 'book') renderBookModule();
+  }
+}
+
 // The panel skeleton (#marketsTabs, #marketsBody, etc.) is built exactly
 // once and never destroyed -- loading/error/empty states are shown as an
 // overlay on top of it instead, so switching tickets never leaves the
 // skeleton's child elements missing underneath a stale placeholder.
-function render() {
-  renderTopbar();
+function renderResearch() {
   renderContext();
   const t = activeTicket();
   if (!t) {
@@ -934,6 +1261,382 @@ function render() {
   renderMatchup();
   renderInjuries();
   renderHistory();
+}
+
+// ========================================================================
+// SLATE module: week overview (moneyline/spread/total per game) with a
+// click-team-then-player drill-down into combo markets + rosters.
+// ========================================================================
+
+async function loadSlate(force) {
+  if (state.slate.games && !force) { render(); return; }
+  state.slate.loading = true; state.slate.error = null;
+  render();
+  try {
+    const resp = await fetch('/api/week');
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'request failed');
+    state.slate.games = data.games;
+  } catch (e) {
+    state.slate.error = String(e.message || e);
+  } finally {
+    state.slate.loading = false;
+    render();
+  }
+}
+
+function activeGameTab() { return state.games.find(g => g.id === state.activeGameId) || null; }
+
+function openGameDetail(eventTicker) {
+  const existing = state.games.find(g => g.eventTicker === eventTicker);
+  if (existing) {
+    state.activeGameId = existing.id;
+    state.module = 'slate';
+    state.slate.view = 'detail';
+    render();
+    return;
+  }
+  const meta = (state.slate.games || []).find(x => x.event_ticker === eventTicker);
+  const g = {
+    id: nextId++, eventTicker,
+    away: meta ? meta.away : null, home: meta ? meta.home : null,
+    label: meta ? `${meta.away} @ ${meta.home}` : eventTicker,
+    loading: true, error: null, data: null,
+  };
+  state.games.push(g);
+  state.activeGameId = g.id;
+  state.module = 'slate';
+  state.slate.view = 'detail';
+  loadGameTab(g);
+  render();
+}
+
+async function loadGameTab(g) {
+  try {
+    const resp = await fetch('/api/game?event=' + encodeURIComponent(g.eventTicker));
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'request failed');
+    g.data = data;
+    g.away = data.away; g.home = data.home;
+    g.label = `${data.away} @ ${data.home}`;
+  } catch (e) {
+    g.error = String(e.message || e);
+  } finally {
+    g.loading = false;
+    render();
+  }
+}
+
+function closeGameTab(id) {
+  const i = state.games.findIndex(g => g.id === id);
+  if (i === -1) return;
+  state.games.splice(i, 1);
+  if (state.activeGameId === id) {
+    const next = state.games[Math.max(0, i - 1)];
+    state.activeGameId = next ? next.id : null;
+    if (!next) state.slate.view = 'list';
+  }
+  render();
+}
+
+function backToSlateList() {
+  state.slate.view = 'list';
+  state.activeGameId = null;
+  render();
+}
+
+// Team logos (Slate module only). Kalshi codes match ESPN's lowercase
+// abbreviations except these three.
+const ESPN_LOGO_CODE = { JAC: 'jax', WAS: 'wsh', LAR: 'lar' };
+function teamLogo(code, size) {
+  if (!code) return '';
+  const slug = ESPN_LOGO_CODE[code] || code.toLowerCase();
+  return `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${slug}.png" alt="" width="${size}" height="${size}" loading="lazy" style="flex-shrink:0;object-fit:contain" onerror="this.style.visibility='hidden'">`;
+}
+
+function moneylinePct(side) {
+  return side && side.implied_prob_yes !== null && side.implied_prob_yes !== undefined ? (side.implied_prob_yes * 100).toFixed(1) + '%' : '--';
+}
+
+function renderSlate() {
+  const el = document.getElementById('slateView');
+  const g = activeGameTab();
+  if (state.slate.view === 'detail' && g) { renderGameDetail(el, g); return; }
+  if (state.slate.loading && !state.slate.games) { el.innerHTML = `<div class="empty">Loading week…</div>`; return; }
+  if (state.slate.error) { el.innerHTML = `<div class="empty" style="color:var(--orange)">${escapeHtml(state.slate.error)}</div>`; return; }
+  if (!state.slate.games) { loadSlate(false); el.innerHTML = `<div class="empty">Loading week…</div>`; return; }
+  renderGameList(el);
+}
+
+function renderGameList(el) {
+  const games = state.slate.games;
+  const slots = [];
+  games.forEach(g => {
+    const slot = gameSlot(g);
+    const last = slots[slots.length - 1];
+    if (last && last.key === slot.key) last.games.push(g);
+    else slots.push({ ...slot, games: [g] });
+  });
+  const week = games.find(g => g.schedule) ? games.find(g => g.schedule).schedule.week : null;
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 4px">
+      <span style="font-size:15px;font-weight:600">${week ? 'WEEK ' + week : 'WEEK OVERVIEW'}</span>
+      <span class="mono" style="font-size:10.5px;color:var(--dim)">${games.length} GAMES</span>
+    </div>
+    <div style="flex-grow:1;min-height:0;overflow:auto;padding:0 4px 8px">
+      ${slots.map(sl => `
+        <div class="slot-head"><span class="sn">${sl.label}</span><span class="sc mono">${sl.games.length} ${sl.games.length === 1 ? 'GAME' : 'GAMES'}</span></div>
+        <div class="game-cards">${sl.games.map(renderGameCard).join('')}</div>
+      `).join('')}
+    </div>`;
+}
+
+// Kickoff slot for grouping: early window (1 PM), late window (4:05/4:25),
+// and prime time, per day. Uses the nflverse schedule (ET) when available.
+function gameSlot(g) {
+  const s = g.schedule;
+  if (!s) return { key: 'tbd', label: 'OTHER' };
+  const day = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long' }).format(new Date(s.gameday + 'T12:00:00Z')).toUpperCase();
+  const hour = parseInt(s.gametime, 10);
+  const [slot, label] = hour < 12 ? ['am', `${day} MORNING`]
+    : hour < 15 ? ['early', `${day} · 1 PM ET`]
+    : hour < 19 ? ['late', `${day} · 4 PM ET`]
+    : ['night', `${day} NIGHT`];
+  return { key: s.gameday + slot, label };
+}
+
+function gameKickoffText(g) {
+  const s = g.schedule;
+  if (!s) return g.kickoff ? formatKickoff(g.kickoff) : '--';
+  const [h, m] = s.gametime.split(':').map(Number);
+  const day = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(s.gameday + 'T12:00:00Z')).toUpperCase();
+  return `${day} · ${(h % 12) || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'} ET`;
+}
+
+function renderGameCard(g) {
+  const spreadTxt = g.spread ? `${g.spread.team} ${g.spread.line >= 0 ? '-' : '+'}${Math.abs(g.spread.line).toFixed(1)}` : '--';
+  const totalTxt = g.total ? g.total.line.toFixed(1) : '--';
+  const rec = g.records || {};
+  const teamRow = (code, record, side) => `<div class="gc-team mono">
+      ${teamLogo(code, 30)}
+      <span><span class="gc-code">${code}</span><span class="gc-rec">${record || ''}</span></span>
+      <span class="gc-ml" style="color:${moneylineColor(side)}">${moneylinePct(side)}</span>
+    </div>`;
+  return `<div class="game-card" data-open-game="${g.event_ticker}">
+    <div class="gc-top mono"><span>${gameKickoffText(g)}</span><span>AWAY @ HOME</span></div>
+    ${teamRow(g.away, rec.away, g.moneyline.away)}
+    ${teamRow(g.home, rec.home, g.moneyline.home)}
+    <div class="gc-foot mono"><span><span class="k">SPREAD</span>${spreadTxt}</span><span><span class="k">O/U</span>${totalTxt}</span></div>
+  </div>`;
+}
+
+function moneylineColor(side) {
+  if (!side || side.implied_prob_yes === null || side.implied_prob_yes === undefined) return 'var(--muted)';
+  return side.implied_prob_yes >= 0.5 ? 'var(--blue)' : 'var(--muted)';
+}
+
+function formatKickoff(iso) {
+  const dt = new Date(iso);
+  return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit' }).format(dt).toUpperCase() + ' ET';
+}
+
+function renderGameDetail(el, g) {
+  if (g.loading) { el.innerHTML = `<div class="empty">Loading game…</div>`; return; }
+  if (g.error) { el.innerHTML = `<div class="empty" style="color:var(--orange)">${escapeHtml(g.error)}</div>`; return; }
+  const d = g.data;
+  if (!d) { el.innerHTML = ''; return; }
+
+  const spreadTxt = d.spread ? `${d.spread.team} ${d.spread.line >= 0 ? '-' : '+'}${Math.abs(d.spread.line).toFixed(1)} (${(d.spread.implied_prob_yes * 100).toFixed(0)}%)` : '--';
+  const totalTxt = d.total ? `${d.total.line.toFixed(1)} (${(d.total.implied_prob_yes * 100).toFixed(0)}%)` : '--';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 4px">
+      <span class="backlink" data-back-slate="1">&larr; ALL GAMES</span>
+      <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600">${teamLogo(d.away, 32)}${d.away}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).away || ''}</span><span style="color:var(--dim);font-weight:400">@</span>${teamLogo(d.home, 32)}${d.home}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).home || ''}</span></span>
+      <span class="mono" style="font-size:10.5px;color:var(--dim)">SPREAD ${spreadTxt} &middot; TOTAL ${totalTxt}</span>
+    </div>
+    <div style="flex-grow:1;min-height:0;display:grid;grid-template-columns:220px 220px minmax(0,1fr);gap:8px;padding:0 4px 8px">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(d.away, 16)}${d.away} ROSTER</span><span class="mono" style="margin-left:auto;display:flex;align-items:center;padding-right:8px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim)">OVR</span></div>
+        <div class="panel-body">${rosterHtml(d.away_roster)}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(d.home, 16)}${d.home} ROSTER</span><span class="mono" style="margin-left:auto;display:flex;align-items:center;padding-right:8px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim)">OVR</span></div>
+        <div class="panel-body">${rosterHtml(d.home_roster)}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">GAME &amp; COMBO MARKETS</span></div>
+        <div class="panel-body">${combosHtml(d.combos, d.away, d.home)}</div>
+      </div>
+    </div>`;
+}
+
+// Madden overall -> color tier: 90+ elite, 80+ starter, 70+ depth, else dim.
+function ovrColor(ovr) {
+  return ovr >= 90 ? 'var(--amber)' : ovr >= 80 ? 'var(--blue)' : ovr >= 70 ? 'var(--on)' : 'var(--dim)';
+}
+
+function rosterHtml(roster) {
+  if (!roster || !roster.length) return `<div class="empty">No roster data.</div>`;
+  return roster.map(p => {
+    const m = p.madden;
+    const tip = m ? `Madden ${m.iteration || ''}: ${m.ovr} OVR${m.archetype ? ' · ' + m.archetype : ''}${m.speed ? ' · ' + m.speed + ' SPD' : ''}` : 'No Madden rating found';
+    return `<div class="roster-player mono" data-open-player="${escapeHtml(p.full_name)}" style="height:22px;display:flex;align-items:center;gap:8px;padding:0 8px;border-bottom:1px solid var(--row-rule);font-size:11px">
+    <span style="width:28px;flex-shrink:0;color:var(--dim)">${p.position}</span>
+    <span style="flex-grow:1;color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.full_name)}</span>
+    <span title="${escapeHtml(tip)}" style="width:22px;flex-shrink:0;text-align:right;font-weight:600;color:${m ? ovrColor(m.ovr) : 'var(--faint)'}">${m ? m.ovr : '·'}</span>
+  </div>`;
+  }).join('');
+}
+
+// The outcome(s) priced closest to 50% within one market -- the "main line".
+// Single-outcome markets have nothing to compare, so they get no highlight.
+function nearestToEven(outcomes) {
+  const priced = outcomes.filter(o => o.implied_prob_yes !== null && o.implied_prob_yes !== undefined);
+  if (priced.length < 2) return new Set();
+  const dist = o => Math.abs(o.implied_prob_yes - 0.5);
+  const best = Math.min(...priced.map(dist));
+  return new Set(priced.filter(o => dist(o) - best < 1e-9));
+}
+
+function combosHtml(combos, away, home) {
+  if (!combos || !combos.length) return `<div class="empty">No combo markets found for this game.</div>`;
+  const rowPx = monoTextPx(combos.flatMap(c => (c.outcomes || []).map(o => o.title)), 10.5) + 8 + 48 + 16;
+  return combos.map(c => {
+    if (c.series === 'KXNFLRACE') return raceLadderHtml(c, away, home, rowPx);
+    const even = nearestToEven(c.outcomes);
+    return `<div class="combo-block">
+      <div style="font-size:11px;font-weight:600;color:var(--label);padding:0 8px 4px">${c.label}</div>
+      <div style="max-width:${rowPx}px">${c.outcomes.map(o => outcomeRow(o, even.has(o))).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+// Race to N as a ladder: one rung per point threshold, columns per team
+// (away, home) plus "neither". Each cell has a bar sized to its probability.
+const RACE_COLS = '64px repeat(3, minmax(0,1fr))';
+const CHECK_SVG = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--amber)" stroke-width="1.6"><path d="M1.5 5.2l2.3 2.3L8.5 2.5"></path></svg>`;
+
+function raceLadderHtml(c, away, home, widthPx) {
+  const even = nearestToEven(c.thresholds.flatMap(t => t.outcomes));
+  const cell = (o) => {
+    if (!o || o.implied_prob_yes === null || o.implied_prob_yes === undefined) {
+      return `<span class="right" style="color:var(--faint);padding-right:4px">--</span>`;
+    }
+    const p = o.implied_prob_yes * 100, hl = even.has(o);
+    return `<span title="${escapeHtml(o.title || '')}${hl ? ' · closest to 50%' : ''}" style="position:relative;height:15px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;background:${hl ? 'var(--amber-soft)' : '#141920'};${hl ? 'box-shadow:inset 0 0 0 1px var(--amber-ring);' : ''}">
+      <span style="position:absolute;left:0;top:0;bottom:0;width:${p.toFixed(1)}%;background:${hl ? 'rgba(242,165,65,0.28)' : 'var(--blue-bar)'};opacity:${hl ? 1 : 0.55}"></span>
+      <span style="position:relative;color:${hl ? 'var(--amber)' : 'var(--on)'}">${p.toFixed(1)}%</span>
+    </span>`;
+  };
+  const colHead = (code) => `<span style="display:flex;align-items:center;justify-content:flex-end;gap:5px;color:var(--label)">${teamLogo(code, 14)}${code}</span>`;
+  return `<div class="combo-block">
+    <div style="font-size:11px;font-weight:600;color:var(--label);padding:0 8px 4px">${c.label}</div>
+    <div class="mono" style="padding:0 8px;font-size:10.5px;max-width:${Math.max(widthPx || 0, 360)}px">
+      <div style="height:20px;display:grid;grid-template-columns:${RACE_COLS};gap:4px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+        <span>FIRST TO</span>${colHead(away)}${colHead(home)}<span class="right">NEITHER</span>
+      </div>
+      ${c.thresholds.map(t => {
+        const by = code => t.outcomes.find(o => o.team_code === code);
+        return `<div style="height:21px;display:grid;grid-template-columns:${RACE_COLS};gap:4px;align-items:center;border-bottom:1px solid var(--row-rule)">
+          <span style="display:flex;align-items:center;gap:5px;color:var(--on)">${CHECK_SVG}${t.threshold}</span>
+          ${cell(by(away))}${cell(by(home))}${cell(by('NONE'))}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function outcomeRow(o, even) {
+  const imp = o.implied_prob_yes !== null && o.implied_prob_yes !== undefined ? (o.implied_prob_yes * 100) : null;
+  const hl = even ? 'background:var(--amber-soft);box-shadow:inset 2px 0 0 var(--amber);' : '';
+  return `<div class="mono" ${even ? 'title="Closest to 50% in this market"' : ''} style="height:19px;display:flex;align-items:center;gap:8px;padding:0 8px;font-size:10.5px;border-bottom:1px solid var(--row-rule);${hl}">
+    <span style="color:${even ? 'var(--on)' : 'var(--muted)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-grow:1">${escapeHtml(o.title || '')}</span>
+    <span style="color:${even ? 'var(--amber)' : 'var(--on)'};width:48px;flex-shrink:0;text-align:right">${imp !== null ? imp.toFixed(1) + '%' : '--'}</span>
+  </div>`;
+}
+
+// ========================================================================
+// BOOK module: all open positions, grouped by game (secondary: futures).
+// ========================================================================
+
+async function loadBook(force) {
+  if (state.book.data && !force) { render(); return; }
+  state.book.loading = true; state.book.error = null;
+  render();
+  try {
+    const resp = await fetch('/api/positions');
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'request failed');
+    state.book.data = data;
+  } catch (e) {
+    state.book.error = String(e.message || e);
+  } finally {
+    state.book.loading = false;
+    render();
+  }
+}
+
+// Book-module matchup strings come straight from Kalshi's event sub_title
+// ("AWAY vs HOME", team codes) -- parse it back out to pull each team's logo.
+function matchupTitleHtml(matchup) {
+  const parts = (matchup || '').split(' vs ');
+  if (parts.length !== 2) return escapeHtml(matchup || '');
+  const [away, home] = parts.map(s => s.trim());
+  return `<span style="display:flex;align-items:center;gap:6px">${teamLogo(away, 18)}<span>${escapeHtml(away)}</span><span style="color:var(--dim)">@</span>${teamLogo(home, 18)}<span>${escapeHtml(home)}</span></span>`;
+}
+
+function renderBookModule() {
+  const el = document.getElementById('bookView');
+  if (state.book.loading && !state.book.data) { el.innerHTML = `<div class="empty">Loading positions…</div>`; return; }
+  if (state.book.error) { el.innerHTML = `<div class="empty" style="color:var(--orange)">${escapeHtml(state.book.error)}</div>`; return; }
+  if (!state.book.data) { loadBook(false); el.innerHTML = `<div class="empty">Loading positions…</div>`; return; }
+
+  const d = state.book.data;
+  if (d.count === 0) { el.innerHTML = `<div class="empty">No open Kalshi positions.</div>`; return; }
+
+  const allRows = [];
+  d.weekly.forEach(g => g.positions.forEach(m => allRows.push(buildPositionRow(m, m.title))));
+  d.futures.forEach(g => g.positions.forEach(m => allRows.push(buildPositionRow(m, m.title))));
+
+  const weeklyRows = d.weekly.map(g => g.positions.map(m => buildPositionRow(m, m.player_name ? `${m.player_name} · ${m.title}` : m.title)));
+  const futuresRows = d.futures.map(g => g.positions.map(m => buildPositionRow(m, m.title)));
+  // Each section shares one label width so its tables line up; futures titles
+  // run much longer, so they get their own.
+  const weeklyPx = monoTextPx(weeklyRows.flat().map(p => p.label), 11);
+  const futuresPx = monoTextPx(futuresRows.flat().map(p => p.label), 11);
+
+  let html = `<div class="panel" style="margin-bottom:8px;flex-shrink:0"><div class="panel-body" style="padding:8px;flex-shrink:0;overflow:visible">${positionsTilesHtml(allRows)}</div></div>`;
+
+  html += `<div class="section-label">THIS WEEK'S GAMES (${d.weekly.length})</div>`;
+  if (!d.weekly.length) {
+    html += `<div class="empty">No single-game positions this week.</div>`;
+  } else {
+    d.weekly.forEach((g, i) => {
+      const rows = weeklyRows[i], labelPx = weeklyPx;
+      html += `<div class="panel" style="margin-bottom:8px;flex-shrink:0">
+        <div class="panel-head"><span class="panel-title">${matchupTitleHtml(g.matchup)}</span></div>
+        <div class="panel-body" style="padding:0 8px;flex-shrink:0;overflow:visible">${positionsTableHtml(rows, labelPx)}</div>
+      </div>`;
+    });
+  }
+
+  html += `<details style="margin-top:4px">
+    <summary class="section-label" style="cursor:pointer;display:inline-block">FUTURES &amp; SEASON PROPS (${d.futures.reduce((a, g) => a + g.positions.length, 0)}) -- secondary</summary>`;
+  if (!d.futures.length) {
+    html += `<div class="empty">No futures positions.</div>`;
+  } else {
+    d.futures.forEach((g, i) => {
+      const rows = futuresRows[i], labelPx = futuresPx;
+      html += `<div class="panel" style="margin-bottom:8px;flex-shrink:0">
+        <div class="panel-head"><span class="panel-title">${escapeHtml(g.category.toUpperCase())}</span></div>
+        <div class="panel-body" style="padding:0 8px;flex-shrink:0;overflow:visible">${positionsTableHtml(rows, labelPx)}</div>
+      </div>`;
+    });
+  }
+  html += `</details>`;
+
+  el.innerHTML = html;
 }
 
 function buildGridSkeleton(grid) {
@@ -989,6 +1692,7 @@ function buildGridSkeleton(grid) {
 
 // ---------- events ----------
 document.addEventListener('click', (e) => {
+  const railT = e.target.closest('[data-module]');
   const openT = e.target.closest('[data-open]');
   const closeT = e.target.closest('[data-close]');
   const mktT = e.target.closest('[data-mkt]');
@@ -996,21 +1700,131 @@ document.addEventListener('click', (e) => {
   const riskT = e.target.closest('[data-risk]');
   const matchT = e.target.closest('[data-match]');
   const injT = e.target.closest('[data-inj]');
+  const gameT = e.target.closest('[data-open-game]');
+  const playerT = e.target.closest('[data-open-player]');
+  const backSlateT = e.target.closest('[data-back-slate]');
+  const openGameTabT = e.target.closest('[data-open-gametab]');
+  const closeGameTabT = e.target.closest('[data-close-gametab]');
   const t = activeTicket();
   if (closeT) { e.stopPropagation(); closeTicket(Number(closeT.dataset.close)); return; }
-  if (openT) { state.activeId = Number(openT.dataset.open); render(); return; }
+  if (closeGameTabT) { e.stopPropagation(); closeGameTab(Number(closeGameTabT.dataset.closeGametab)); return; }
+  if (railT) { state.module = railT.dataset.module; render(); return; }
+  if (openT) { state.activeId = Number(openT.dataset.open); state.module = 'research'; render(); return; }
+  if (openGameTabT) { state.activeGameId = Number(openGameTabT.dataset.openGametab); state.module = 'slate'; state.slate.view = 'detail'; render(); return; }
   if (mktT && t) { t.ui.mkt = mktT.dataset.mkt; renderMarkets(); return; }
   if (curveT && t) { t.ui.curve = curveT.dataset.curve; renderCurve(); return; }
   if (riskT && t) { t.ui.risk = riskT.dataset.risk; renderBook(); return; }
   if (matchT && t) { t.ui.match = matchT.dataset.match; renderMatchup(); return; }
   if (injT && t) { t.ui.inj = injT.dataset.inj; renderInjuries(); return; }
-  if (e.target.id === 'newticket') { document.getElementById('q').focus(); return; }
+  if (gameT) { openGameDetail(gameT.dataset.openGame); return; }
+  if (playerT) { openPlayerFromDrilldown(playerT.dataset.openPlayer); return; }
+  if (backSlateT) { backToSlateList(); return; }
+  if (e.target.id === 'newticket') { state.module = 'research'; document.getElementById('q').focus(); return; }
 });
 
-document.getElementById('q').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    const v = e.target.value.trim();
-    if (v) { newTicket(v); e.target.value = ''; }
+// Player-name autocomplete. The roster list loads once; matching is local.
+const qEl = document.getElementById('q');
+const suggestEl = document.getElementById('suggest');
+const sugg = { players: null, items: [], idx: -1 };
+let playersLoading = false;
+function loadPlayers() {
+  if (playersLoading || (sugg.players && sugg.players.length)) return;
+  playersLoading = true;
+  fetch('/api/players').then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(d => {
+      sugg.players = d.players || [];
+      if (document.activeElement === qEl && qEl.value.trim()) { sugg.items = matchPlayers(qEl.value); renderSuggest(); }
+    })
+    .catch(() => {})
+    .finally(() => { playersLoading = false; });
+}
+loadPlayers();
+
+// Trailing 4h Kalshi prop volume by player, used to rank suggestions.
+// Refreshed every 5 minutes (the server caches for the same period).
+sugg.vol = {}; sugg.volLast = {};
+function loadPlayerVolume() {
+  fetch('/api/player_volume').then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(d => {
+      const vol = {}, volLast = {};
+      for (const p of d.players || []) {
+        const k = volKey(p.name), lk = lastTeamKey(p.name, p.team);
+        vol[k] = (vol[k] || 0) + p.vol;
+        volLast[lk] = (volLast[lk] || 0) + p.vol;
+      }
+      sugg.vol = vol; sugg.volLast = volLast;
+      if (document.activeElement === qEl && qEl.value.trim()) { sugg.items = matchPlayers(qEl.value); renderSuggest(); }
+    })
+    .catch(() => {});
+}
+loadPlayerVolume();
+setInterval(loadPlayerVolume, 5 * 60 * 1000);
+
+const normName = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f.'\-]/g, '');
+// Kalshi and nflverse disagree on suffixes ("Jr.", "III"), so key volume on the bare name.
+const volKey = (s) => normName(s).replace(/\s+(jr|sr|ii|iii|iv|v)$/, '').replace(/\s+/g, ' ').trim();
+const lastTeamKey = (name, team) => volKey(name).split(' ').pop() + '|' + (team || '');
+const playerVol = (p) => sugg.vol[volKey(p.name)] || sugg.volLast[lastTeamKey(p.name, p.team)] || 0;
+const fmtVol = (v) => v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k' : String(Math.round(v));
+
+function matchPlayers(q) {
+  const n = normName(q.trim());
+  if (!n || !sugg.players) return [];
+  const starts = [], words = [], contains = [];
+  for (const p of sugg.players) {
+    const nm = normName(p.name);
+    if (nm.startsWith(n)) starts.push(p);
+    else if (nm.split(' ').some(w => w.startsWith(n))) words.push(p);
+    else if (nm.includes(n)) contains.push(p);
+  }
+  // Highest 4h volume first; ties (incl. no volume) keep name-match order.
+  const ranked = starts.concat(words, contains).map((p, i) => ({ p, i, v: playerVol(p) }));
+  ranked.sort((a, b) => b.v - a.v || a.i - b.i);
+  return ranked.slice(0, 8).map(r => r.p);
+}
+
+function hideSuggest() {
+  suggestEl.hidden = true; sugg.items = []; sugg.idx = -1;
+  qEl.setAttribute('aria-expanded', 'false');
+}
+
+function renderSuggest() {
+  if (!sugg.items.length) { hideSuggest(); return; }
+  const q = qEl.value.trim();
+  suggestEl.innerHTML = sugg.items.map((p, i) => {
+    const at = p.name.toLowerCase().indexOf(q.toLowerCase());
+    const nm = at >= 0
+      ? escapeHtml(p.name.slice(0, at)) + '<b>' + escapeHtml(p.name.slice(at, at + q.length)) + '</b>' + escapeHtml(p.name.slice(at + q.length))
+      : escapeHtml(p.name);
+    return `<div class="sg${i === sugg.idx ? ' on' : ''}" role="option" data-sg="${i}"><span class="nm">${nm}</span><span class="meta mono">${escapeHtml(p.pos || '')} · ${escapeHtml(p.team || '')}</span><span class="meta mono" style="width:40px;text-align:right;color:${playerVol(p) ? 'var(--amber)' : 'var(--dim)'}" title="Kalshi prop volume, last 4h">${playerVol(p) ? fmtVol(playerVol(p)) : '·'}</span></div>`;
+  }).join('');
+  suggestEl.hidden = false;
+  qEl.setAttribute('aria-expanded', 'true');
+}
+
+function submitSearch(v) {
+  v = v.trim();
+  if (!v) return;
+  hideSuggest();
+  state.module = 'research'; newTicket(v); qEl.value = '';
+}
+
+qEl.addEventListener('input', () => { loadPlayers(); sugg.items = matchPlayers(qEl.value); sugg.idx = -1; renderSuggest(); });
+qEl.addEventListener('blur', () => setTimeout(hideSuggest, 120));
+suggestEl.addEventListener('mousedown', (e) => {
+  const row = e.target.closest('[data-sg]');
+  if (row) { e.preventDefault(); submitSearch(sugg.items[Number(row.dataset.sg)].name); }
+});
+
+qEl.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' && sugg.items.length) {
+    e.preventDefault(); sugg.idx = (sugg.idx + 1) % sugg.items.length; renderSuggest();
+  } else if (e.key === 'ArrowUp' && sugg.items.length) {
+    e.preventDefault(); sugg.idx = (sugg.idx - 1 + sugg.items.length) % sugg.items.length; renderSuggest();
+  } else if (e.key === 'Escape') {
+    hideSuggest();
+  } else if (e.key === 'Enter') {
+    submitSearch(sugg.idx >= 0 ? sugg.items[sugg.idx].name : qEl.value);
   }
 });
 document.addEventListener('keydown', (e) => {

@@ -72,6 +72,21 @@ TEAM_GAME_SERIES: dict[str, str] = {
     "KXNFLTEAMTOTAL": "Team Total",
 }
 
+# Exotic/combo game-level series -- one event per matchup, same as
+# TEAM_GAME_SERIES, EXCEPT KXNFLRACE which has one event per (matchup,
+# point-threshold) and is handled separately in get_game_combos().
+GAME_COMBO_SERIES: dict[str, str] = {
+    "KXNFL1H": "1st Half Winner",
+    "KXNFL1HSPREAD": "1st Half Spread",
+    "KXNFL1HTOTAL": "1st Half Total",
+    "KXNFL1HFT": "1st Half / Final",
+    "KXNFL1Q": "1st Quarter Winner",
+    "KXNFLBOTH": "Both Teams Score",
+    "KXNFLOT": "Overtime?",
+    "KXNFLFIRSTTDTEAM": "First TD Scorer",
+}
+RACE_SERIES = "KXNFLRACE"
+
 
 def _cache_path(name: str) -> str:
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -292,6 +307,106 @@ class MarketIndex:
                     if custom.get("football_player") == player_id:
                         out.append(self._to_prop_market(m, series, label))
         return out
+
+    # -- week overview / game detail (Slate module) ---------------------------
+
+    def get_game_core_markets(self, game: dict) -> dict:
+        """Moneyline/spread/total/team-total ref lines for one game, for the
+        week-overview list. `game` is one entry from get_current_week_games()."""
+        suffix = game["event_ticker"].split("-", 1)[1]
+        out: dict[str, Any] = {
+            "event_ticker": game["event_ticker"],
+            "away": game["away"],
+            "home": game["home"],
+            "kickoff": game["close_time"],
+            "moneyline": {}, "spread": None, "total": None, "team_totals": {},
+        }
+        for series, label in TEAM_GAME_SERIES.items():
+            event_ticker = f"{series}-{suffix}"
+            try:
+                markets = [self._to_prop_market(m, series, label) for m in self.get_event_markets(event_ticker)]
+            except Exception:
+                continue
+            if series == "KXNFLGAME":
+                for m in markets:
+                    if m.team_code == game["away"]:
+                        out["moneyline"]["away"] = _quote(m)
+                    elif m.team_code == game["home"]:
+                        out["moneyline"]["home"] = _quote(m)
+            elif series == "KXNFLSPREAD":
+                ref = _pick_ref(markets)
+                if ref:
+                    out["spread"] = {"team": ref.team_code, "line": ref.threshold, **_quote(ref)}
+            elif series == "KXNFLTOTAL":
+                ref = _pick_ref(markets)
+                if ref:
+                    out["total"] = {"line": ref.threshold, **_quote(ref)}
+            elif series == "KXNFLTEAMTOTAL":
+                for code in (game["away"], game["home"]):
+                    ref = _pick_ref([m for m in markets if m.team_code == code])
+                    if ref:
+                        out["team_totals"][code] = {"line": ref.threshold, **_quote(ref)}
+        return out
+
+    def get_game_combos(self, event_ticker: str) -> list[dict]:
+        """Exotic/combo markets for one game (race-to-N, 1H/FT, 1Q winner, both
+        teams score, OT, ...), each reduced to a small representative set."""
+        suffix = event_ticker.split("-", 1)[1]
+
+        def fetch_one(item):
+            series, label = item
+            try:
+                markets = [self._to_prop_market(m, series, label) for m in self.get_event_markets(f"{series}-{suffix}")]
+            except Exception:
+                return None
+            if not markets:
+                return None
+            return {
+                "series": series, "label": label,
+                "outcomes": [{"title": m.raw.get("title"), **_quote(m)} for m in markets],
+            }
+
+        with ThreadPoolExecutor(max_workers=len(GAME_COMBO_SERIES)) as pool:
+            combos = [c for c in pool.map(fetch_one, GAME_COMBO_SERIES.items()) if c]
+        # KXNFLRACE has one event per (game, point-threshold) instead of one
+        # event per game, so it needs its own listing.
+        try:
+            race_events = [
+                ev for ev in self.client.get_events(series_ticker=RACE_SERIES, status="open")
+                if ev["event_ticker"].startswith(f"{RACE_SERIES}-{suffix}-")
+            ]
+        except Exception:
+            race_events = []
+        race_thresholds = []
+        for ev in sorted(race_events, key=lambda e: int(e["event_ticker"].rsplit("-", 1)[-1])):
+            threshold = ev["event_ticker"].rsplit("-", 1)[-1]
+            markets = [self._to_prop_market(m, RACE_SERIES, "Race to " + threshold) for m in ev.get("markets", [])]
+            race_thresholds.append({
+                "threshold": int(threshold),
+                "outcomes": [{"title": m.raw.get("title"), **_quote(m)} for m in markets],
+            })
+        if race_thresholds:
+            combos.append({"series": RACE_SERIES, "label": "Race to N Points", "thresholds": race_thresholds})
+        return combos
+
+
+def _quote(pm: PropMarket) -> dict:
+    q = pm.quote
+    return {
+        "ticker": pm.ticker,
+        "yes_bid": q.yes_bid, "yes_ask": q.yes_ask,
+        "implied_prob_yes": q.implied_prob_yes,
+        "volume": q.volume,
+        "team_code": pm.team_code,
+    }
+
+
+def _pick_ref(markets: list[PropMarket]) -> PropMarket | None:
+    """The market whose implied YES probability is closest to a coinflip."""
+    priced = [m for m in markets if m.quote.implied_prob_yes is not None]
+    if not priced:
+        return None
+    return min(priced, key=lambda m: abs(m.quote.implied_prob_yes - 0.5))
 
 
 if __name__ == "__main__":

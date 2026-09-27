@@ -91,6 +91,10 @@ def resolve_and_build(name: str) -> dict:
     environment_section = _build_environment_section(next_game) if next_game else None
     history_section = _build_history_section(gsis_id, opponent) if opponent else None
     correlation_section = _build_correlation_section(markets_section)
+    try:
+        season_pace = nd.player_season_pace(gsis_id, team_nflverse)
+    except Exception:
+        season_pace = None
 
     return {
         "player": {
@@ -110,6 +114,7 @@ def resolve_and_build(name: str) -> dict:
         "game_environment": environment_section,
         "history_vs_opponent": history_section,
         "correlations": correlation_section,
+        "season_pace": season_pace,
     }
 
 

@@ -306,4 +306,92 @@ def team_injuries(team: str, season: int | None = None, week: int | None = None)
         rows = rows[rows["week"] == week]
     else:
         rows = rows[rows["week"] == rows["week"].max()]
-    return rows[["full_name", "position", "report_status", "report_primary_injury", "practice_status"]]
+    return rows[["full_name", "position", "report_status", "report_primary_injury",
+                 "report_secondary_injury", "practice_primary_injury", "practice_status"]]
+
+
+POSITION_GROUP_ORDER = {"QB": 0, "RB": 1, "WR": 2, "TE": 3, "OL": 4, "T": 4, "G": 4, "C": 4,
+                         "DL": 5, "DE": 5, "DT": 5, "LB": 6, "DB": 7, "CB": 7, "S": 7,
+                         "K": 8, "P": 9, "LS": 10}
+
+
+def team_roster(team: str, season: int | None = None) -> list[dict]:
+    """Active players for `team` (nflverse code), sorted offense-skill-position
+    first (QB/RB/WR/TE) since those are what a bettor usually wants to drill
+    into, then the rest of the depth chart."""
+    rosters = load_rosters(season)
+    rows = rosters[(rosters["team"] == team) & (rosters["status"] == "ACT")].copy()
+    rows["sort_key"] = rows["position"].map(lambda p: POSITION_GROUP_ORDER.get(p, 11))
+    rows = rows.sort_values(["sort_key", "jersey_number"])
+    return rows[["full_name", "position", "jersey_number", "sportradar_id"]].to_dict(orient="records")
+
+
+def all_player_names(season: int | None = None) -> list[dict]:
+    """Active players league-wide for search-box autocomplete, skill positions
+    first so the likely prop targets surface ahead of linemen."""
+    rosters = load_rosters(season)
+    rows = rosters[rosters["status"] == "ACT"].copy()
+    rows["sort_key"] = rows["position"].map(lambda p: POSITION_GROUP_ORDER.get(p, 11))
+    rows = rows.sort_values(["sort_key", "full_name"]).drop_duplicates("full_name")
+    return [
+        {"name": r.full_name, "team": nflverse_to_kalshi_team(r.team), "pos": r.position}
+        for r in rows.itertuples()
+    ]
+
+
+def team_records(season: int | None = None) -> dict[str, str]:
+    """W-L(-T) record per nflverse team code from completed regular-season games."""
+    sched = load_schedules(season)
+    done = sched[(sched["game_type"] == "REG") & sched["result"].notna()]
+    rec: dict[str, list[int]] = {}
+    for _, g in done.iterrows():
+        # result = home_score - away_score
+        for team, margin in ((g["home_team"], g["result"]), (g["away_team"], -g["result"])):
+            w_l_t = rec.setdefault(team, [0, 0, 0])
+            w_l_t[0 if margin > 0 else 1 if margin < 0 else 2] += 1
+    return {t: f"{w}-{l}-{t_}" if t_ else f"{w}-{l}" for t, (w, l, t_) in rec.items()}
+
+
+def find_upcoming_game(away: str, home: str, season: int | None = None) -> dict | None:
+    """Next unplayed schedule row for away@home (nflverse codes): week, gameday,
+    and gametime (ET, HH:MM)."""
+    sched = load_schedules(season)
+    rows = sched[(sched["away_team"] == away) & (sched["home_team"] == home) & sched["result"].isna()]
+    if rows.empty:
+        return None
+    row = rows.sort_values("gameday").iloc[0]
+    return {"week": int(row["week"]), "gameday": row["gameday"], "gametime": row["gametime"]}
+
+
+SEASON_PACE_STATS = [
+    "passing_yards", "passing_tds", "rushing_yards", "rushing_tds",
+    "receptions", "receiving_yards", "receiving_tds",
+]
+
+
+def player_season_pace(gsis_id: str, team: str, season: int | None = None) -> dict:
+    """Regular-season-to-date totals for a player plus how many team games are
+    left. Remaining games come from the team's unplayed REG schedule rows, so
+    the bye week (which has no row) is excluded automatically."""
+    season = season or current_season()
+    sched = load_schedules(season)
+    reg = sched[(sched["game_type"] == "REG") & ((sched["home_team"] == team) | (sched["away_team"] == team))]
+    played = reg[reg["result"].notna()]
+    remaining = reg[reg["result"].isna()]
+    team_weeks = set(int(w) for w in reg["week"])
+    all_weeks = set(int(w) for w in sched.loc[sched["game_type"] == "REG", "week"])
+    bye_weeks = sorted(all_weeks - team_weeks)
+    last_played_week = int(played["week"].max()) if not played.empty else 0
+
+    ps = load_player_stats(season)
+    rows = ps[(ps["player_id"] == gsis_id) & (ps["season_type"] == "REG")]
+    totals = {c: float(rows[c].fillna(0).sum()) for c in SEASON_PACE_STATS if c in rows.columns}
+    return {
+        "season": season,
+        "totals": totals,
+        "games_played": int(len(rows)),
+        "team_games_played": int(len(played)),
+        "team_games_remaining": int(len(remaining)),
+        "bye_week": bye_weeks[0] if bye_weeks else None,
+        "bye_upcoming": bool(bye_weeks and bye_weeks[0] > last_played_week),
+    }

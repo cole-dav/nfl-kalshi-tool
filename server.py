@@ -20,6 +20,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 import player_research as pr
+import positions_overview as po
+import injury_news as inj
+import nflverse_data as nd
+import week_overview as wo
+import player_volume as pvol
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
@@ -85,6 +90,66 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(data)
             except pr.PlayerNotFound as e:
                 self._send_json({"error": str(e)}, status=404)
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"internal error: {e}"}, status=500)
+            return
+
+        if parsed.path == "/api/players":
+            try:
+                self._send_json({"players": nd.all_player_names()})
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"internal error: {e}"}, status=500)
+            return
+
+        if parsed.path == "/api/player_volume":
+            try:
+                self._send_json(pvol.player_volume_cached())
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"volume lookup failed: {e}"}, status=502)
+            return
+
+        if parsed.path == "/api/injury_news":
+            qs = parse_qs(parsed.query)
+            name = (qs.get("name") or [""])[0].strip()
+            if not name:
+                self._send_json({"error": "missing 'name' query param"}, status=400)
+                return
+            try:
+                self._send_json({"name": name, "items": inj.player_injury_news(name)})
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"news lookup failed: {e}"}, status=502)
+            return
+
+        if parsed.path == "/api/week":
+            try:
+                self._send_json(wo.build_week_overview())
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"internal error: {e}"}, status=500)
+            return
+
+        if parsed.path == "/api/game":
+            qs = parse_qs(parsed.query)
+            event_ticker = (qs.get("event") or [""])[0].strip()
+            if not event_ticker:
+                self._send_json({"error": "missing 'event' query param"}, status=400)
+                return
+            try:
+                self._send_json(wo.build_game_detail(event_ticker))
+            except ValueError as e:
+                self._send_json({"error": str(e)}, status=404)
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"internal error: {e}"}, status=500)
+            return
+
+        if parsed.path == "/api/positions":
+            try:
+                self._send_json(po.build_positions_overview())
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"internal error: {e}"}, status=500)

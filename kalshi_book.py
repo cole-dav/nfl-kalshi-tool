@@ -9,6 +9,8 @@ Auth reads:
 from __future__ import annotations
 
 import base64
+import hashlib
+import json
 import os
 import time
 from dataclasses import dataclass
@@ -19,6 +21,42 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
 KALSHI_BASE_URL = "https://api.elections.kalshi.com/trade-api/v2"
+
+# GET responses are cached to disk for this many seconds so that repeated
+# local dev refreshes (browser reload -> re-fetch same markets) don't re-hit
+# the network every time. Kalshi odds move on a much slower cadence than a
+# dev iteration loop, so a short TTL keeps data fresh enough for real use
+# while making "refresh the page a few times while tweaking code" instant.
+# Set KALSHI_CACHE_TTL=0 to disable (always hit the network).
+CACHE_TTL_SECONDS = float(os.environ.get("KALSHI_CACHE_TTL", "20"))
+_API_CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "kalshi_api")
+
+
+def _cache_key(path: str, params: dict | None) -> str:
+    raw = json.dumps({"path": path, "params": params or {}}, sort_keys=True)
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+
+def _cache_read(path: str, params: dict | None) -> dict | None:
+    if CACHE_TTL_SECONDS <= 0:
+        return None
+    fpath = os.path.join(_API_CACHE_DIR, _cache_key(path, params) + ".json")
+    try:
+        if time.time() - os.path.getmtime(fpath) > CACHE_TTL_SECONDS:
+            return None
+        with open(fpath) as f:
+            return json.load(f)
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return None
+
+
+def _cache_write(path: str, params: dict | None, data: dict) -> None:
+    if CACHE_TTL_SECONDS <= 0:
+        return
+    os.makedirs(_API_CACHE_DIR, exist_ok=True)
+    fpath = os.path.join(_API_CACHE_DIR, _cache_key(path, params) + ".json")
+    with open(fpath, "w") as f:
+        json.dump(data, f)
 
 
 def _load_private_key():
@@ -77,16 +115,38 @@ class KalshiClient:
             "Content-Type": "application/json",
         }
 
-    def _request(self, method: str, path: str, **kwargs) -> dict[str, Any]:
-        """`path` must start with /trade-api/v2/... it is what gets signed."""
+    def _request(self, method: str, path: str, max_retries: int = 3, **kwargs) -> dict[str, Any]:
+        """`path` must start with /trade-api/v2/... it is what gets signed.
+
+        Kalshi's API occasionally times out or 5xx's transiently under load;
+        retries with backoff since each attempt re-signs with a fresh
+        timestamp (a stale signature would otherwise be rejected on retry)."""
         url = f"https://{self.base_url.split('://', 1)[1].split('/', 1)[0]}{path}"
-        headers = self._headers(method, path)
-        resp = self._session.request(method, url, headers=headers, timeout=20, **kwargs)
-        resp.raise_for_status()
-        return resp.json()
+        last_exc: Exception | None = None
+        for attempt in range(max_retries):
+            try:
+                headers = self._headers(method, path)
+                resp = self._session.request(method, url, headers=headers, timeout=20, **kwargs)
+                resp.raise_for_status()
+                return resp.json()
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                last_exc = e
+            except requests.exceptions.HTTPError as e:
+                if e.response is not None and (e.response.status_code == 429 or e.response.status_code >= 500):
+                    last_exc = e
+                else:
+                    raise
+            if attempt < max_retries - 1:
+                time.sleep(0.5 * (2 ** attempt))
+        raise last_exc
 
     def get(self, path: str, params: dict | None = None) -> dict[str, Any]:
-        return self._request("GET", path, params=params)
+        cached = _cache_read(path, params)
+        if cached is not None:
+            return cached
+        data = self._request("GET", path, params=params)
+        _cache_write(path, params, data)
+        return data
 
     # -- market discovery -------------------------------------------------
 
@@ -186,13 +246,21 @@ class Position:
 def position_from_kalshi(raw: dict) -> Position:
     """Convert a /portfolio/positions market_position entry into a Position.
 
-    Kalshi reports `position` as net YES contracts (negative = net NO).
+    Kalshi reports net YES contracts (negative = net NO) as `position`
+    (legacy, integer cents-era field) or `position_fp` (current, float).
+    Exposure is likewise `market_exposure` (cents) or `market_exposure_dollars`
+    (current). Prefer whichever pair is actually present in the response.
     """
-    net = raw.get("position", 0)
+    net = raw.get("position")
+    if net is None:
+        net = float(raw.get("position_fp", 0))
+    net = int(round(net))
     side = "yes" if net >= 0 else "no"
     contracts = abs(net)
-    # market_exposure is in cents total; derive an average price if we can
-    exposure = abs(raw.get("market_exposure", 0))
+    exposure = raw.get("market_exposure")
+    if exposure is None:
+        exposure = float(raw.get("market_exposure_dollars", 0)) * 100
+    exposure = abs(exposure)
     avg_price = (exposure / contracts) if contracts else 0.0
     return Position(
         ticker=raw["ticker"],
