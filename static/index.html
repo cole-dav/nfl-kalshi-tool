@@ -109,9 +109,9 @@ table.t{width:100%;border-collapse:collapse;font-size:11px}
 table.t thead th{text-align:left;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);font-weight:500;border-bottom:1px solid var(--head-rule);padding:2px 4px;white-space:nowrap}
 table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:nowrap}
 .right{text-align:right}
-.ladder-head{height:18px;display:grid;grid-template-columns:50px 30px 30px 28px minmax(0,1fr) 44px 36px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)}
+.ladder-head{height:18px;display:grid;grid-template-columns:14px 46px 30px 30px 28px minmax(0,1fr) 44px 36px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)}
 .ladder-group{height:18px;display:flex;align-items:center;gap:8px;background:#0B0E12;border-bottom:1px solid #1A2027;padding:0 4px}
-.ladder-row{height:17px;display:grid;grid-template-columns:50px 30px 30px 28px minmax(0,1fr) 44px 36px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule)}
+.ladder-row{height:17px;display:grid;grid-template-columns:14px 46px 30px 30px 28px minmax(0,1fr) 44px 36px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule)}
 .bar-track{flex-grow:1;height:7px;background:#161B22;position:relative}
 .bar-fill{position:absolute;left:0;top:0;bottom:0;background:var(--blue-bar)}
 .bar-mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--faint)}
@@ -199,6 +199,96 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
 .combo-btn.armed{background:var(--orange)}
 .combo-note{font-size:10.5px;color:var(--dim)}
 .section-label{font-size:10px;letter-spacing:0.1em;color:var(--dim);font-weight:600;padding:8px 4px 4px}
+
+/* bet builder drawer */
+#builder{width:340px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;background:var(--panel);border-left:1px solid var(--border)}
+#builder[hidden]{display:none}
+body.bb-open #grid{grid-template-columns:minmax(560px,760px) minmax(400px,1fr)}
+#bbToggle{display:flex;align-items:center;gap:6px;padding:0 12px;border-left:1px solid var(--border);font-size:11px;letter-spacing:0.06em;color:var(--muted);flex-shrink:0}
+#bbToggle:hover{color:var(--on)}
+#bbToggle.on{color:var(--amber);background:#141920}
+.bb-badge{min-width:16px;padding:0 4px;background:#1A2027;color:var(--muted);font-size:10px;text-align:center;line-height:14px}
+.bb-badge.has{background:var(--amber);color:var(--bg);font-weight:600}
+#bbBody{flex-grow:1;min-height:0;overflow:auto}
+#bbBody.flexcol{display:flex;flex-direction:column;overflow:hidden}
+.bm{width:14px;flex-shrink:0;color:var(--faint);font-size:11px;line-height:1;text-align:center}
+.bm:hover{color:var(--amber)}
+.bm.on{color:var(--amber)}
+.bb-sec{display:flex;align-items:center;gap:8px;height:24px;flex-shrink:0;padding:0 8px;font-size:10px;letter-spacing:0.1em;color:var(--dim);font-weight:600;background:var(--panel-head);border-bottom:1px solid var(--head-rule)}
+.bb-sec + .bb-sec,.bb-row + .bb-sec,div + .bb-sec{border-top:1px solid var(--border)}
+.bb-sec .backlink{font-weight:400;letter-spacing:0.04em;font-size:10px}
+.bb-sec .cnt{font-weight:400;color:var(--muted);letter-spacing:0.02em}
+.bb-row{padding:3px 8px 3px 6px;border-bottom:1px solid var(--row-rule);border-left:2px solid transparent}
+.bb-row.locked{border-left-color:var(--amber)}
+.bb-row.excl{opacity:0.55}
+.bb-row.excl .bb-lbl{text-decoration:line-through}
+.bb-row.bad{background:rgba(255,122,69,0.07)}
+.bb-l1{display:flex;align-items:center;gap:6px;min-height:17px;font-size:11px}
+.bb-l2{display:flex;align-items:center;gap:6px;min-height:17px;font-size:10px;color:var(--muted);padding-left:20px}
+.bb-lbl{flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--on)}
+.bb-gm{color:var(--dim);font-size:9.5px;flex-shrink:0}
+.bb-px{min-width:44px;text-align:right;flex-shrink:0;color:var(--on)}
+.bb-side{font-size:9.5px;font-weight:600;width:24px;text-align:center;flex-shrink:0}
+.bb-side.yes{color:var(--blue)}
+.bb-side.no{color:var(--orange)}
+button.bb-side:hover{outline:1px solid var(--faint)}
+.bb-act{font-size:9.5px;letter-spacing:0.04em;color:var(--dim);padding:0 4px;border:1px solid var(--faint);height:15px;line-height:13px;flex-shrink:0;white-space:nowrap}
+.bb-act:hover{color:var(--on);border-color:var(--muted)}
+.bb-act.on{color:var(--bg);background:var(--amber);border-color:var(--amber);font-weight:600}
+.bb-act.onx{color:var(--bg);background:var(--orange);border-color:var(--orange);font-weight:600}
+.bb-act:disabled{color:var(--faint);border-color:var(--row-rule);cursor:default;background:none}
+.bb-x{color:var(--dim);font-size:13px;width:14px;flex-shrink:0;line-height:1}
+.bb-x:hover{color:var(--orange)}
+.bb-tag{font-size:9px;font-weight:600;padding:0 3px;letter-spacing:0.04em;flex-shrink:0}
+.bb-tag.lock{color:var(--bg);background:var(--amber)}
+.bb-tag.excl{color:var(--bg);background:var(--orange)}
+.bb-tag.scn{color:var(--amber);border:1px solid var(--amber-ring);font-weight:500}
+.bb-tag.mock{color:var(--bg);background:var(--muted)}
+.bb-chips{display:flex;flex-wrap:wrap;gap:4px;padding:4px 8px 6px}
+.bb-chip{font-size:10.5px;padding:1px 6px;border:1px solid var(--faint);color:var(--muted);display:inline-flex;gap:5px;align-items:center;white-space:nowrap}
+.bb-chip:hover{color:var(--on);border-color:var(--muted)}
+.bb-chip.on{border-color:var(--amber);background:var(--amber-soft);color:var(--amber)}
+.bb-chip .px{color:var(--dim);font-size:9.5px}
+.bb-chip.scn{border-color:var(--amber-ring);color:var(--amber)}
+.bb-form{display:flex;align-items:center;gap:6px;padding:6px 8px;flex-wrap:wrap}
+.bb-in{background:var(--bg);border:1px solid var(--head-rule);color:var(--on);font:inherit;font-size:11px;height:20px;padding:0 4px;min-width:0;outline:none}
+.bb-in:focus{border-color:var(--amber-ring)}
+.bb-in::-webkit-inner-spin-button,.bb-in::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.bb-note{font-size:10.5px;color:var(--dim);padding:6px 8px;line-height:1.4}
+.bb-err{font-size:10.5px;color:var(--orange);padding:6px 8px;line-height:1.4}
+.bb-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin:6px 8px}
+.bb-tiles .stat-tile{padding:5px 6px;min-width:0}
+.bb-tiles .sv{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bb-tiles .sv small{font-size:9.5px;color:var(--dim)}
+.bb-grid{display:grid;align-items:center;gap:6px;font-size:11px;min-height:19px;padding:0 8px;border-bottom:1px solid var(--row-rule)}
+.bb-grid.hd{font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom-color:var(--head-rule);min-height:17px}
+.bb-actions{display:flex;align-items:center;gap:6px;padding:6px 8px;flex-wrap:wrap}
+.bb-msgs{flex-grow:1;min-height:0;overflow:auto}
+.bb-msg{padding:6px 8px;border-bottom:1px solid var(--row-rule);font-size:11.5px;line-height:1.45;color:var(--label)}
+.bb-msg .who{font-size:9.5px;letter-spacing:0.1em;font-weight:600;color:var(--dim);margin-bottom:2px;display:flex;gap:8px}
+.bb-msg.user .who{color:var(--amber)}
+.bb-msg.err{color:var(--orange)}
+.bb-msg p{margin:0 0 5px}
+.bb-msg ul,.bb-msg ol{margin:0 0 5px;padding-left:16px}
+.bb-msg code{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10.5px;background:var(--bg);padding:0 3px}
+.bb-msg pre{margin:0 0 5px;padding:4px 6px;background:var(--bg);overflow-x:auto}
+.bb-msg pre code{padding:0}
+.bb-msg .note{font-size:10px;color:var(--dim)}
+.bb-trace{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.bb-trace span{font-size:9.5px;color:var(--muted);border:1px solid var(--head-rule);padding:0 4px;font-family:'IBM Plex Mono',ui-monospace,monospace}
+.bb-prop{border:1px solid var(--head-rule);background:var(--panel-head);margin-top:6px}
+.bb-prop.accepted{border-color:rgba(90,169,255,0.55)}
+.bb-prop.rejected{opacity:0.5}
+.bb-prop-hd{display:flex;align-items:center;gap:6px;padding:4px 6px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--on)}
+.bb-prop-why{padding:4px 6px;font-size:10.5px;color:var(--muted);line-height:1.4}
+.bb-prop .bb-row{padding-left:4px}
+.bb-prop .bb-l2{padding-left:4px}
+.bb-inputbar{display:flex;gap:6px;padding:6px 8px;border-top:1px solid var(--border);background:var(--panel-head);flex-shrink:0}
+.bb-inputbar textarea{flex-grow:1;resize:none;height:40px;background:var(--bg);border:1px solid var(--head-rule);color:var(--on);font:inherit;font-size:11.5px;padding:3px 5px;outline:none}
+.bb-inputbar textarea:focus{border-color:var(--amber-ring)}
+.bb-edges{flex:0 0 38%;min-height:0;overflow:auto;border-bottom:1px solid var(--border)}
+.bb-pbar{height:6px;background:#161B22;position:relative;flex-grow:1}
+.bb-pbar span{position:absolute;left:0;top:0;bottom:0;background:var(--blue-bar)}
 </style>
 </head>
 <body>
@@ -224,6 +314,10 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
       <span>NFLVERSE · CACHED</span>
       <span id="clock" style="color:var(--on)"></span>
     </div>
+    <button id="bbToggle" type="button" data-bb="toggle" aria-label="Toggle bet builder" title="Bet builder: bookmarks, parlay slip, scenarios, engine">
+      <svg width="11" height="12" viewBox="0 0 11 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1.5 1h8v10l-4-3-4 3z"></path></svg>
+      BUILDER<span class="bb-badge mono" id="bbBadge">0</span>
+    </button>
   </div>
 
   <div style="flex-grow:1;min-height:0;display:flex">
@@ -257,6 +351,7 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
       <div id="injPop" hidden></div>
       <div id="overlay" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);align-items:center;justify-content:center;font-size:12px;color:var(--dim)"></div>
     </div>
+    <aside id="builder" hidden aria-label="Bet builder"></aside>
   </div>
 </div>
 
@@ -615,6 +710,7 @@ function buildLadderRows(rows, meta) {
       vol: Math.round(r.volume || 0),
       pos: r.my_position ? (r.my_position.side === 'yes' ? 'Y' : 'N') + r.my_position.contracts : '',
       held: !!r.my_position,
+      m: r,
     };
   });
 }
@@ -680,7 +776,7 @@ function renderLadder(body, t, d) {
   function col(ids, showStats) {
     const groups = ids.map(s => buildGroup(d, s, hist)).filter(Boolean);
     let html = `<div style="display:flex;flex-direction:column;min-width:0">
-      <div class="ladder-head mono"><span>LINE</span><span class="right">BID</span><span class="right">ASK</span><span class="right">SPR</span><span style="padding-left:10px">IMPLIED %</span><span class="right">VOL</span><span class="right">POS</span></div>`;
+      <div class="ladder-head mono"><span></span><span>LINE</span><span class="right">BID</span><span class="right">ASK</span><span class="right">SPR</span><span style="padding-left:10px">IMPLIED %</span><span class="right">VOL</span><span class="right">POS</span></div>`;
     groups.forEach(g => {
       html += `<div class="ladder-group">
         <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--label)">${g.meta.name.toUpperCase()}</span>
@@ -690,7 +786,8 @@ function renderLadder(body, t, d) {
       </div>`;
       g.rows.forEach((r, i) => {
         html += `<div class="ladder-row mono" style="background:${r.held ? 'var(--amber-soft)' : 'transparent'}">
-          <span style="color:var(--on);padding-left:4px">${r.line} <span style="color:var(--muted);font-size:9px">${i === g.refIdx ? '◆' : ''}</span></span>
+          ${bmStar(r.m)}
+          <span style="color:var(--on);padding-left:2px">${r.line} <span style="color:var(--muted);font-size:9px">${i === g.refIdx ? '◆' : ''}</span></span>
           <span class="right" style="color:var(--blue)">${r.bid}</span>
           <span class="right" style="color:var(--ask)">${r.ask}</span>
           <span class="right" style="color:${r.sp >= 10 ? 'var(--orange)' : 'var(--muted)'}">${r.sp}</span>
@@ -749,15 +846,16 @@ function renderFlatMarkets(body, t, d, which) {
   }
   const sorted = [...rows].sort((a, b) => Math.abs((a.implied_prob_yes ?? 0.5) - 0.5) - Math.abs((b.implied_prob_yes ?? 0.5) - 0.5));
   let html = `<div style="padding:4px 8px 8px;display:flex;flex-direction:column">
-    <div class="mono" style="height:18px;display:grid;grid-template-columns:150px minmax(0,1fr) 200px 90px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-      <span style="padding-left:4px">WHO</span><span>MARKET</span><span>IMPLIED %</span><span class="right">LINKED</span>
+    <div class="mono" style="height:18px;display:grid;grid-template-columns:16px 150px minmax(0,1fr) 200px 90px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+      <span></span><span style="padding-left:4px">WHO</span><span>MARKET</span><span>IMPLIED %</span><span class="right">LINKED</span>
     </div>`;
   sorted.forEach(r => {
     const who = r.player_name || r.team_code || '—';
     const imp = (r.implied_prob_yes ?? 0) * 100;
     const linked = correlated.has(r.ticker);
     const heldStyle = r.my_position ? 'background:var(--amber-soft)' : '';
-    html += `<div class="mono" style="height:20px;display:grid;grid-template-columns:150px minmax(0,1fr) 200px 90px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule);${heldStyle}">
+    html += `<div class="mono" style="height:20px;display:grid;grid-template-columns:16px 150px minmax(0,1fr) 200px 90px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule);${heldStyle}">
+      ${bmStar(r)}
       <span style="padding-left:4px;color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(who)}</span>
       <span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.title)}</span>
       <div style="display:flex;align-items:center;gap:6px">
@@ -781,8 +879,8 @@ function renderMarketsGroupedByName(body, rows, correlated, note) {
   const names = [...groups.keys()].sort((a, b) => a.localeCompare(b));
 
   let html = `<div style="padding:4px 8px 8px;display:flex;flex-direction:column">
-    <div class="mono" style="height:18px;display:grid;grid-template-columns:minmax(0,1fr) 200px 90px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-      <span style="padding-left:4px">MARKET</span><span>IMPLIED %</span><span class="right">LINKED</span>
+    <div class="mono" style="height:18px;display:grid;grid-template-columns:16px minmax(0,1fr) 200px 90px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+      <span></span><span style="padding-left:4px">MARKET</span><span>IMPLIED %</span><span class="right">LINKED</span>
     </div>`;
   names.forEach(name => {
     const group = groups.get(name).sort((a, b) => Math.abs((a.implied_prob_yes ?? 0.5) - 0.5) - Math.abs((b.implied_prob_yes ?? 0.5) - 0.5));
@@ -795,7 +893,8 @@ function renderMarketsGroupedByName(body, rows, correlated, note) {
       const imp = (r.implied_prob_yes ?? 0) * 100;
       const linked = correlated.has(r.ticker);
       const heldStyle = r.my_position ? 'background:var(--amber-soft)' : '';
-      html += `<div class="mono" style="height:20px;display:grid;grid-template-columns:minmax(0,1fr) 200px 90px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule);${heldStyle}">
+      html += `<div class="mono" style="height:20px;display:grid;grid-template-columns:16px minmax(0,1fr) 200px 90px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule);${heldStyle}">
+        ${bmStar(r)}
         <span style="padding-left:4px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.title)}</span>
         <div style="display:flex;align-items:center;gap:6px">
           <div class="bar-track"><div class="bar-fill" style="width:${imp}%"></div></div>
@@ -837,10 +936,10 @@ function renderSeasonMarkets(body, d, rows, note) {
   const pace = d.season_pace;
   const fmtN = (v, dec) => dec === 0 ? Math.round(v).toLocaleString('en-US') : v.toFixed(dec);
   const sorted = [...rows].sort((a, b) => (a.series || '').localeCompare(b.series || '') || a.threshold - b.threshold);
-  const grid = 'grid-template-columns:minmax(0,1fr) 170px 120px 100px';
+  const grid = 'grid-template-columns:16px minmax(0,1fr) 170px 120px 100px';
   let html = `<div style="padding:4px 8px 8px;display:flex;flex-direction:column">
     <div class="mono" style="min-height:18px;display:grid;${grid};align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-      <span style="padding-left:4px">MARKET</span><span>IMPLIED %</span><span class="right">NEED / GAME</span><span class="right">NEXT G EXP</span>
+      <span></span><span style="padding-left:4px">MARKET</span><span>IMPLIED %</span><span class="right">NEED / GAME</span><span class="right">NEXT G EXP</span>
     </div>`;
   sorted.forEach(r => {
     const imp = (r.implied_prob_yes ?? 0) * 100;
@@ -858,6 +957,7 @@ function renderSeasonMarkets(body, d, rows, note) {
       if (exp) expHtml = `<span style="color:var(--on)">${fmtN(exp.value, map.dec === 0 ? 1 : 2)}</span> <span style="color:var(--dim);font-size:9px">${exp.src}</span>`;
     }
     html += `<div class="mono" style="min-height:20px;padding:2px 0;display:grid;${grid};align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule);${heldStyle}">
+      ${bmStar(r)}
       <span style="padding-left:4px;color:var(--muted);white-space:normal">${escapeHtml(r.title)}</span>
       <div style="display:flex;align-items:center;gap:6px">
         <div class="bar-track"><div class="bar-fill" style="width:${imp}%"></div></div>
@@ -893,7 +993,9 @@ function renderCurve() {
   const hist = latestHistoryMap(d);
   const lastVal = meta.histKey && hist ? hist[meta.histKey] : null;
 
-  const W = 712, H = 150, pl = 24, pr = 24, pt = 8, pb = 8;
+  // Fit the plot to the panel so it still fits when the builder drawer
+  // narrows the left column.
+  const W = Math.max(360, Math.min(712, (body.clientWidth || 756) - 46)), H = 150, pl = 24, pr = 24, pt = 8, pb = 8;
   const t0 = rows[0].threshold, t1 = rows[rows.length - 1].threshold;
   const X = (v) => pl + (t1 === t0 ? 0 : (v - t0) / (t1 - t0)) * (W - pl - pr);
   const Y = (p) => pt + (1 - p / 100) * (H - pt - pb);
@@ -1052,12 +1154,6 @@ const COMBO_POLL_MAX_MS = 45000;
 function loadUnitSize() { try { const v = Number(localStorage.getItem('combo.unit')); return v > 0 ? v : 10; } catch (e) { return 10; } }
 function saveUnitSize(v) { try { localStorage.setItem('combo.unit', String(v)); } catch (e) {} }
 
-function comboState(t) {
-  if (!t.combo) t.combo = { legs: [], check: null, checkSig: null, checking: false, seq: 0, timer: null,
-    quote: null, unit: loadUnitSize(), units: 1, armed: null, flash: null };
-  return t.combo;
-}
-
 function familyKey(m) { return m.series + '|' + (m.player_id || m.team_code || m.player_name || ''); }
 function gameMarkets(d) { return [...d.markets.player_props, ...d.markets.teammate_props, ...d.markets.team_game_markets]; }
 function marketIdx(d) {
@@ -1075,7 +1171,6 @@ function comboEligible(d, m) {
   const ev = d.correlations.combo_eligible_events;
   return !ev || !ev.length || ev.includes(eventOf(m));
 }
-function legSig(legs) { return legs.map(l => l.ticker + ':' + l.side).join(','); }
 
 function comboGrid(d) {
   const idx = marketIdx(d);
@@ -1121,190 +1216,43 @@ function americanOdds(p) {
   return p >= 0.5 ? Math.round(-100 * p / (1 - p)) : Math.round(100 * (1 - p) / p);
 }
 
-// Running (independent) combo odds after each leg. Prefers fresh prices from
-// the last server check when it matches the current slip.
-function comboPricing(d, cs) {
-  const idx = marketIdx(d);
-  const fresh = cs.check && cs.checkSig === legSig(cs.legs) ? cs.check.legs : null;
-  let p = 1;
-  return cs.legs.map((l, i) => {
-    const q = fresh && fresh[i].prob !== null ? fresh[i].prob : sideProb(idx[l.ticker] || {}, l.side);
-    p = (p === null || q === null) ? null : p * q;
-    return { prob: q, run: p, units: p ? 1 / p - 1 : null, american: americanOdds(p) };
+// Correlation grid = leg picker for the global Bet Builder slip. A row or
+// column is "on" when the slip holds a leg from that market family.
+function corrSelection(d) {
+  const idx = marketIdx(d), sel = {};
+  state.builder.slip.legs.forEach(l => {
+    const m = idx[l.market_ticker];
+    if (m) sel[familyKey(m)] = { ticker: m.ticker, side: l.side };
   });
-}
-
-// Background refreshes (validation results, quote polling) skip the redraw
-// while a stake input has focus so typing isn't interrupted.
-function rerenderCombo(t) {
-  if (activeTicket() !== t || t.ui.risk !== 'corr') return;
-  const a = document.activeElement;
-  if (a && a.dataset && a.dataset.comboInput) return;
-  renderBook();
-}
-
-function comboChanged(t) {
-  const cs = comboState(t);
-  cs.armed = null;
-  if (cs.quote) { stopQuotePolling(cs); if (cs.quote.rfq_id) cancelRfq(cs.quote.rfq_id); cs.quote = null; }
-  scheduleComboCheck(t);
-  renderBook();
-}
-
-function scheduleComboCheck(t) {
-  const cs = comboState(t);
-  clearTimeout(cs.timer);
-  if (!cs.legs.length) { cs.check = null; cs.checkSig = null; cs.checking = false; return; }
-  cs.checking = true;
-  cs.timer = setTimeout(async () => {
-    const seq = ++cs.seq;
-    const sig = legSig(cs.legs);
-    try {
-      const resp = await fetch('/api/combo/validate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ legs: cs.legs.map(l => ({ market_ticker: l.ticker, side: l.side })) }) });
-      const data = await resp.json();
-      if (seq !== cs.seq) return;
-      cs.check = resp.ok ? data : { ok: false, legs: [], issues: [{ level: 'error', msg: data.error || 'check failed' }] };
-    } catch (e) {
-      if (seq !== cs.seq) return;
-      cs.check = { ok: false, legs: [], issues: [{ level: 'error', msg: 'check failed: ' + e }] };
-    }
-    cs.checkSig = sig;
-    cs.checking = false;
-    rerenderCombo(t);
-  }, 250);
-}
-
-function cancelRfq(rfqId) {
-  fetch('/api/combo/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rfq_id: rfqId }) }).catch(() => {});
-}
-function stopQuotePolling(cs) { if (cs.quote && cs.quote.poll) { clearInterval(cs.quote.poll); cs.quote.poll = null; } }
-
-async function requestComboQuote(t) {
-  const cs = comboState(t);
-  const stake = cs.unit * cs.units;
-  cs.quote = { phase: 'requesting', started: Date.now() };
-  renderBook();
-  try {
-    const resp = await fetch('/api/combo/quote', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ legs: cs.legs.map(l => ({ market_ticker: l.ticker, side: l.side })), stake_dollars: stake }) });
-    const data = await resp.json();
-    if (!cs.quote || cs.quote.phase !== 'requesting') { if (resp.ok) cancelRfq(data.rfq_id); return; }
-    if (!resp.ok) { cs.quote = { phase: 'error', error: data.error || 'quote request failed' }; renderBook(); return; }
-    cs.quote = { phase: 'waiting', started: Date.now(), stake, rfq_id: data.rfq_id, market_ticker: data.market_ticker,
-      collection: data.collection, title: data.title, quotes: [], best: null, poll: null };
-    cs.quote.poll = setInterval(() => pollComboQuotes(t), COMBO_POLL_MS);
-    pollComboQuotes(t);
-  } catch (e) {
-    cs.quote = { phase: 'error', error: String(e) };
-  }
-  renderBook();
-}
-
-async function pollComboQuotes(t) {
-  const cs = comboState(t);
-  const q = cs.quote;
-  if (!q || !q.rfq_id) return;
-  if (Date.now() - q.started > COMBO_POLL_MAX_MS) {
-    stopQuotePolling(cs);
-    if (!q.quotes.length) q.phase = 'expired';
-    rerenderCombo(t);
-    return;
-  }
-  try {
-    const resp = await fetch('/api/combo/quotes?rfq_id=' + encodeURIComponent(q.rfq_id));
-    const data = await resp.json();
-    if (cs.quote !== q) return;
-    if (!resp.ok) { q.pollError = data.error; }
-    else {
-      q.pollError = null;
-      q.quotes = data.quotes || [];
-      q.best = data.best;
-      q.rfqStatus = data.rfq_status;
-      if (q.best) q.phase = 'quoted';
-    }
-  } catch (e) { q.pollError = String(e); }
-  rerenderCombo(t);
-}
-
-async function acceptComboQuote(t, quoteId) {
-  const cs = comboState(t);
-  const q = cs.quote;
-  if (!q) return;
-  stopQuotePolling(cs);
-  q.phase = 'accepting';
-  renderBook();
-  try {
-    const resp = await fetch('/api/combo/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rfq_id: q.rfq_id, quote_id: quoteId, side: 'yes' }) });
-    const data = await resp.json();
-    q.phase = resp.ok ? 'accepted' : 'error';
-    q.error = resp.ok ? null : (data.error || 'accept failed');
-    q.acceptMsg = resp.ok ? data.status : null;
-  } catch (e) { q.phase = 'error'; q.error = String(e); }
-  cs.armed = null;
-  renderBook();
+  return sel;
 }
 
 function handleComboClick(el, t) {
-  const d = t.data, cs = comboState(t), act = el.dataset.combo, key = el.dataset.key;
-  const i = cs.legs.findIndex(l => l.key === key);
-  cs.flash = null;
-  if (act === 'toggle') {
-    if (i >= 0) cs.legs.splice(i, 1);
-    else {
-      const m = marketIdx(d)[el.dataset.ticker];
-      if (!m) return;
-      if (!comboEligible(d, m)) { cs.flash = `${statShort(m)} isn't offered in Kalshi combos.`; renderBook(); return; }
-      cs.legs.push({ key, ticker: m.ticker, side: 'yes' });
-    }
-    comboChanged(t);
-  } else if (act === 'side' && i >= 0) {
-    cs.legs[i].side = el.dataset.side; comboChanged(t);
-  } else if (act === 'step' && i >= 0) {
-    const ladder = familyLadder(d, key);
-    const j = ladder.findIndex(m => m.ticker === cs.legs[i].ticker) + Number(el.dataset.dir);
-    if (j < 0 || j >= ladder.length) return;
-    cs.legs[i].ticker = ladder[j].ticker; comboChanged(t);
-  } else if (act === 'remove' && i >= 0) {
-    cs.legs.splice(i, 1); comboChanged(t);
-  } else if (act === 'clear') {
-    cs.legs = []; comboChanged(t);
-  } else if (act === 'quote') {
-    requestComboQuote(t);
-  } else if (act === 'cancel') {
-    if (cs.quote) { stopQuotePolling(cs); if (cs.quote.rfq_id) cancelRfq(cs.quote.rfq_id); }
-    cs.quote = null; cs.armed = null; renderBook();
-  } else if (act === 'accept') {
-    // Two-step in-page confirm (no browser dialogs): first click arms, second places.
-    const qid = el.dataset.quote;
-    if (cs.armed !== qid) {
-      cs.armed = qid; renderBook();
-      setTimeout(() => { if (cs.armed === qid) { cs.armed = null; if (activeTicket() === t) renderBook(); } }, 6000);
-    } else acceptComboQuote(t, qid);
+  const d = t.data, act = el.dataset.combo, key = el.dataset.key;
+  bbrt.corrFlash = null;
+  if (act !== 'toggle') return;
+  const idx = marketIdx(d);
+  const slip = state.builder.slip.legs;
+  const inFam = slip.filter(l => idx[l.market_ticker] && familyKey(idx[l.market_ticker]) === key);
+  if (inFam.length) {
+    const locked = inFam.filter(l => isLocked(legKey(l)));
+    if (locked.length) { bbrt.corrFlash = 'That leg is locked in the builder. Unlock it there first.'; renderBook(); return; }
+    state.builder.slip.legs = slip.filter(l => !inFam.includes(l));
+  } else {
+    const m = idx[el.dataset.ticker];
+    if (!m) return;
+    if (!comboEligible(d, m)) { bbrt.corrFlash = `${statShort(m)} isn't offered in Kalshi combos.`; renderBook(); return; }
+    addToSlip(makeSnap(m, 'yes'), { quiet: true });
+    state.builder.open = true; state.builder.tab = 'slip';
   }
-}
-
-function handleComboInput(el, t) {
-  const cs = comboState(t);
-  const v = Number(el.value);
-  if (!(v > 0)) { renderBook(); return; }
-  if (el.dataset.comboInput === 'unit') { cs.unit = v; saveUnitSize(v); }
-  else cs.units = v;
-  if (cs.quote && cs.quote.phase !== 'accepted') {
-    // The RFQ was sized to the old stake; drop it rather than quote the wrong size.
-    stopQuotePolling(cs); if (cs.quote.rfq_id) cancelRfq(cs.quote.rfq_id); cs.quote = null;
-  }
-  renderBook();
+  slipChanged();
 }
 
 function renderCorrelation(body, d, t) {
-  const cs = comboState(t);
   const g = comboGrid(d);
   if (!g.rows.length) { body.innerHTML = `<div class="empty">No priced props for this player.</div>`; return; }
   const idx = marketIdx(d);
-  const sel = {};
-  cs.legs.forEach(l => { sel[l.key] = l; });
+  const sel = corrSelection(d);
   const shown = (key, rep) => (sel[key] && idx[sel[key].ticker]) || rep;
   const cols = `grid-template-columns:150px repeat(${g.cols.length},minmax(46px,1fr)) 22px`;
   const pname = d.player.name.split(' ').pop().toUpperCase();
@@ -1313,7 +1261,7 @@ function renderCorrelation(body, d, t) {
     <div class="combo-legend">
       <span><span class="swatch" style="background:var(--blue)"></span>QB ↔ PASS-CATCHER</span>
       <span><span class="swatch" style="background:var(--amber)"></span>TEAM TOTAL</span>
-      <span style="color:var(--muted)">Click a row or column to add it to the combo</span>
+      <span style="color:var(--muted)">Click a row or column to add it to the builder slip</span>
     </div>
     <div class="mono combo-colhead" style="${cols}">
       <span style="letter-spacing:0.06em;align-self:end">${escapeHtml(pname)} ↓ / LEG →</span>
@@ -1350,118 +1298,19 @@ function renderCorrelation(body, d, t) {
       </div>`;
     }).join('')}
   </div>`;
-  html += comboSlipHtml(d, cs);
-  body.innerHTML = html;
-}
-
-function comboSlipHtml(d, cs) {
-  const idx = marketIdx(d);
-  const fresh = cs.check && cs.checkSig === legSig(cs.legs) ? cs.check : null;
-  const price = comboPricing(d, cs);
-  const fin = price.length ? price[price.length - 1] : null;
-  const stake = cs.unit * cs.units;
-  const slipCols = 'grid-template-columns:18px minmax(0,1fr) 72px 92px 40px 50px 58px 18px';
-
-  let html = `<div class="combo-slip">
+  const legs = state.builder.slip.legs;
+  const here = legs.filter(l => idx[l.market_ticker]).length;
+  html += `<div class="combo-slip">
     <div class="combo-slip-head">
-      <span class="panel-title" style="margin:0">COMBO SLIP</span>
-      <span class="mono" style="font-size:10px;color:var(--dim)">${cs.legs.length} leg${cs.legs.length === 1 ? '' : 's'}${d.correlations.combo_collection ? ' · ' + escapeHtml(d.correlations.combo_collection) : ''}</span>
+      <span class="panel-title" style="margin:0">BUILDER SLIP</span>
+      <span class="mono" style="font-size:10px;color:var(--dim)">${legs.length} leg${legs.length === 1 ? '' : 's'}${legs.length ? ` · ${here} from this game` : ''}${d.correlations.combo_collection ? ' · ' + escapeHtml(d.correlations.combo_collection) : ''}</span>
       <span style="flex-grow:1"></span>
-      ${cs.checking ? `<span class="mono" style="font-size:10px;color:var(--dim)">checking…</span>` : ''}
-      ${cs.legs.length ? `<button type="button" class="backlink" data-combo="clear">clear</button>` : ''}
-    </div>`;
-  if (cs.flash) html += `<div class="combo-msg err">${escapeHtml(cs.flash)}</div>`;
-  if (!cs.legs.length) {
-    return html + `<div class="empty" style="padding:12px">No legs yet. Rows are ${escapeHtml(d.player.name)}'s lines; columns are the teammate and team-total lines they move with. A filled ● cell means both sides of a correlated pair are in your combo.</div></div>`;
-  }
-
-  html += `<div class="mono combo-slip-grid" style="${slipCols};font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-    <span>#</span><span>LEG</span><span>SIDE</span><span>LINE</span><span class="right">PROB</span><span class="right">COMBO</span><span class="right">PAYS</span><span></span>
+      <button type="button" class="backlink" data-bb="open-slip">open builder →</button>
+    </div>
+    ${bbrt.corrFlash ? `<div class="combo-msg err">${escapeHtml(bbrt.corrFlash)}</div>` : ''}
+    <div class="combo-note" style="padding:2px 0">${legs.length ? 'Pricing, joint fair value and the Kalshi RFQ quote live in the builder drawer.' : `Rows are ${escapeHtml(d.player.name)}'s lines; columns are the teammate and team-total lines they move with. A filled ● cell means both sides of a correlated pair are in your slip.`}</div>
   </div>`;
-  cs.legs.forEach((l, i) => {
-    const m = idx[l.ticker] || { ticker: l.ticker, series: '', threshold: 0 };
-    const chk = fresh && fresh.legs[i];
-    const ladder = familyLadder(d, l.key);
-    const at = ladder.findIndex(x => x.ticker === l.ticker);
-    const p = price[i];
-    const errs = chk ? chk.errors : [], warns = chk ? chk.warnings : [];
-    html += `<div class="mono combo-slip-grid" style="${slipCols};font-size:11px;min-height:22px;${errs.length ? 'background:rgba(255,122,69,0.08)' : ''}">
-      <span style="color:${errs.length ? 'var(--orange)' : chk ? 'var(--blue)' : 'var(--dim)'}" title="${escapeHtml([...errs, ...warns].join(' · ') || (chk ? 'valid combo leg' : 'checking'))}">${errs.length ? '✗' : chk ? '✓' : '·'}</span>
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--on)">${escapeHtml(whoLabel(m))} <span style="color:var(--muted)">${escapeHtml(statShort(m))}</span></span>
-      <span class="seg"><button type="button" class="${l.side === 'yes' ? 'on' : ''}" data-combo="side" data-side="yes" data-key="${escapeHtml(l.key)}">YES</button><button type="button" class="${l.side === 'no' ? 'on' : ''}" data-combo="side" data-side="no" data-key="${escapeHtml(l.key)}">NO</button></span>
-      <span class="stepper"><button type="button" data-combo="step" data-dir="-1" data-key="${escapeHtml(l.key)}" ${at <= 0 ? 'disabled' : ''}>◀</button><span>${escapeHtml(sideLine(m, l.side))}</span><button type="button" data-combo="step" data-dir="1" data-key="${escapeHtml(l.key)}" ${at < 0 || at >= ladder.length - 1 ? 'disabled' : ''}>▶</button></span>
-      <span class="right">${cents(p.prob)}</span>
-      <span class="right" style="color:var(--label)">${p.run === null ? '--' : (p.run * 100).toFixed(1) + '%'}</span>
-      <span class="right" style="color:var(--amber)">${fmtUnits(p.units)}</span>
-      <button type="button" class="combo-x" data-combo="remove" data-key="${escapeHtml(l.key)}" aria-label="Remove leg">×</button>
-    </div>`;
-    [...errs.map(x => ['err', x]), ...warns.map(x => ['warn', x])].forEach(([k, x]) => {
-      html += `<div class="combo-msg ${k}" style="padding-left:22px">${escapeHtml(x)}</div>`;
-    });
-  });
-  if (fresh) fresh.issues.forEach(x => { html += `<div class="combo-msg ${x.level === 'error' ? 'err' : 'warn'}">${escapeHtml(x.msg)}</div>`; });
-
-  const toWinFair = fin && fin.units !== null ? stake * fin.units : null;
-  html += `<div class="stat-tiles" style="grid-template-columns:repeat(5,minmax(0,1fr));margin-top:8px">
-    <div class="stat-tile"><span class="sl">INDEP. PROB</span><span class="sv mono">${fin && fin.run !== null ? (fin.run * 100).toFixed(1) + '%' : '--'}</span></div>
-    <div class="stat-tile"><span class="sl">FAIR ODDS</span><span class="sv mono">${fmtAmerican(fin && fin.american)}</span></div>
-    <div class="stat-tile"><span class="sl">PAYS / 1u</span><span class="sv mono" style="color:var(--amber)">${fmtUnits(fin && fin.units)}</span></div>
-    <div class="stat-tile"><span class="sl">STAKE</span><span class="sv mono combo-stake">
-      <input class="mono" type="number" min="0.5" step="0.5" value="${cs.units}" data-combo-input="units" aria-label="Units to stake">u ×
-      $<input class="mono" type="number" min="1" step="1" value="${cs.unit}" data-combo-input="unit" aria-label="Dollars per unit"></span></div>
-    <div class="stat-tile"><span class="sl">TO WIN (FAIR)</span><span class="sv mono" style="color:var(--blue)">${toWinFair === null ? '--' : money(toWinFair)}</span></div>
-  </div>`;
-  html += comboQuoteHtml(cs, fresh, fin, stake);
-  return html + `</div>`;
-}
-
-function comboQuoteHtml(cs, fresh, fin, stake) {
-  const q = cs.quote;
-  const ready = fresh && fresh.ok && !cs.checking;
-  let html = `<div class="combo-quote">`;
-  if (!q) {
-    const why = cs.checking ? 'checking legs…' : !fresh ? 'waiting for leg check' : !fresh.ok ? 'fix the ✗ legs above to request a quote' : '';
-    html += `<button type="button" class="combo-btn" data-combo="quote" ${ready ? '' : 'disabled'}>GET KALSHI QUOTE · ${money(stake)}</button>
-      <span class="combo-note">${escapeHtml(why || 'Creates the combo on Kalshi and asks market makers to price it (RFQ). Nothing is bought until you accept.')}</span>`;
-    return html + `</div>`;
-  }
-  if (q.phase === 'requesting') return html + `<span class="combo-note">Creating combo market and sending RFQ…</span></div>`;
-  if (q.phase === 'error') {
-    return html + `<span class="combo-msg err" style="padding:0">${escapeHtml(q.error)}</span>
-      <button type="button" class="backlink" data-combo="cancel">dismiss</button></div>`;
-  }
-  const secs = Math.round((Date.now() - q.started) / 1000);
-  html += `<div style="display:flex;flex-direction:column;gap:4px;width:100%">
-    <div class="mono" style="display:flex;gap:10px;align-items:center;font-size:10px;color:var(--dim)">
-      <span title="${escapeHtml(q.title || '')}">COMBO ${escapeHtml(q.market_ticker || '')}</span>
-      <span>RFQ ${escapeHtml((q.rfq_id || '').slice(0, 8))}</span>
-      <span style="flex-grow:1"></span>
-      ${q.phase === 'waiting' ? `<span>waiting for makers… ${secs}s</span>` : ''}
-      ${q.phase !== 'accepted' ? `<button type="button" class="backlink" data-combo="cancel">cancel RFQ</button>` : ''}
-    </div>`;
-  if (q.pollError) html += `<div class="combo-msg warn" style="padding:0">${escapeHtml(q.pollError)}</div>`;
-  if (q.phase === 'expired') html += `<div class="combo-msg warn" style="padding:0">No maker quoted this combo within ${COMBO_POLL_MAX_MS / 1000}s. Makers skip some leg mixes; try fewer or more mainstream legs, then request again.</div>`;
-  if (q.phase === 'accepted') html += `<div class="combo-msg" style="padding:0;color:var(--blue)">Accepted: ${escapeHtml(q.acceptMsg || '')}. Check Kalshi fills to confirm execution.</div>`;
-  const live = (q.quotes || []).filter(x => x.yes_cost).sort((a, b) => a.yes_cost - b.yes_cost);
-  if (live.length) {
-    const qc = 'grid-template-columns:70px 64px 64px 80px minmax(0,1fr) 150px';
-    html += `<div class="mono combo-slip-grid" style="${qc};font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-      <span>YES COST</span><span>ODDS</span><span class="right">PAYS</span><span class="right">TO WIN</span><span class="right">vs INDEP.</span><span></span></div>`;
-    live.forEach((x, i) => {
-      const vs = fin && fin.run ? x.yes_cost / fin.run - 1 : null;
-      const armed = cs.armed === x.id;
-      const canAccept = fresh && fresh.accept_enabled && q.phase === 'quoted' && i === 0;
-      html += `<div class="mono combo-slip-grid" style="${qc};font-size:11px;min-height:22px;${i === 0 ? 'background:var(--amber-soft)' : ''}">
-        <span>${cents(x.yes_cost)}</span><span>${fmtAmerican(x.yes_american)}</span>
-        <span class="right" style="color:var(--amber)">${fmtUnits(x.yes_units)}</span>
-        <span class="right" style="color:var(--blue)">${x.yes_units ? money(q.stake * x.yes_units) : '--'}</span>
-        <span class="right" style="color:${vs === null ? 'var(--dim)' : vs > 0 ? 'var(--ask)' : 'var(--blue)'}" title="Quote price vs. multiplying the legs' odds together. Above 0 = Kalshi prices the combo as likelier than independent (correlation) and/or maker margin.">${vs === null ? '--' : (vs > 0 ? '+' : '') + (vs * 100).toFixed(0) + '%'}</span>
-        <span class="right">${canAccept ? `<button type="button" class="combo-btn ${armed ? 'armed' : ''}" data-combo="accept" data-quote="${escapeHtml(x.id)}">${armed ? `CONFIRM ${money(q.stake)} @ ${cents(x.yes_cost)}` : 'ACCEPT YES'}</button>` : ''}</span>
-      </div>`;
-    });
-    if (fresh && !fresh.accept_enabled) html += `<div class="combo-note">Placing is off. Start the server with KALSHI_ENABLE_COMBO_ACCEPT=1 to enable ACCEPT, or place this combo in the Kalshi app.</div>`;
-  }
-  return html + `</div></div>`;
+  body.innerHTML = html;
 }
 
 function renderExposure(body, held) {
@@ -1834,6 +1683,7 @@ function hideOverlay() {
 // overview). Only one is visible at a time; each owns its own DOM subtree so
 // switching between them never tears down another module's state.
 function render() {
+  document.body.classList.toggle('bb-open', !!state.builder.open);
   renderTopbar();
   document.querySelectorAll('.railbtn[data-module]').forEach(b => b.classList.toggle('active', b.dataset.module === state.module));
   document.getElementById('ctx').style.display = state.module === 'research' ? '' : 'none';
@@ -1847,6 +1697,7 @@ function render() {
     if (state.module === 'slate') renderSlate();
     else if (state.module === 'book') renderBookModule();
   }
+  renderBuilder();
 }
 
 // The panel skeleton (#marketsTabs, #marketsBody, etc.) is built exactly
@@ -2030,16 +1881,20 @@ function renderGameCard(g) {
   const spreadTxt = g.spread ? `${g.spread.team} ${g.spread.line >= 0 ? '-' : '+'}${Math.abs(g.spread.line).toFixed(1)}` : '--';
   const totalTxt = g.total ? g.total.line.toFixed(1) : '--';
   const rec = g.records || {};
-  const teamRow = (code, record, side) => `<div class="gc-team mono">
+  const cm = {};
+  coreMkts(g).forEach(m => { cm[m.ticker] = m; });
+  const star = (q) => q && q.ticker && cm[q.ticker] ? bmStar(cm[q.ticker]) : '';
+  const teamRow = (code, record, side) => `<div class="gc-team mono" style="grid-template-columns:30px minmax(0,1fr) auto 14px">
       ${teamLogo(code, 30)}
       <span><span class="gc-code">${code}</span><span class="gc-rec">${record || ''}</span></span>
       <span class="gc-ml" style="color:${moneylineColor(side)}">${moneylinePct(side)}</span>
+      ${star(side) || '<span></span>'}
     </div>`;
   return `<div class="game-card" data-open-game="${g.event_ticker}">
     <div class="gc-top mono"><span>${gameKickoffText(g)}</span><span>AWAY @ HOME</span></div>
     ${teamRow(g.away, rec.away, g.moneyline.away)}
     ${teamRow(g.home, rec.home, g.moneyline.home)}
-    <div class="gc-foot mono"><span><span class="k">SPREAD</span>${spreadTxt}</span><span><span class="k">O/U</span>${totalTxt}</span></div>
+    <div class="gc-foot mono"><span style="display:flex;align-items:center;gap:3px"><span class="k">SPREAD</span>${spreadTxt}${star(g.spread)}</span><span style="display:flex;align-items:center;gap:3px"><span class="k">O/U</span>${totalTxt}${star(g.total)}</span></div>
   </div>`;
 }
 
@@ -2062,13 +1917,16 @@ function renderGameDetail(el, g) {
   const spreadTxt = d.spread ? `${d.spread.team} ${d.spread.line >= 0 ? '-' : '+'}${Math.abs(d.spread.line).toFixed(1)} (${(d.spread.implied_prob_yes * 100).toFixed(0)}%)` : '--';
   const totalTxt = d.total ? `${d.total.line.toFixed(1)} (${(d.total.implied_prob_yes * 100).toFixed(0)}%)` : '--';
   const view = g.view || 'depth';
+  const gdm = {};
+  coreMkts(d).forEach(m => { gdm[m.ticker] = m; });
+  const gdStar = (q) => q && q.ticker && gdm[q.ticker] ? bmStar(gdm[q.ticker]) : '';
   const viewTabs = [{ id: 'depth', label: 'DEPTH MATCHUPS' }, { id: 'tend', label: 'TENDENCIES & SCRIPT' }];
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 4px">
       <span class="backlink" data-back-slate="1">&larr; ALL GAMES</span>
       <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600">${teamLogo(d.away, 32)}${d.away}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).away || ''}</span><span style="color:var(--dim);font-weight:400">@</span>${teamLogo(d.home, 32)}${d.home}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).home || ''}</span></span>
-      <span class="mono" style="font-size:10.5px;color:var(--dim)">SPREAD ${spreadTxt} &middot; TOTAL ${totalTxt}</span>
+      <span class="mono" style="font-size:10.5px;color:var(--dim);display:flex;align-items:center;gap:4px">SPREAD ${spreadTxt}${gdStar(d.spread)} &middot; TOTAL ${totalTxt}${gdStar(d.total)}</span>
       <span style="margin-left:auto;display:flex;align-self:stretch">${viewTabs.map(v => `<button type="button" class="tab small ${view === v.id ? 'on' : ''}" data-game-view="${v.id}">${v.label}</button>`).join('')}</span>
     </div>
     <div style="flex-grow:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 340px;gap:8px;padding:0 4px 8px">
@@ -2296,6 +2154,7 @@ function raceLadderHtml(c, away, home, widthPx) {
     const p = o.implied_prob_yes * 100, hl = even.has(o);
     return `<span title="${escapeHtml(o.title || '')}${hl ? ' · closest to 50%' : ''}" style="position:relative;height:15px;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;background:${hl ? 'var(--amber-soft)' : '#141920'};${hl ? 'box-shadow:inset 0 0 0 1px var(--amber-ring);' : ''}">
       <span style="position:absolute;left:0;top:0;bottom:0;width:${p.toFixed(1)}%;background:${hl ? 'rgba(242,165,65,0.28)' : 'var(--blue-bar)'};opacity:${hl ? 1 : 0.55}"></span>
+      ${o.ticker ? `<span style="position:absolute;left:2px;top:1px">${bmStar(normMkt(o))}</span>` : ''}
       <span style="position:relative;color:${hl ? 'var(--amber)' : 'var(--on)'}">${p.toFixed(1)}%</span>
     </span>`;
   };
@@ -2320,7 +2179,8 @@ function raceLadderHtml(c, away, home, widthPx) {
 function outcomeRow(o, even) {
   const imp = o.implied_prob_yes !== null && o.implied_prob_yes !== undefined ? (o.implied_prob_yes * 100) : null;
   const hl = even ? 'background:var(--amber-soft);box-shadow:inset 2px 0 0 var(--amber);' : '';
-  return `<div class="mono" ${even ? 'title="Closest to 50% in this market"' : ''} style="height:19px;display:flex;align-items:center;gap:8px;padding:0 8px;font-size:10.5px;border-bottom:1px solid var(--row-rule);${hl}">
+  return `<div class="mono" ${even ? 'title="Closest to 50% in this market"' : ''} style="height:19px;display:flex;align-items:center;gap:8px;padding:0 8px 0 4px;font-size:10.5px;border-bottom:1px solid var(--row-rule);${hl}">
+    ${o.ticker ? bmStar(normMkt(o)) : '<span style="width:14px"></span>'}
     <span style="color:${even ? 'var(--on)' : 'var(--muted)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-grow:1">${escapeHtml(o.title || '')}</span>
     <span style="color:${even ? 'var(--amber)' : 'var(--on)'};width:48px;flex-shrink:0;text-align:right">${imp !== null ? imp.toFixed(1) + '%' : '--'}</span>
   </div>`;
@@ -2453,8 +2313,1711 @@ function buildGridSkeleton(grid) {
     </div>`;
 }
 
+// ========================================================================
+// BET BUILDER drawer: bookmarks, the global parlay slip, scenario ladders,
+// and the fair-value engine (edges + chat). Persistent state lives in
+// state.builder (localStorage 'builder.v1', minus live chat messages);
+// runtime-only bits (validation, quotes, fetched fair values) live in bbrt.
+// ========================================================================
+const BB_KEY = 'builder.v1';
+const BB_REFRESH_MS = 30000;
+const MOCK = (() => { try { return new URLSearchParams(location.search).has('mock'); } catch (e) { return false; } })();
+const MOCK_NOCHAT = (() => { try { return new URLSearchParams(location.search).get('mock') === 'nochat'; } catch (e) { return false; } })();
+
+const legKey = (l) => l.market_ticker + '|' + l.side;
+function splitKey(key) { const i = String(key).lastIndexOf('|'); return [key.slice(0, i), key.slice(i + 1)]; }
+const sfx = (ev) => String(ev || '').split('-')[1] || '';
+const seriesOfT = (t) => String(t || '').split('-')[0];
+const evOfT = (t) => String(t || '').split('-').slice(0, 2).join('-');
+const gameEv = (x) => sfx(x) ? 'KXNFLGAME-' + sfx(x) : '';
+const midOf = (m) => m && m.yes_bid != null && m.yes_ask != null && m.yes_ask > 0 ? (m.yes_bid + m.yes_ask) / 2
+  : (m && m.implied_prob_yes != null ? m.implied_prob_yes : null);
+
+function bbDefaults() {
+  return {
+    open: false, oddsMode: 'american', tab: 'slip',
+    bookmarks: [], slip: { legs: [] }, locks: [], excludes: [], scenarios: [],
+    chat: { id: null, messages: [], proposals: [], notes: [] },
+    engineStatus: null,
+    scen: { event: null, team: null, family: 'SPREAD', strikes: [], stakes: {}, useScen: true },
+    eng: { kind: 'all', minEdge: 0.03, scope: 'event' },
+  };
+}
+function validSnap(x) { return !!x && typeof x.market_ticker === 'string' && (x.side === 'yes' || x.side === 'no'); }
+function loadBuilder() {
+  const b = bbDefaults();
+  try {
+    const raw = localStorage.getItem(BB_KEY);
+    const s = raw ? JSON.parse(raw) : null;
+    if (s && typeof s === 'object') {
+      b.open = !!s.open;
+      if (s.oddsMode === 'kalshi') b.oddsMode = 'kalshi';
+      if (['slip', 'scen', 'engine'].includes(s.tab)) b.tab = s.tab;
+      if (Array.isArray(s.bookmarks)) b.bookmarks = s.bookmarks.filter(validSnap);
+      if (s.slip && Array.isArray(s.slip.legs)) b.slip.legs = s.slip.legs.filter(validSnap);
+      if (Array.isArray(s.locks)) b.locks = s.locks.filter(k => typeof k === 'string');
+      if (Array.isArray(s.excludes)) b.excludes = s.excludes.filter(k => typeof k === 'string');
+      if (Array.isArray(s.scenarios)) b.scenarios = s.scenarios.filter(x => x && typeof x.event === 'string' && Array.isArray(x.constraints) && x.constraints.length);
+      if (s.chat && typeof s.chat === 'object') {
+        b.chat.id = typeof s.chat.id === 'string' ? s.chat.id : null;
+        if (Array.isArray(s.chat.proposals)) b.chat.proposals = s.chat.proposals.filter(p => p && p.id && Array.isArray(p.legs));
+        if (Array.isArray(s.chat.notes)) b.chat.notes = s.chat.notes.filter(n => typeof n === 'string');
+      }
+      if (s.scen && typeof s.scen === 'object') {
+        Object.assign(b.scen, s.scen);
+        b.scen.strikes = Array.isArray(s.scen.strikes) ? s.scen.strikes.filter(x => typeof x === 'number') : [];
+        b.scen.stakes = s.scen.stakes && typeof s.scen.stakes === 'object' ? s.scen.stakes : {};
+      }
+      if (s.eng && typeof s.eng === 'object') Object.assign(b.eng, s.eng);
+    }
+  } catch (e) {}
+  return b;
+}
+function saveBuilder() {
+  const b = state.builder;
+  try {
+    localStorage.setItem(BB_KEY, JSON.stringify({
+      v: 1, open: b.open, oddsMode: b.oddsMode, tab: b.tab, bookmarks: b.bookmarks, slip: { legs: b.slip.legs },
+      locks: b.locks, excludes: b.excludes, scenarios: b.scenarios,
+      chat: { id: b.chat.id, proposals: b.chat.proposals.slice(-30), notes: b.chat.notes },
+      scen: b.scen, eng: b.eng,
+    }));
+  } catch (e) {}
+}
+state.builder = loadBuilder();
+
+const bbrt = {
+  px: {},          // ticker -> {yes_bid, yes_ask} from the latest refresh
+  fair: {},        // "ticker|side" -> {fair, edge} (unconditional engine fair)
+  cond: {},        // ticker -> scenario market row (YES-side fair_cond)
+  extra: {},       // ticker -> market learned from engine responses
+  idxVer: 0,
+  pxAt: 0, pxLoading: false, pxNote: null, pxTimer: null, refreshTimer: null,
+  slip: { check: null, checkSig: null, checking: false, seq: 0, timer: null, quote: null, armed: null, flash: null,
+    unit: loadUnitSize(), units: 1, price: null },
+  edges: null, strikeFetch: {}, ladder: null, scenRes: {},
+  cf: { type: 'margin_gte', team: '', value: '', player: '', series: 'KXNFLRECYDS' },
+  chatBusy: false, chatDraft: '', chatScroll: false, flash: null, flashTimer: null, corrFlash: null,
+  statusLoading: false,
+};
+
+async function bbFetch(url, body) {
+  const opts = body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  const resp = await fetch(url, opts);
+  let data = null;
+  try { data = await resp.json(); } catch (e) {}
+  if (!resp.ok) {
+    const err = new Error((data && data.error) || ('HTTP ' + resp.status));
+    err.status = resp.status; err.data = data;
+    throw err;
+  }
+  return data || {};
+}
+
+// ---------- global market index ----------
+function normMkt(o, extra) {
+  if (!o || !o.ticker) return null;
+  return {
+    ticker: o.ticker, event_ticker: o.event_ticker || evOfT(o.ticker), series: o.series || seriesOfT(o.ticker),
+    title: o.title || '', threshold: o.threshold ?? null, team_code: o.team_code ?? null, player_name: o.player_name ?? null,
+    yes_bid: o.yes_bid ?? null, yes_ask: o.yes_ask ?? null, implied_prob_yes: o.implied_prob_yes ?? null, volume: o.volume ?? null,
+    ...(extra || {}),
+  };
+}
+// Moneyline / ref spread / ref total / team totals from a /api/week or /api/game payload.
+function coreMkts(g) {
+  const out = [];
+  const ml = g.moneyline || {};
+  ['away', 'home'].forEach(side => {
+    const q = ml[side];
+    if (q) out.push(normMkt({ ...q, team_code: q.team_code || g[side], title: `${q.team_code || g[side]} wins` }));
+  });
+  if (g.spread) out.push(normMkt({ ...g.spread, team_code: g.spread.team_code || g.spread.team, threshold: g.spread.line, title: `${g.spread.team} wins by over ${g.spread.line} points` }));
+  if (g.total) out.push(normMkt({ ...g.total, threshold: g.total.line, title: `Over ${g.total.line} points scored` }));
+  Object.entries(g.team_totals || {}).forEach(([code, q]) => out.push(normMkt({ ...q, team_code: code, threshold: q.line, title: `${code} over ${q.line} points` })));
+  return out.filter(Boolean);
+}
+function comboMkts(combos) {
+  const out = [];
+  (combos || []).forEach(c => {
+    (c.outcomes || []).forEach(o => out.push(normMkt(o)));
+    (c.thresholds || []).forEach(t => (t.outcomes || []).forEach(o => out.push(normMkt(o))));
+  });
+  return out.filter(Boolean);
+}
+function snapMkt(s) {
+  return { ticker: s.market_ticker, event_ticker: s.event_ticker || evOfT(s.market_ticker), series: s.series || seriesOfT(s.market_ticker),
+    title: s.title || '', threshold: s.threshold ?? null, team_code: s.team_code ?? null, player_name: s.player_name ?? null,
+    yes_bid: s.yes_bid ?? null, yes_ask: s.yes_ask ?? null };
+}
+function makeSnap(m, side) {
+  return { market_ticker: m.ticker, side, title: m.title || '', event_ticker: m.event_ticker || evOfT(m.ticker),
+    series: m.series || seriesOfT(m.ticker), threshold: m.threshold ?? null, team_code: m.team_code ?? null,
+    player_name: m.player_name ?? null, yes_bid: m.yes_bid ?? null, yes_ask: m.yes_ask ?? null, ts: Date.now() };
+}
+// Engine rows carry the cost of one side; back out the YES quote from it.
+function edgeMkt(e) {
+  const t = e.ticker || e.market_ticker;
+  const m = { ticker: t, event_ticker: e.event_ticker || evOfT(t), series: seriesOfT(t), title: e.title || '', threshold: e.threshold ?? null,
+    team_code: e.team_code ?? null, player_name: e.player_name ?? null, yes_bid: e.yes_bid ?? null, yes_ask: e.yes_ask ?? null };
+  if (m.yes_ask == null && e.side === 'yes' && e.cost != null) m.yes_ask = e.cost;
+  if (m.yes_bid == null && e.side === 'no' && e.cost != null) m.yes_bid = +(1 - e.cost).toFixed(4);
+  return m;
+}
+function learnMkts(list) {
+  let n = 0;
+  (list || []).forEach(m => { if (m && m.ticker && !bbrt.extra[m.ticker]) { bbrt.extra[m.ticker] = m; n++; } });
+  if (n) bbrt.idxVer++;
+}
+
+let _gidx = null, _gidxVer = -1;
+function gidx() {
+  if (_gidx && _gidxVer === bbrt.idxVer) return _gidx;
+  const idx = {};
+  const put = (m) => { if (m && m.ticker && !idx[m.ticker]) idx[m.ticker] = m.event_ticker ? m : { ...m, event_ticker: evOfT(m.ticker) }; };
+  state.tickets.forEach(t => { if (t.data) { gameMarkets(t.data).forEach(put); (t.data.markets.season_props || []).forEach(put); } });
+  state.games.forEach(g => { if (g.data) { coreMkts(g.data).forEach(put); comboMkts(g.data.combos).forEach(put); } });
+  (state.slate.games || []).forEach(g => coreMkts(g).forEach(put));
+  Object.values(bbrt.extra).forEach(put);
+  const b = state.builder;
+  [...b.bookmarks, ...b.slip.legs].forEach(s => put(snapMkt(s)));
+  _gidx = idx; _gidxVer = bbrt.idxVer;
+  return idx;
+}
+function familyLadderG(s) {
+  const idx = gidx(), m = idx[s.market_ticker];
+  if (!m || m.threshold == null) return [];
+  const who = m.player_name || m.team_code || '', sx = sfx(m.event_ticker || m.ticker);
+  return Object.values(idx).filter(x => x.series === m.series && x.threshold != null && (x.player_name || x.team_code || '') === who && sfx(x.event_ticker || x.ticker) === sx)
+    .sort((a, b) => a.threshold - b.threshold);
+}
+
+// ---------- games + labels ----------
+function knownGames() {
+  const out = [], seen = new Set();
+  const add = (ev, away, home) => { const s = sfx(ev); if (!s || !away || !home || seen.has(s)) return; seen.add(s); out.push({ ev: 'KXNFLGAME-' + s, sfx: s, away, home }); };
+  (state.slate.games || []).forEach(g => add(g.event_ticker, g.away, g.home));
+  state.games.forEach(g => add(g.eventTicker, g.away, g.home));
+  state.tickets.forEach(t => { const mu = ticketMatchup(t); if (mu && t.data && t.data.markets.event_ticker) add(t.data.markets.event_ticker, mu.away, mu.home); });
+  return out;
+}
+function gameInfo(x) {
+  const s = sfx(x);
+  if (!s) return null;
+  const g = knownGames().find(k => k.sfx === s);
+  if (g) return g;
+  const teams = s.slice(7);
+  for (let i = 2; i <= 3; i++) {
+    const a = teams.slice(0, i), h = teams.slice(i);
+    if (TEAM_COLORS[a] && TEAM_COLORS[h]) return { ev: 'KXNFLGAME-' + s, sfx: s, away: a, home: h };
+  }
+  return { ev: 'KXNFLGAME-' + s, sfx: s, away: null, home: null };
+}
+function gameTag(x) { const g = gameInfo(x); return g && g.away ? g.away + '@' + g.home : sfx(x).slice(7); }
+function ctxEvent() {
+  if (state.module === 'slate' && state.slate.view === 'detail') { const g = activeGameTab(); if (g) return gameEv(g.eventTicker); }
+  if (state.module === 'research') { const t = activeTicket(); if (t && t.data && t.data.markets.event_ticker) return gameEv(t.data.markets.event_ticker); }
+  return state.builder.scen.event || null;
+}
+
+function snapLabel(s) {
+  const ser = s.series || seriesOfT(s.market_ticker), yes = s.side === 'yes', thr = s.threshold, tc = s.team_code || '';
+  const meta = SERIES_META[ser];
+  if (meta && s.player_name && thr != null) return `${shortName(s.player_name)} ${meta.short} ${sideLine({ series: ser, threshold: thr }, s.side)}`;
+  if (ser === 'KXNFLGAME' && tc) return `${yes ? '' : 'NO '}${tc} ML`;
+  if (ser === 'KXNFLSPREAD' && thr != null && tc) return `${yes ? '' : 'NO '}${tc} -${thr}`;
+  if (ser === 'KXNFLTOTAL' && thr != null) return `${yes ? 'Over' : 'Under'} ${thr}`;
+  if (ser === 'KXNFLTEAMTOTAL' && thr != null && tc) return `${tc} TT ${yes ? 'o' : 'u'}${thr}`;
+  return (yes ? '' : 'NO · ') + (s.title || s.market_ticker);
+}
+function mLabel(m, side) {
+  return snapLabel({ market_ticker: m.ticker, side, series: m.series, threshold: m.threshold, team_code: m.team_code, player_name: m.player_name, title: m.title });
+}
+function legLabelFromTicker(t, side, title) { const m = gidx()[t]; return m ? mLabel(m, side) : (side === 'no' ? 'NO · ' : '') + (title || t); }
+
+// ---------- prices ----------
+function fmtPrice(cost) {
+  if (cost === null || cost === undefined || isNaN(cost)) return '--';
+  if (state.builder.oddsMode === 'kalshi') return Math.round(cost * 100) + '¢';
+  return fmtAmerican(americanOdds(cost));
+}
+const fmtAm = (p) => fmtAmerican(americanOdds(p));
+const pct1 = (p) => p === null || p === undefined || isNaN(p) ? '--' : (p * 100).toFixed(1) + '%';
+function edgeTxt(e) {
+  if (e === null || e === undefined || isNaN(e)) return '';
+  return `<span style="color:${e >= 0 ? 'var(--blue)' : 'var(--orange)'}">${e >= 0 ? '+' : ''}${(e * 100).toFixed(1)}%</span>`;
+}
+function fairTxt(fair, edge) {
+  if (fair === null || fair === undefined) return `<span style="color:var(--faint)">FAIR --</span>`;
+  const c = state.builder.oddsMode === 'kalshi' ? ` <span style="color:var(--dim)">${Math.round(fair * 100)}¢</span>` : '';
+  return `<span style="color:var(--dim)">FAIR</span> <span style="color:var(--label)">${fmtAm(fair)}</span>${c} ${edgeTxt(edge)}`;
+}
+function legLive(s) {
+  const key = legKey(s), m = gidx()[s.market_ticker], px = bbrt.px[s.market_ticker];
+  const bid = px ? px.yes_bid : (m && m.yes_bid != null ? m.yes_bid : s.yes_bid);
+  const ask = px ? px.yes_ask : (m && m.yes_ask != null ? m.yes_ask : s.yes_ask);
+  const cost = s.side === 'yes' ? (ask || null) : (bid !== null && bid !== undefined ? +(1 - bid).toFixed(4) : null);
+  const f = bbrt.fair[key];
+  const fair = f ? f.fair : null;
+  const c = bbrt.cond[s.market_ticker];
+  let cond = null;
+  if (c && c.fair_cond != null) {
+    const cf = s.side === 'yes' ? c.fair_cond : 1 - c.fair_cond;
+    cond = { fair: cf, edge: cost != null ? cf - cost : null, base: c.fair_base != null ? (s.side === 'yes' ? c.fair_base : 1 - c.fair_base) : null };
+  }
+  return { bid, ask, cost, fair, edge: fair != null && cost != null ? fair - cost : null, cond };
+}
+function updateSnapPx(ticker, bid, ask) {
+  const b = state.builder;
+  [...b.bookmarks, ...b.slip.legs].forEach(s => {
+    if (s.market_ticker !== ticker) return;
+    if (bid !== undefined) s.yes_bid = bid;
+    if (ask !== undefined) s.yes_ask = ask;
+    s.ts = Date.now();
+  });
+}
+function absorbQuotes(legs) {
+  (legs || []).forEach(l => {
+    if (!l.market_ticker || (l.yes_bid == null && l.yes_ask == null)) return;
+    bbrt.px[l.market_ticker] = { yes_bid: l.yes_bid, yes_ask: l.yes_ask };
+    updateSnapPx(l.market_ticker, l.yes_bid, l.yes_ask);
+    if (l.title) [...state.builder.bookmarks, ...state.builder.slip.legs].forEach(s => { if (s.market_ticker === l.market_ticker && !s.title) s.title = l.title; });
+  });
+}
+function absorbEngineLegs(legs, conditional) {
+  absorbQuotes(legs);
+  if (conditional) return;
+  (legs || []).forEach(l => {
+    if (l.market_ticker && l.fair != null) bbrt.fair[l.market_ticker + '|' + l.side] = { fair: l.fair, edge: l.edge };
+  });
+}
+function schedulePriceRefresh(delay) { clearTimeout(bbrt.pxTimer); bbrt.pxTimer = setTimeout(refreshPrices, delay === undefined ? 500 : delay); }
+async function refreshPrices() {
+  const b = state.builder, seen = new Set(), legs = [];
+  [...b.bookmarks, ...b.slip.legs].forEach(s => { const k = legKey(s); if (!seen.has(k)) { seen.add(k); legs.push({ market_ticker: s.market_ticker, side: s.side }); } });
+  if (!legs.length || bbrt.pxLoading) return;
+  bbrt.pxLoading = true;
+  renderBuilder({ soft: true });
+  try {
+    const data = await bbFetch('/api/engine/price', { legs });
+    absorbEngineLegs(data.legs, false);
+    bbrt.pxNote = null;
+  } catch (e) {
+    try {
+      const v = await bbFetch('/api/combo/validate', { legs });
+      absorbQuotes(v.legs);
+      bbrt.pxNote = `Engine unavailable (${e.message}). Showing Kalshi prices only, no fair values.`;
+    } catch (e2) { bbrt.pxNote = 'Price refresh failed: ' + e2.message; }
+  }
+  bbrt.pxLoading = false; bbrt.pxAt = Date.now();
+  saveBuilder();
+  renderBuilder({ soft: true });
+}
+async function loadEngineStatus() {
+  if (bbrt.statusLoading) return;
+  bbrt.statusLoading = true;
+  try {
+    const d = await bbFetch('/api/engine/status');
+    state.builder.engineStatus = { chat_enabled: !!d.chat_enabled, model: d.model || null };
+  } catch (e) {
+    state.builder.engineStatus = { chat_enabled: false, offline: true, error: e.message };
+  }
+  bbrt.statusLoading = false;
+  renderBuilder({ soft: true });
+}
+
+// ---------- bookmarks / locks / excludes ----------
+const isLocked = (key) => state.builder.locks.includes(key);
+const isExcl = (key) => state.builder.excludes.includes(key);
+const isBm = (key) => state.builder.bookmarks.some(b => legKey(b) === key);
+const inSlip = (key) => state.builder.slip.legs.some(l => legKey(l) === key);
+function flagTags(key) {
+  return (isLocked(key) ? '<span class="bb-tag lock" title="Locked: must stay in engine proposals">LOCK</span>' : '')
+    + (isExcl(key) ? '<span class="bb-tag excl" title="Excluded: off-limits to the engine">EXCL</span>' : '');
+}
+function bmStar(m, side) {
+  side = side || 'yes';
+  if (!m || !m.ticker) return '<span></span>';
+  const key = m.ticker + '|' + side, on = isBm(key);
+  const a = (k, v) => v === null || v === undefined || v === '' ? '' : ` data-${k}="${escapeHtml(String(v))}"`;
+  return `<button type="button" class="bm${on ? ' on' : ''}" data-bm="${escapeHtml(key)}"${a('t', m.title)}${a('ev', m.event_ticker)}${a('ser', m.series)}${a('thr', m.threshold)}${a('tc', m.team_code)}${a('pn', m.player_name)}${a('b', m.yes_bid)}${a('a', m.yes_ask)} title="${on ? 'Remove bookmark' : 'Bookmark ' + side.toUpperCase()}" aria-label="Bookmark ${side}">${on ? '★' : '☆'}</button>`;
+}
+function toggleBookmarkFromEl(el) {
+  const key = el.dataset.bm, [ticker, side] = splitKey(key);
+  const b = state.builder;
+  const i = b.bookmarks.findIndex(x => legKey(x) === key);
+  if (i >= 0) b.bookmarks.splice(i, 1);
+  else {
+    const d = el.dataset, num = (v) => v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v);
+    const m = gidx()[ticker] || { ticker, title: d.t || '', event_ticker: d.ev, series: d.ser, threshold: num(d.thr), team_code: d.tc || null,
+      player_name: d.pn || null, yes_bid: num(d.b), yes_ask: num(d.a) };
+    b.bookmarks.push(makeSnap(m, side));
+  }
+  bookmarksChanged();
+}
+function addBookmark(snap) { if (snap && !isBm(legKey(snap))) state.builder.bookmarks.push(snap); }
+function bookmarksChanged() {
+  saveBuilder(); bbrt.idxVer++;
+  syncStars(); renderBuilder();
+  if (state.builder.open) schedulePriceRefresh();
+}
+function syncStars() {
+  document.querySelectorAll('.bm[data-bm]').forEach(el => {
+    const on = isBm(el.dataset.bm);
+    el.classList.toggle('on', on);
+    el.textContent = on ? '★' : '☆';
+  });
+  updateBadge();
+}
+function updateBadge() {
+  const n = state.builder.bookmarks.length;
+  const el = document.getElementById('bbBadge');
+  if (el) { el.textContent = String(n); el.classList.toggle('has', n > 0); }
+  const tg = document.getElementById('bbToggle');
+  if (tg) tg.classList.toggle('on', !!state.builder.open);
+}
+function findSnapByKey(key) {
+  const b = state.builder;
+  const s = [...b.slip.legs, ...b.bookmarks].find(x => legKey(x) === key);
+  if (s) return { ...s };
+  const [t, side] = splitKey(key);
+  const m = gidx()[t];
+  return m ? makeSnap(m, side) : null;
+}
+function snapFromLeg(l) {
+  const t = l.market_ticker || l.ticker;
+  const m = gidx()[t];
+  return makeSnap(m || edgeMkt({ ...l, ticker: t }), l.side);
+}
+function setFlash(msg) {
+  bbrt.flash = msg;
+  clearTimeout(bbrt.flashTimer);
+  bbrt.flashTimer = setTimeout(() => { bbrt.flash = null; renderBuilder({ soft: true }); }, 4500);
+}
+function toggleLock(key) {
+  const b = state.builder;
+  if (isLocked(key)) b.locks = b.locks.filter(k => k !== key);
+  else {
+    b.locks.push(key);
+    b.excludes = b.excludes.filter(k => k !== key);
+    if (!inSlip(key)) { const snap = findSnapByKey(key); if (snap) addToSlip(snap); }
+  }
+  slipChanged();
+}
+function toggleExcl(key) {
+  const b = state.builder;
+  if (isExcl(key)) b.excludes = b.excludes.filter(k => k !== key);
+  else {
+    b.excludes.push(key);
+    b.locks = b.locks.filter(k => k !== key);
+    b.slip.legs = b.slip.legs.filter(l => legKey(l) !== key);
+  }
+  slipChanged();
+}
+function migrateKey(oldKey, newKey) {
+  const b = state.builder;
+  b.locks = b.locks.map(k => k === oldKey ? newKey : k);
+  b.excludes = b.excludes.filter(k => k !== newKey);
+}
+
+// ---------- slip ----------
+function addToSlip(snap) {
+  const legs = state.builder.slip.legs;
+  const i = legs.findIndex(l => l.market_ticker === snap.market_ticker);
+  if (i >= 0) {
+    if (legs[i].side === snap.side) return false;
+    if (isLocked(legKey(legs[i]))) { bbrt.slip.flash = 'The other side of that market is locked in the slip.'; return false; }
+    legs[i] = snap;
+    return true;
+  }
+  legs.push(snap);
+  return true;
+}
+function removeFromSlip(key) {
+  if (isLocked(key)) { bbrt.slip.flash = 'Locked legs stay in the slip. Unlock it first.'; return false; }
+  state.builder.slip.legs = state.builder.slip.legs.filter(l => legKey(l) !== key);
+  return true;
+}
+function scenFor(ev) { const s = sfx(ev); return state.builder.scenarios.find(x => sfx(x.event) === s) || null; }
+function slipScenario() {
+  const legs = state.builder.slip.legs;
+  if (!legs.length) return null;
+  const s0 = sfx(legs[0].event_ticker || legs[0].market_ticker);
+  if (!legs.every(l => sfx(l.event_ticker || l.market_ticker) === s0)) return null;
+  const sc = scenFor(s0 ? 'KXNFLGAME-' + s0 : '');
+  return sc && sc.constraints.length ? { event: sc.event, constraints: sc.constraints } : null;
+}
+function slipSig() { const sc = slipScenario(); return state.builder.slip.legs.map(legKey).join(',') + '#' + (sc ? JSON.stringify(sc.constraints) : ''); }
+function slipChanged() {
+  const rt = bbrt.slip;
+  rt.armed = null;
+  if (rt.quote && rt.quote.phase !== 'accepted') { stopQuotePolling(rt); if (rt.quote.rfq_id) cancelRfq(rt.quote.rfq_id); rt.quote = null; }
+  saveBuilder(); bbrt.idxVer++;
+  scheduleSlipCheck();
+  if (state.builder.open && !bbrt.refreshTimer) onBuilderOpen();
+  render();
+}
+function scheduleSlipCheck() {
+  const rt = bbrt.slip;
+  clearTimeout(rt.timer);
+  if (!state.builder.slip.legs.length) { rt.check = null; rt.checkSig = null; rt.checking = false; rt.price = null; return; }
+  rt.checking = true;
+  rt.timer = setTimeout(async () => {
+    const seq = ++rt.seq, sig = slipSig();
+    const legs = state.builder.slip.legs.map(l => ({ market_ticker: l.market_ticker, side: l.side }));
+    const sc = slipScenario();
+    const [v, p] = await Promise.allSettled([
+      bbFetch('/api/combo/validate', { legs }),
+      bbFetch('/api/engine/price', sc ? { legs, scenario: sc } : { legs }),
+    ]);
+    if (seq !== rt.seq) return;
+    rt.check = v.status === 'fulfilled' ? v.value : { ok: false, legs: [], issues: [{ level: 'error', msg: 'Leg check failed: ' + v.reason.message }] };
+    rt.checkSig = sig;
+    rt.price = p.status === 'fulfilled' ? { sig, data: p.value } : { sig, error: p.reason.message };
+    if (v.status === 'fulfilled') absorbQuotes(v.value.legs);
+    if (p.status === 'fulfilled') absorbEngineLegs(p.value.legs, !!sc);
+    rt.checking = false;
+    saveBuilder();
+    renderBuilder({ soft: true });
+    rerenderCorr();
+  }, 250);
+}
+function rerenderCorr() {
+  const t = activeTicket();
+  if (state.module === 'research' && t && t.data && t.ui.risk === 'corr') renderBook();
+}
+
+// Kalshi RFQ quote flow for the slip (only when every leg sits in one combo collection).
+function cancelRfq(rfqId) {
+  fetch('/api/combo/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rfq_id: rfqId }) }).catch(() => {});
+}
+function stopQuotePolling(rt) { if (rt.quote && rt.quote.poll) { clearInterval(rt.quote.poll); rt.quote.poll = null; } }
+async function requestSlipQuote() {
+  const rt = bbrt.slip, stake = rt.unit * rt.units;
+  rt.quote = { phase: 'requesting', started: Date.now() };
+  renderBuilder();
+  try {
+    const resp = await fetch('/api/combo/quote', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ legs: state.builder.slip.legs.map(l => ({ market_ticker: l.market_ticker, side: l.side })), stake_dollars: stake }) });
+    const data = await resp.json();
+    if (!rt.quote || rt.quote.phase !== 'requesting') { if (resp.ok) cancelRfq(data.rfq_id); return; }
+    if (!resp.ok) { rt.quote = { phase: 'error', error: data.error || 'quote request failed' }; renderBuilder(); return; }
+    rt.quote = { phase: 'waiting', started: Date.now(), stake, rfq_id: data.rfq_id, market_ticker: data.market_ticker,
+      collection: data.collection, title: data.title, quotes: [], best: null, poll: null };
+    rt.quote.poll = setInterval(pollSlipQuotes, COMBO_POLL_MS);
+    pollSlipQuotes();
+  } catch (e) {
+    rt.quote = { phase: 'error', error: String(e) };
+  }
+  renderBuilder();
+}
+async function pollSlipQuotes() {
+  const rt = bbrt.slip, q = rt.quote;
+  if (!q || !q.rfq_id) return;
+  if (Date.now() - q.started > COMBO_POLL_MAX_MS) {
+    stopQuotePolling(rt);
+    if (!q.quotes.length) q.phase = 'expired';
+    renderBuilder({ soft: true });
+    return;
+  }
+  try {
+    const resp = await fetch('/api/combo/quotes?rfq_id=' + encodeURIComponent(q.rfq_id));
+    const data = await resp.json();
+    if (rt.quote !== q) return;
+    if (!resp.ok) q.pollError = data.error;
+    else {
+      q.pollError = null; q.quotes = data.quotes || []; q.best = data.best; q.rfqStatus = data.rfq_status;
+      if (q.best) q.phase = 'quoted';
+    }
+  } catch (e) { q.pollError = String(e); }
+  renderBuilder({ soft: true });
+}
+async function acceptSlipQuote(quoteId) {
+  const rt = bbrt.slip, q = rt.quote;
+  if (!q) return;
+  stopQuotePolling(rt);
+  q.phase = 'accepting';
+  renderBuilder();
+  try {
+    const resp = await fetch('/api/combo/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rfq_id: q.rfq_id, quote_id: quoteId, side: 'yes' }) });
+    const data = await resp.json();
+    q.phase = resp.ok ? 'accepted' : 'error';
+    q.error = resp.ok ? null : (data.error || 'accept failed');
+    q.acceptMsg = resp.ok ? data.status : null;
+  } catch (e) { q.phase = 'error'; q.error = String(e); }
+  rt.armed = null;
+  renderBuilder();
+}
+
+// ---------- scenarios ----------
+function consLabel(c) {
+  if (!c || typeof c !== 'object') return '?';
+  if ('margin_gte' in c) return `${c.team} by ${c.margin_gte}+`;
+  if ('margin_lte' in c) return c.margin_lte < 0 ? `${c.team} loses by ${-c.margin_lte}+` : c.margin_lte === 0 ? `${c.team} doesn't win` : `${c.team} margin ≤ ${c.margin_lte}`;
+  if ('total_gte' in c) return `Over ${c.total_gte - 0.5}`;
+  if ('total_lte' in c) return `Under ${c.total_lte + 0.5}`;
+  if ('points_gte' in c) return `${c.team} ${c.points_gte}+ pts`;
+  if ('points_lte' in c) return `${c.team} ≤ ${c.points_lte} pts`;
+  if (c.player) {
+    const st = SERIES_META[c.series] ? SERIES_META[c.series].short : c.series;
+    return `${shortName(c.player)} ${st} ${'gte' in c ? c.gte + '+' : '≤ ' + c.lte}`;
+  }
+  return JSON.stringify(c);
+}
+const CONS_TYPES = [
+  ['margin_gte', 'Team wins by ≥'], ['margin_lte', 'Team margin ≤'], ['total_gte', 'Total ≥ (over)'], ['total_lte', 'Total ≤ (under)'],
+  ['points_gte', 'Team pts ≥'], ['points_lte', 'Team pts ≤'], ['player_gte', 'Player stat ≥'], ['player_lte', 'Player stat ≤'],
+];
+function consFromForm(g) {
+  const cf = bbrt.cf, v = Number(cf.value);
+  if (String(cf.value).trim() === '' || isNaN(v)) return { error: 'Enter a number.' };
+  const team = cf.team || g.home;
+  switch (cf.type) {
+    case 'margin_gte': return { c: { team, margin_gte: Math.ceil(v) } };
+    case 'margin_lte': return { c: { team, margin_lte: Math.floor(v) } };
+    case 'total_gte': return { c: { total_gte: Math.ceil(v) } };
+    case 'total_lte': return { c: { total_lte: Math.floor(v) } };
+    case 'points_gte': return { c: { team, points_gte: Math.ceil(v) } };
+    case 'points_lte': return { c: { team, points_lte: Math.floor(v) } };
+    case 'player_gte': case 'player_lte':
+      if (!cf.player.trim()) return { error: 'Pick a player.' };
+      return { c: { player: cf.player.trim(), series: cf.series, [cf.type === 'player_gte' ? 'gte' : 'lte']: v } };
+  }
+  return { error: 'Unknown constraint type.' };
+}
+function addConstraint(ev, c) {
+  const b = state.builder;
+  let sc = scenFor(ev);
+  if (!sc) { sc = { event: gameEv(ev), constraints: [], label: '' }; b.scenarios.push(sc); }
+  if (!sc.constraints.some(x => JSON.stringify(x) === JSON.stringify(c))) sc.constraints.push(c);
+  scenChanged(sc.event);
+}
+function scenChanged(ev) {
+  const b = state.builder, s = sfx(ev);
+  b.scenarios.forEach(x => { x.label = x.constraints.map(consLabel).join(' · '); });
+  b.scenarios = b.scenarios.filter(x => x.constraints.length);
+  Object.keys(bbrt.cond).forEach(t => { if (sfx(t) === s) delete bbrt.cond[t]; });
+  saveBuilder();
+  const sc = scenFor(ev);
+  if (sc) applyScenario(sc);
+  else { delete bbrt.scenRes[s]; renderBuilder(); }
+  if (state.builder.slip.legs.some(l => sfx(l.market_ticker) === s)) scheduleSlipCheck();
+}
+async function applyScenario(sc) {
+  const s = sfx(sc.event), sig = JSON.stringify(sc.constraints);
+  bbrt.scenRes[s] = { loading: true, sig };
+  renderBuilder({ soft: true });
+  try {
+    const d = await bbFetch('/api/engine/scenario', { event: sc.event, constraints: sc.constraints });
+    if (!bbrt.scenRes[s] || bbrt.scenRes[s].sig !== sig) return;
+    bbrt.scenRes[s] = { sig, data: d };
+    (d.markets || []).forEach(m => { if (m.ticker) bbrt.cond[m.ticker] = m; });
+    learnMkts((d.markets || []).map(m => edgeMkt({ ...m, side: 'yes' })));
+  } catch (e) {
+    if (!bbrt.scenRes[s] || bbrt.scenRes[s].sig !== sig) return;
+    bbrt.scenRes[s] = { sig, error: e.message };
+  }
+  renderBuilder({ soft: true });
+}
+function favTeam(g) {
+  const idx = gidx();
+  const ml = (tc) => Object.values(idx).find(m => m.series === 'KXNFLGAME' && m.team_code === tc && sfx(m.event_ticker || m.ticker) === g.sfx);
+  const pa = midOf(ml(g.away)), ph = midOf(ml(g.home));
+  return pa != null && ph != null && pa > ph ? g.away : g.home;
+}
+function scenStrikes() {
+  const f = state.builder.scen, s = sfx(f.event);
+  if (!s || !f.team) return [];
+  const all = Object.values(gidx()).filter(m => sfx(m.event_ticker || m.ticker) === s && m.team_code === f.team);
+  const out = [], seen = new Set();
+  const push = (strike, label, m) => { if (seen.has(strike)) return; seen.add(strike); out.push({ strike, label, m }); };
+  const ml = all.find(m => m.series === 'KXNFLGAME');
+  if ((f.family === 'ML' || f.family === 'SPREAD') && ml) push(0, 'ML', ml);
+  if (f.family === 'SPREAD') all.filter(m => m.series === 'KXNFLSPREAD' && m.threshold != null).sort((a, b) => a.threshold - b.threshold).forEach(m => push(m.threshold, '-' + m.threshold, m));
+  if (f.family === 'TEAMTOTAL') all.filter(m => m.series === 'KXNFLTEAMTOTAL' && m.threshold != null).sort((a, b) => a.threshold - b.threshold).forEach(m => push(m.threshold, 'o' + m.threshold, m));
+  return out;
+}
+// /api/game only carries one ref strike per series, so the full spread /
+// team-total ladder comes from loaded player tickets or, failing that, from
+// the engine's edge list for the event (min_edge=-1 = every market).
+function ensureStrikes(ev) {
+  const s = sfx(ev);
+  if (!s || bbrt.strikeFetch[s]) return;
+  const n = Object.values(gidx()).filter(m => m.series === 'KXNFLSPREAD' && sfx(m.event_ticker || m.ticker) === s).length;
+  if (n >= 6) { bbrt.strikeFetch[s] = 'skip'; return; }
+  bbrt.strikeFetch[s] = 'loading';
+  bbFetch(`/api/engine/edges?event=${encodeURIComponent(gameEv(ev))}&min_edge=-1&kind=game`)
+    .then(d => { learnMkts((d.edges || []).map(edgeMkt)); bbrt.strikeFetch[s] = 'done'; })
+    .catch(e => { bbrt.strikeFetch[s] = 'error: ' + e.message; })
+    .finally(() => renderBuilder({ soft: true }));
+}
+async function runLadder() {
+  const f = state.builder.scen;
+  const valid = new Set(scenStrikes().map(x => x.strike));
+  const strikes = f.strikes.filter(k => valid.has(k)).sort((a, b) => a - b);
+  if (!strikes.length) return;
+  const sc = f.useScen ? scenFor(f.event) : null;
+  const body = { event: gameEv(f.event), team: f.team, family: f.family, strikes,
+    stakes: strikes.map(k => Number(f.stakes[k]) > 0 ? Number(f.stakes[k]) : 10) };
+  if (sc) body.scenario = { event: sc.event, constraints: sc.constraints };
+  bbrt.ladder = { loading: true, req: body };
+  renderBuilder();
+  try {
+    const d = await bbFetch('/api/engine/ladder', body);
+    bbrt.ladder = { req: body, data: d };
+    learnMkts((d.legs || []).map(l => edgeMkt({ ...l, side: l.side || 'yes' })));
+  } catch (e) {
+    bbrt.ladder = { req: body, error: e.message };
+  }
+  renderBuilder();
+}
+
+// ---------- engine edges ----------
+function edgesSig() {
+  const e = state.builder.eng, ev = e.scope === 'event' ? (ctxEvent() || '') : '';
+  return [ev, e.kind, e.minEdge].join('|');
+}
+function ensureEdges(force) {
+  const sig = edgesSig(), E = bbrt.edges;
+  if (E && E.sig === sig && E.loading) return;
+  if (!force && E && E.sig === sig && Date.now() - E.at < 60000) return;
+  const [ev, kind, min] = sig.split('|');
+  bbrt.edges = { sig, loading: true, at: Date.now(), data: E && E.sig === sig ? E.data : null };
+  bbFetch(`/api/engine/edges?event=${encodeURIComponent(ev)}&min_edge=${encodeURIComponent(min)}&kind=${encodeURIComponent(kind)}`)
+    .then(d => {
+      if (!bbrt.edges || bbrt.edges.sig !== sig) return;
+      bbrt.edges = { sig, at: Date.now(), data: d };
+      learnMkts((d.edges || []).map(edgeMkt));
+    })
+    .catch(e => { if (bbrt.edges && bbrt.edges.sig === sig) bbrt.edges = { sig, at: Date.now(), error: e.message }; })
+    .finally(() => { if (state.builder.open && state.builder.tab === 'engine') renderBuilder({ soft: true }); });
+}
+
+// ---------- chat ----------
+function slipPayload() {
+  const b = state.builder;
+  const asLeg = (k) => { const [t, side] = splitKey(k); return { market_ticker: t, side, title: legLabelFromTicker(t, side) }; };
+  return {
+    legs: b.slip.legs.map(l => ({ market_ticker: l.market_ticker, side: l.side, title: snapLabel(l) })),
+    bookmarks: b.bookmarks.map(l => ({ market_ticker: l.market_ticker, side: l.side, title: snapLabel(l) })),
+    locks: b.locks.map(asLeg), excludes: b.excludes.map(asLeg),
+    scenarios: b.scenarios.map(s => ({ event: s.event, constraints: s.constraints, label: s.label || s.constraints.map(consLabel).join(' · ') })),
+    odds_mode: b.oddsMode,
+  };
+}
+async function chatSend(text) {
+  const b = state.builder, c = b.chat;
+  text = String(text || '').trim();
+  if (!text || bbrt.chatBusy) return;
+  const notes = c.notes.splice(0);
+  const message = notes.length ? notes.join('\n') + '\n\n' + text : text;
+  c.messages.push({ role: 'user', text, notes });
+  bbrt.chatBusy = true; bbrt.chatDraft = ''; bbrt.chatScroll = true;
+  saveBuilder(); renderBuilder();
+  try {
+    const data = await bbFetch('/api/engine/chat', { conversation_id: c.id || undefined, message, slip: slipPayload() });
+    c.id = data.conversation_id || c.id;
+    const turn = c.messages.length;
+    const props = (data.proposals || []).filter(p => p && Array.isArray(p.legs)).map((p, i) => ({ ...p, id: turn + ':' + (p.id || i), srcId: p.id, status: null }));
+    props.forEach(p => learnMkts(p.legs.map(l => edgeMkt({ ...l, ticker: l.market_ticker }))));
+    c.proposals.push(...props);
+    c.messages.push({ role: 'assistant', text: data.reply || '', trace: data.trace || [], pids: props.map(p => p.id) });
+  } catch (e) {
+    if (e.status === 503) b.engineStatus = { ...(b.engineStatus || {}), chat_enabled: false };
+    c.messages.push({ role: 'error', text: 'Engine chat failed: ' + e.message });
+    c.notes.unshift(...notes);
+  }
+  bbrt.chatBusy = false; bbrt.chatScroll = true;
+  saveBuilder(); renderBuilder();
+}
+function propById(id) { return state.builder.chat.proposals.find(p => p.id === id) || null; }
+function acceptProposal(p) {
+  let added = 0, skipped = 0;
+  p.legs.forEach(l => {
+    if (isExcl(l.market_ticker + '|' + l.side)) { skipped++; return; }
+    if (addToSlip(snapFromLeg(l))) added++;
+  });
+  p.status = 'accepted';
+  setFlash(`${added} leg${added === 1 ? '' : 's'} from "${p.title}" added to the slip${skipped ? ` (${skipped} excluded skipped)` : ''}.`);
+  slipChanged();
+}
+function rejectProposal(p) {
+  const b = state.builder;
+  p.legs.forEach(l => {
+    const k = l.market_ticker + '|' + l.side;
+    if (isLocked(k)) return;
+    if (!b.excludes.includes(k)) b.excludes.push(k);
+    b.slip.legs = b.slip.legs.filter(x => legKey(x) !== k);
+  });
+  p.status = 'rejected';
+  b.chat.notes.push(`Rejected: ${p.title}`);
+  slipChanged();
+}
+
+// Minimal markdown: paragraphs, **bold**, *italic*, `code`, fenced code, bullet/numbered lists, headings.
+function mdInline(t) {
+  return escapeHtml(t)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\w)/g, '$1<i>$2</i>');
+}
+function mdHtml(src) {
+  const lines = String(src || '').replace(/\r/g, '').split('\n');
+  let out = '', para = [], list = null, code = null;
+  const flushP = () => { if (para.length) { out += '<p>' + para.map(mdInline).join('<br>') + '</p>'; para = []; } };
+  const flushL = () => { if (list) { out += `<${list.t}>` + list.items.map(x => '<li>' + mdInline(x) + '</li>').join('') + `</${list.t}>`; list = null; } };
+  for (const ln of lines) {
+    if (code !== null) {
+      if (/^\s*```/.test(ln)) { out += '<pre><code>' + escapeHtml(code.join('\n')) + '</code></pre>'; code = null; } else code.push(ln);
+      continue;
+    }
+    let m;
+    if (/^\s*```/.test(ln)) { flushP(); flushL(); code = []; continue; }
+    if ((m = ln.match(/^\s*[-*•]\s+(.*)$/))) { flushP(); if (!list || list.t !== 'ul') { flushL(); list = { t: 'ul', items: [] }; } list.items.push(m[1]); continue; }
+    if ((m = ln.match(/^\s*\d+[.)]\s+(.*)$/))) { flushP(); if (!list || list.t !== 'ol') { flushL(); list = { t: 'ol', items: [] }; } list.items.push(m[1]); continue; }
+    if ((m = ln.match(/^\s*#{1,6}\s+(.*)$/))) { flushP(); flushL(); out += '<p><b>' + mdInline(m[1]) + '</b></p>'; continue; }
+    if (!ln.trim()) { flushP(); flushL(); continue; }
+    flushL(); para.push(ln);
+  }
+  if (code !== null) out += '<pre><code>' + escapeHtml(code.join('\n')) + '</code></pre>';
+  flushP(); flushL();
+  return out;
+}
+
+// ---------- open / close ----------
+function onBuilderOpen() {
+  const b = state.builder;
+  if (!b.engineStatus || b.engineStatus.offline) loadEngineStatus();
+  schedulePriceRefresh(50);
+  if (b.slip.legs.length && !bbrt.slip.check && !bbrt.slip.checking) scheduleSlipCheck();
+  b.scenarios.forEach(sc => { if (!bbrt.scenRes[sfx(sc.event)]) applyScenario(sc); });
+  clearInterval(bbrt.refreshTimer);
+  bbrt.refreshTimer = setInterval(() => { if (state.builder.open && !document.hidden) refreshPrices(); }, BB_REFRESH_MS);
+  if (!state.slate.games && !state.slate.loading) setTimeout(() => loadSlate(false), 0);
+}
+function setBuilderOpen(open) {
+  state.builder.open = !!open;
+  saveBuilder();
+  if (open) onBuilderOpen();
+  else { clearInterval(bbrt.refreshTimer); bbrt.refreshTimer = null; }
+  render();
+}
+function builderInit() {
+  updateBadge();
+  if (state.builder.open) onBuilderOpen();
+}
+
+// ---------- render ----------
+function renderBuilder(opts) {
+  const el = document.getElementById('builder');
+  if (!el || !state.builder) return;
+  const b = state.builder;
+  bbrt.idxVer++;
+  const was = document.body.classList.contains('bb-open');
+  document.body.classList.toggle('bb-open', !!b.open);
+  updateBadge();
+  if (was !== !!b.open && state.module === 'research') { const t = activeTicket(); if (t && t.data) renderCurve(); }
+  el.hidden = !b.open;
+  if (!b.open) { el.innerHTML = ''; return; }
+  // A background refresh must not yank an open <select> out from under the user.
+  const a = document.activeElement;
+  if (opts && opts.soft && a && el.contains(a) && a.tagName === 'SELECT') return;
+  let focus = null;
+  if (a && el.contains(a) && a.dataset && a.dataset.bbin) {
+    let start = null;
+    try { start = a.selectionStart; } catch (e) {}
+    focus = { sel: `[data-bbin="${a.dataset.bbin}"]` + (a.dataset.strike !== undefined ? `[data-strike="${a.dataset.strike}"]` : ''), start };
+  }
+  const scrolls = {};
+  el.querySelectorAll('[data-sk]').forEach(x => { scrolls[x.dataset.sk] = x.scrollTop; });
+
+  const tabs = [
+    { id: 'slip', label: 'SLIP', cnt: b.slip.legs.length + '/' + b.bookmarks.length, tip: 'parlay legs / bookmarks' },
+    { id: 'scen', label: 'SCEN', cnt: b.scenarios.length ? String(b.scenarios.length) : '' },
+    { id: 'engine', label: 'ENGINE', cnt: '' },
+  ];
+  let body = '';
+  try {
+    body = b.tab === 'scen' ? scenTabHtml() : b.tab === 'engine' ? engineTabHtml() : slipTabHtml();
+  } catch (e) {
+    body = `<div class="bb-err">Builder render error: ${escapeHtml(e.message)}</div>`;
+    console.error(e);
+  }
+  el.innerHTML = `<div class="panel-head" style="padding-left:4px;gap:0">
+      ${tabs.map(tb => `<button type="button" class="tab ${b.tab === tb.id ? 'on' : ''}" data-bb="tab" data-tab="${tb.id}"${tb.tip ? ` title="${tb.tip}"` : ''}>${tb.label}${tb.cnt ? `<span class="cnt mono">${tb.cnt}</span>` : ''}</button>`).join('')}
+      ${MOCK ? `<span class="bb-tag mock" style="align-self:center;margin-left:4px" title="?mock=1: /api/engine/* is answered by the in-page mock">MOCK</span>` : ''}
+      <span style="flex-grow:1"></span>
+      <span class="seg" style="align-self:center;margin-right:6px" title="Odds: American odds from the price you'd pay, or the Kalshi price in cents">
+        <button type="button" class="${b.oddsMode === 'american' ? 'on' : ''}" data-bb="odds" data-mode="american">US</button><button type="button" class="${b.oddsMode === 'kalshi' ? 'on' : ''}" data-bb="odds" data-mode="kalshi">¢</button>
+      </span>
+      <button type="button" class="bb-x" style="align-self:center;margin-right:8px" data-bb="close" aria-label="Close builder">×</button>
+    </div>
+    ${bbrt.flash ? `<div class="bb-note" style="color:var(--amber);border-bottom:1px solid var(--border);flex-shrink:0">${escapeHtml(bbrt.flash)}</div>` : ''}
+    <div id="bbBody" class="${b.tab === 'engine' ? 'flexcol' : ''}" data-sk="body-${b.tab}">${body}</div>`;
+
+  el.querySelectorAll('[data-sk]').forEach(x => { if (scrolls[x.dataset.sk] !== undefined) x.scrollTop = scrolls[x.dataset.sk]; });
+  if (bbrt.chatScroll) { const c = el.querySelector('[data-sk="chat"]'); if (c) c.scrollTop = c.scrollHeight; bbrt.chatScroll = false; }
+  if (focus) {
+    const f = el.querySelector(focus.sel);
+    if (f) { f.focus(); if (focus.start !== null) { try { f.setSelectionRange(focus.start, focus.start); } catch (e) {} } }
+  }
+}
+
+function secHtml(label, right) {
+  return `<div class="bb-sec"><span>${label}</span><span style="flex-grow:1"></span>${right || ''}</div>`;
+}
+function ago(ts) { const s = Math.round((Date.now() - ts) / 1000); return s < 60 ? s + 's ago' : Math.round(s / 60) + 'm ago'; }
+
+// ----- SLIP tab -----
+function slipTabHtml() {
+  const b = state.builder;
+  let h = secHtml(`BOOKMARKS <span class="cnt">${b.bookmarks.length}</span>`,
+    `${bbrt.pxLoading ? '<span class="cnt">updating…</span>' : bbrt.pxAt ? `<span class="cnt">${ago(bbrt.pxAt)}</span>` : ''}<button type="button" class="backlink" data-bb="refresh">refresh</button>`);
+  if (bbrt.pxNote) h += `<div class="bb-note" style="color:var(--amber)">${escapeHtml(bbrt.pxNote)}</div>`;
+  if (!b.bookmarks.length) h += `<div class="bb-note">Click ☆ next to any price (player ladders, market lists, slate cards, game pages) to bookmark it here.</div>`;
+  else h += b.bookmarks.map(bookmarkRowHtml).join('');
+  h += parlayHtml();
+  return h;
+}
+function bookmarkRowHtml(s) {
+  const key = legKey(s), L = legLive(s), lk = isLocked(key), ex = isExcl(key), slipped = inSlip(key), k = escapeHtml(key);
+  return `<div class="bb-row${lk ? ' locked' : ''}${ex ? ' excl' : ''}">
+    <div class="bb-l1 mono">
+      <button type="button" class="bm on" data-bm="${k}" title="Remove bookmark">★</button>
+      <span class="bb-lbl" title="${escapeHtml(s.title || s.market_ticker)}">${escapeHtml(snapLabel(s))}</span>
+      <span class="bb-gm">${escapeHtml(gameTag(s.event_ticker || s.market_ticker))}</span>
+      <button type="button" class="bb-side ${s.side}" data-bb="bm-side" data-key="${k}" title="Flip to the other side">${s.side.toUpperCase()}</button>
+      <span class="bb-px">${fmtPrice(L.cost)}</span>
+    </div>
+    <div class="bb-l2 mono">
+      <span style="min-width:0;overflow:hidden;white-space:nowrap">${L.cond ? `<span class="bb-tag scn" title="Fair value under your scenario">SCN</span> ${fairTxt(L.cond.fair, L.cond.edge)}` : fairTxt(L.fair, L.edge)}</span>
+      <span style="flex-grow:1"></span>
+      <button type="button" class="bb-act" data-bb="add-slip" data-key="${k}" ${slipped || ex ? 'disabled' : ''}>${slipped ? 'IN SLIP' : '+SLIP'}</button>
+      <button type="button" class="bb-act${lk ? ' on' : ''}" data-bb="lock" data-key="${k}" title="Locked legs stay in the slip and in every engine proposal">LOCK</button>
+      <button type="button" class="bb-act${ex ? ' onx' : ''}" data-bb="excl" data-key="${k}" title="Excluded legs are off-limits to the engine">EXCL</button>
+      <button type="button" class="bb-x" data-bb="bm-remove" data-key="${k}" aria-label="Remove bookmark">×</button>
+    </div>
+  </div>`;
+}
+function parlayHtml() {
+  const b = state.builder, rt = bbrt.slip, legs = b.slip.legs, sig = slipSig();
+  const fresh = rt.check && rt.checkSig === sig ? rt.check : null;
+  const P = rt.price && rt.price.sig === sig ? rt.price : null;
+  const pr = P && P.data ? P.data : null;
+  const lockedN = legs.filter(l => isLocked(legKey(l))).length;
+  let h = secHtml(`PARLAY <span class="cnt">${legs.length} leg${legs.length === 1 ? '' : 's'}${fresh && fresh.collection ? ' · ' + escapeHtml(fresh.collection) : ''}</span>`,
+    `${rt.checking ? '<span class="cnt">checking…</span>' : ''}${legs.length > lockedN ? `<button type="button" class="backlink" data-bb="slip-clear">${lockedN ? 'clear unlocked' : 'clear'}</button>` : ''}`);
+  if (rt.flash) h += `<div class="combo-msg err" style="padding:4px 8px">${escapeHtml(rt.flash)}</div>`;
+  if (!legs.length) return h + `<div class="bb-note">No legs yet. Use +SLIP on a bookmark or engine edge, toggle lines in a player's Correlation tab, or accept an engine proposal.</div>`;
+  h += legs.map(l => slipLegRowHtml(l, fresh, pr)).join('');
+  if (fresh) (fresh.issues || []).forEach(x => { h += `<div class="combo-msg ${x.level === 'error' ? 'err' : 'warn'}" style="padding:2px 8px">${escapeHtml(x.msg)}</div>`; });
+
+  const costs = legs.map(l => legLive(l).cost);
+  const localCost = costs.every(c => c != null) ? costs.reduce((a, c) => a * c, 1) : null;
+  const parlayCost = pr && pr.parlay_cost != null ? pr.parlay_cost : localCost;
+  const stake = rt.unit * rt.units;
+  const toWin = parlayCost ? stake * (1 / parlayCost - 1) : null;
+  const ev = pr && pr.ev_per_dollar != null ? pr.ev_per_dollar : (pr && pr.joint_fair != null && parlayCost ? pr.joint_fair / parlayCost - 1 : null);
+  const small = (p) => p == null ? '' : ` <small>${pct1(p)}</small>`;
+  h += `<div class="bb-tiles">
+    <div class="stat-tile"><span class="sl">PARLAY PRICE</span><span class="sv mono">${fmtPrice(parlayCost)}${state.builder.oddsMode === 'american' ? small(parlayCost) : ''}</span></div>
+    <div class="stat-tile" title="Joint probability from the engine's correlated simulation"><span class="sl">JOINT FAIR</span><span class="sv mono" style="color:var(--blue)">${pr ? fmtAm(pr.joint_fair) + small(pr.joint_fair) : '--'}</span></div>
+    <div class="stat-tile" title="Product of each leg's fair value, as if independent"><span class="sl">INDEP FAIR</span><span class="sv mono">${pr ? fmtAm(pr.indep_fair) + small(pr.indep_fair) : '--'}</span></div>
+    <div class="stat-tile"><span class="sl">EV / $1</span><span class="sv mono" style="color:${ev == null ? 'var(--on)' : ev >= 0 ? 'var(--blue)' : 'var(--orange)'}">${ev == null ? '--' : (ev >= 0 ? '+' : '') + (ev * 100).toFixed(1) + '%'}</span></div>
+    <div class="stat-tile"><span class="sl">STAKE</span><span class="sv mono" style="display:flex;align-items:center;gap:2px;font-size:11px">
+      <input class="bb-in mono" type="number" min="0.5" step="0.5" value="${rt.units}" data-bbin="units" aria-label="Units to stake" style="width:30px">u×$<input class="bb-in mono" type="number" min="1" step="1" value="${rt.unit}" data-bbin="unit" aria-label="Dollars per unit" style="width:34px"></span></div>
+    <div class="stat-tile"><span class="sl">TO WIN</span><span class="sv mono" style="color:var(--blue)">${toWin == null ? '--' : money(toWin)}</span></div>
+  </div>`;
+  if (P && P.error) h += `<div class="bb-note">Engine price unavailable (${escapeHtml(P.error)}). Parlay price is the product of leg prices.</div>`;
+  if (pr && pr.scenario_applied) { const sc = slipScenario(); h += `<div class="bb-note"><span class="bb-tag scn">SCN</span> Fair values conditioned on ${escapeHtml(sc ? sc.constraints.map(consLabel).join(' · ') : 'your scenario')}.</div>`; }
+  h += slipQuoteHtml(fresh, pr, stake);
+  return h;
+}
+function slipLegRowHtml(l, fresh, pr) {
+  const key = legKey(l), k = escapeHtml(key), L = legLive(l), lk = isLocked(key), ex = isExcl(key);
+  const chk = fresh && fresh.legs ? fresh.legs.find(x => x.market_ticker === l.market_ticker) : null;
+  const pl = pr && pr.legs ? pr.legs.find(x => x.market_ticker === l.market_ticker && x.side === l.side) : null;
+  const errs = chk ? chk.errors || [] : [], warns = chk ? chk.warnings || [] : [];
+  const fair = pl && pl.fair != null ? pl.fair : L.fair;
+  const edge = fair != null && L.cost != null ? fair - L.cost : null;
+  const ladder = familyLadderG(l), at = ladder.findIndex(m => m.ticker === l.market_ticker);
+  const tip = [...errs, ...warns].join(' · ') || (chk ? 'valid combo leg' : 'checking');
+  return `<div class="bb-row${lk ? ' locked' : ''}${ex ? ' excl' : ''}${errs.length ? ' bad' : ''}">
+    <div class="bb-l1 mono">
+      <span style="width:14px;text-align:center;flex-shrink:0;color:${errs.length ? 'var(--orange)' : chk ? 'var(--blue)' : 'var(--dim)'}" title="${escapeHtml(tip)}">${errs.length ? '✗' : chk ? '✓' : '·'}</span>
+      <span class="bb-lbl" title="${escapeHtml(l.title || l.market_ticker)}">${escapeHtml(snapLabel(l))}</span>
+      <span class="bb-gm">${escapeHtml(gameTag(l.event_ticker || l.market_ticker))}</span>
+      <span class="bb-px">${fmtPrice(L.cost)}</span>
+      <button type="button" class="bb-x" data-bb="leg-remove" data-key="${k}" ${lk ? 'disabled title="Locked"' : 'aria-label="Remove leg"'} style="${lk ? 'color:var(--faint);cursor:default' : ''}">×</button>
+    </div>
+    <div class="bb-l2 mono">
+      <span class="seg"><button type="button" class="${l.side === 'yes' ? 'on' : ''}" data-bb="leg-side" data-side="yes" data-key="${k}">YES</button><button type="button" class="${l.side === 'no' ? 'on' : ''}" data-bb="leg-side" data-side="no" data-key="${k}">NO</button></span>
+      ${ladder.length > 1 ? `<span class="stepper" title="Step to the next line in this ladder"><button type="button" data-bb="leg-step" data-dir="-1" data-key="${k}" ${at <= 0 ? 'disabled' : ''}>◀</button><button type="button" data-bb="leg-step" data-dir="1" data-key="${k}" ${at < 0 || at >= ladder.length - 1 ? 'disabled' : ''}>▶</button></span>` : ''}
+      <span style="min-width:0;overflow:hidden;white-space:nowrap">${fairTxt(fair, edge)}</span>
+      ${ex ? '<span class="bb-tag excl">EXCL</span>' : ''}
+      <span style="flex-grow:1"></span>
+      <button type="button" class="bb-act${lk ? ' on' : ''}" data-bb="lock" data-key="${k}" title="Locked legs stay in the slip and in every engine proposal">LOCK</button>
+    </div>
+    ${[...errs.map(x => ['err', x]), ...warns.map(x => ['warn', x])].map(([c, x]) => `<div class="combo-msg ${c}" style="padding:0 0 0 20px">${escapeHtml(x)}</div>`).join('')}
+  </div>`;
+}
+function slipQuoteHtml(fresh, pr, stake) {
+  const rt = bbrt.slip, q = rt.quote;
+  if (!fresh) return `<div class="bb-note">${rt.checking ? 'Checking legs against Kalshi combo rules…' : 'Waiting for the leg check.'}</div>`;
+  const quotable = !!(fresh.ok && fresh.collection);
+  if (!q) {
+    if (!quotable) return `<div class="bb-note"><span style="color:var(--amber);font-weight:600">MODEL PRICE ONLY</span> · not quotable as one Kalshi combo${fresh.ok ? '' : '. Fix the ✗ legs, or keep it as a model-priced ticket (cross-game parlays and a second game-level leg in one game can\'t be combined on Kalshi)'}.</div>`;
+    return `<div class="bb-actions"><button type="button" class="combo-btn" data-bb="quote" ${rt.checking ? 'disabled' : ''}>GET KALSHI QUOTE · ${money(stake)}</button>
+      <span class="combo-note" style="flex-basis:100%">Creates the combo on Kalshi and asks makers to price it (RFQ). Nothing is bought until you accept.</span></div>`;
+  }
+  if (q.phase === 'requesting') return `<div class="bb-note">Creating combo market and sending RFQ…</div>`;
+  if (q.phase === 'error') return `<div class="bb-actions"><span class="combo-msg err" style="padding:0">${escapeHtml(q.error)}</span><button type="button" class="backlink" data-bb="q-cancel">dismiss</button></div>`;
+  const secs = Math.round((Date.now() - q.started) / 1000);
+  let h = `<div style="padding:6px 8px;display:flex;flex-direction:column;gap:4px">
+    <div class="mono" style="display:flex;gap:8px;align-items:center;font-size:10px;color:var(--dim);flex-wrap:wrap">
+      <span title="${escapeHtml(q.title || '')}">RFQ ${escapeHtml((q.rfq_id || '').slice(0, 8))}</span>
+      <span style="flex-grow:1"></span>
+      ${q.phase === 'waiting' ? `<span>waiting for makers… ${secs}s</span>` : ''}
+      ${q.phase !== 'accepted' ? `<button type="button" class="backlink" data-bb="q-cancel">cancel RFQ</button>` : ''}
+    </div>`;
+  if (q.pollError) h += `<div class="combo-msg warn" style="padding:0">${escapeHtml(q.pollError)}</div>`;
+  if (q.phase === 'expired') h += `<div class="combo-msg warn" style="padding:0">No maker quoted within ${COMBO_POLL_MAX_MS / 1000}s. Try fewer or more mainstream legs.</div>`;
+  if (q.phase === 'accepted') h += `<div class="combo-msg" style="padding:0;color:var(--blue)">Accepted: ${escapeHtml(q.acceptMsg || '')}. Check Kalshi fills to confirm.</div>`;
+  const live = (q.quotes || []).filter(x => x.yes_cost).sort((a, b) => a.yes_cost - b.yes_cost);
+  if (live.length) {
+    const qc = 'grid-template-columns:40px 46px 56px minmax(0,1fr) auto;padding:0';
+    h += `<div class="mono bb-grid hd" style="${qc}"><span>COST</span><span>ODDS</span><span class="right">TO WIN</span><span class="right">vs FAIR</span><span></span></div>`;
+    const fairP = pr && pr.joint_fair ? pr.joint_fair : null;
+    live.forEach((x, i) => {
+      const vs = fairP ? x.yes_cost / fairP - 1 : null;
+      const armed = rt.armed === x.id;
+      const canAccept = fresh.accept_enabled && q.phase === 'quoted' && i === 0;
+      h += `<div class="mono bb-grid" style="${qc};${i === 0 ? 'background:var(--amber-soft)' : ''}">
+        <span>${cents(x.yes_cost)}</span><span>${state.builder.oddsMode === 'kalshi' ? cents(x.yes_cost) : fmtAmerican(x.yes_american)}</span>
+        <span class="right" style="color:var(--blue)">${x.yes_units ? money(q.stake * x.yes_units) : '--'}</span>
+        <span class="right" style="color:${vs === null ? 'var(--dim)' : vs > 0 ? 'var(--ask)' : 'var(--blue)'}" title="Quote price vs the engine's joint fair. Above 0 = you pay more than fair.">${vs === null ? '--' : (vs > 0 ? '+' : '') + (vs * 100).toFixed(0) + '%'}</span>
+        <span class="right">${canAccept ? `<button type="button" class="combo-btn ${armed ? 'armed' : ''}" style="padding:2px 6px" data-bb="q-accept" data-quote="${escapeHtml(x.id)}">${armed ? `CONFIRM ${money(q.stake)}` : 'ACCEPT'}</button>` : ''}</span>
+      </div>`;
+    });
+    if (!fresh.accept_enabled) h += `<div class="combo-note">Placing is off. Start the server with KALSHI_ENABLE_COMBO_ACCEPT=1 to enable ACCEPT, or place it in the Kalshi app.</div>`;
+  }
+  return h + `</div>`;
+}
+
+// ----- SCEN tab -----
+function scenTabHtml() {
+  const b = state.builder, f = b.scen;
+  const games = knownGames();
+  let h = secHtml('LADDER BUILDER', `<span class="cnt">set of singles, priced jointly</span>`);
+  if (!games.length) {
+    return h + (state.slate.loading ? '<div class="bb-note">Loading slate…</div>'
+      : state.slate.error ? `<div class="bb-err">${escapeHtml(state.slate.error)}</div><div class="bb-actions"><button type="button" class="backlink" data-bb="load-slate">retry</button></div>`
+      : '<div class="bb-note">No games loaded yet.</div><div class="bb-actions"><button type="button" class="backlink" data-bb="load-slate">load this week\'s slate</button></div>');
+  }
+  if (!f.event || !games.some(g => g.sfx === sfx(f.event))) {
+    const ce = ctxEvent();
+    f.event = ce && games.some(g => g.sfx === sfx(ce)) ? gameEv(ce) : games[0].ev;
+    f.team = null; f.strikes = [];
+  }
+  const g = gameInfo(f.event);
+  if (!f.team || ![g.away, g.home].includes(f.team)) { f.team = favTeam(g); f.strikes = []; }
+  setTimeout(() => ensureStrikes(f.event), 0);
+  h += `<div class="bb-form">
+    <select class="bb-in mono" data-bbin="scen-game" aria-label="Game" style="width:96px">${games.map(x => `<option value="${x.ev}" ${x.sfx === g.sfx ? 'selected' : ''}>${x.away}@${x.home}</option>`).join('')}</select>
+    <span class="seg">${[g.away, g.home].map(tc => `<button type="button" class="${f.team === tc ? 'on' : ''}" data-bb="scen-team" data-team="${tc}">${tc}</button>`).join('')}</span>
+    <span class="seg">${[['ML', 'ML'], ['SPREAD', 'SPREAD'], ['TEAMTOTAL', 'TEAM TOT']].map(([id, lb]) => `<button type="button" class="${f.family === id ? 'on' : ''}" data-bb="scen-fam" data-fam="${id}">${lb}</button>`).join('')}</span>
+  </div>`;
+  const strikes = scenStrikes();
+  const valid = new Set(strikes.map(x => x.strike));
+  f.strikes = f.strikes.filter(k => valid.has(k));
+  const st = bbrt.strikeFetch[g.sfx];
+  if (!strikes.length) h += `<div class="bb-note">${st === 'loading' ? 'Loading strikes from the engine…' : `No ${f.family === 'TEAMTOTAL' ? 'team-total' : f.family.toLowerCase()} markets for ${f.team} yet.`}${st && st.startsWith('error') ? ` Engine: ${escapeHtml(st.slice(7))}.` : ''} Open a player from this game to load the full ladder.</div>`;
+  else {
+    h += `<div class="bb-chips">${strikes.map(x => `<button type="button" class="bb-chip mono ${f.strikes.includes(x.strike) ? 'on' : ''}" data-bb="scen-strike" data-strike="${x.strike}" title="${escapeHtml(x.m.title || '')}">${escapeHtml(x.label)}<span class="px">${fmtPrice(x.m.yes_ask)}</span></button>`).join('')}</div>`;
+    if (st === 'loading') h += `<div class="bb-note" style="padding-top:0">Loading more strikes…</div>`;
+  }
+  const sel = strikes.filter(x => f.strikes.includes(x.strike));
+  if (sel.length) {
+    const gc = 'grid-template-columns:minmax(0,1fr) 46px 58px';
+    h += `<div class="mono bb-grid hd" style="${gc}"><span>LEG</span><span class="right">PRICE</span><span class="right">STAKE $</span></div>`;
+    h += sel.map(x => `<div class="mono bb-grid" style="${gc}">
+      <span class="bb-lbl">${escapeHtml(mLabel(x.m, 'yes'))}</span><span class="right">${fmtPrice(x.m.yes_ask)}</span>
+      <span class="right"><input class="bb-in mono" type="number" min="1" step="1" style="width:52px;text-align:right" data-bbin="scen-stake" data-strike="${x.strike}" value="${escapeHtml(String(f.stakes[x.strike] ?? 10))}" aria-label="Stake"></span>
+    </div>`).join('');
+  }
+  const sc = scenFor(g.ev);
+  h += `<div class="bb-actions">
+    <button type="button" class="combo-btn" data-bb="ladder-run" ${sel.length ? '' : 'disabled'}>PRICE LADDER</button>
+    ${sc ? `<label class="mono" style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" data-bbin="scen-use" ${f.useScen ? 'checked' : ''}>under scenario</label>` : ''}
+  </div>`;
+  h += ladderHtml();
+  h += scenarioSectionHtml(g);
+  return h;
+}
+function ladderHtml() {
+  const L = bbrt.ladder;
+  if (!L) return '';
+  if (L.loading) return `<div class="bb-note">Pricing ladder…</div>`;
+  if (L.error) return `<div class="bb-err">Ladder failed: ${escapeHtml(L.error)}</div>`;
+  const d = L.data || {}, legs = d.legs || [], table = d.outcome_table || [];
+  const lc = 'grid-template-columns:14px minmax(0,1fr) 44px 44px 40px 36px';
+  let h = `<div class="mono bb-grid hd" style="${lc}"><span></span><span>LEG${L.req && L.req.scenario ? ' <span class="bb-tag scn">SCN</span>' : ''}</span><span class="right">PRICE</span><span class="right">FAIR</span><span class="right">EDGE</span><span class="right">$</span></div>`;
+  h += legs.map(l => {
+    const m = gidx()[l.market_ticker] || edgeMkt({ ...l, ticker: l.market_ticker, side: l.side || 'yes' });
+    const edge = l.fair != null && l.cost != null ? l.fair - l.cost : null;
+    return `<div class="mono bb-grid" style="${lc}">${bmStar(m, l.side || 'yes')}<span class="bb-lbl" title="${escapeHtml(l.title || '')}">${escapeHtml(mLabel(m, l.side || 'yes'))}</span>
+      <span class="right">${fmtPrice(l.cost)}</span><span class="right" style="color:var(--label)">${fmtAm(l.fair)}</span><span class="right">${edgeTxt(edge) || '--'}</span><span class="right" style="color:var(--muted)">${l.stake ?? ''}</span></div>`;
+  }).join('');
+  const pnlC = (v) => v == null ? 'var(--on)' : v >= 0 ? 'var(--blue)' : 'var(--orange)';
+  h += `<div class="bb-tiles">
+    <div class="stat-tile"><span class="sl">P(ALL HIT)</span><span class="sv mono">${pct1(d.p_all)}</span></div>
+    <div class="stat-tile"><span class="sl">P(NONE)</span><span class="sv mono">${pct1(d.p_none)}</span></div>
+    <div class="stat-tile"><span class="sl">EV</span><span class="sv mono" style="color:${pnlC(d.ev)}">${d.ev == null ? '--' : signedMoney(d.ev)}</span></div>
+    <div class="stat-tile"><span class="sl">MAX LOSS</span><span class="sv mono" style="color:var(--orange)">${d.max_loss == null ? '--' : signedMoney(d.max_loss)}</span></div>
+    <div class="stat-tile"><span class="sl">MAX WIN</span><span class="sv mono" style="color:var(--blue)">${d.max_win == null ? '--' : signedMoney(d.max_win)}</span></div>
+    <div class="stat-tile"><span class="sl">RISKED</span><span class="sv mono">${money(legs.reduce((a, l) => a + (Number(l.stake) || 0), 0))}</span></div>
+  </div>`;
+  if (table.length) {
+    const oc = 'grid-template-columns:minmax(0,1fr) 56px 40px 28px 56px';
+    const maxP = Math.max(...table.map(r => r.prob || 0), 0.0001);
+    h += `<div class="mono bb-grid hd" style="${oc}"><span>FINAL OUTCOME</span><span></span><span class="right">PROB</span><span class="right">HIT</span><span class="right">P&amp;L</span></div>`;
+    h += table.map(r => `<div class="mono bb-grid" style="${oc}">
+      <span class="bb-lbl">${escapeHtml(r.label)}</span>
+      <span class="bb-pbar"><span style="width:${Math.round((r.prob || 0) / maxP * 100)}%"></span></span>
+      <span class="right">${pct1(r.prob)}</span><span class="right" style="color:var(--muted)">${r.legs_hit ?? ''}/${legs.length}</span>
+      <span class="right" style="color:${pnlC(r.pnl)}">${r.pnl == null ? '--' : signedMoney(r.pnl)}</span></div>`).join('');
+  }
+  h += `<div class="bb-actions"><button type="button" class="bb-act" data-bb="ladder-bm">☆ BOOKMARK ALL LEGS</button>
+    <span class="combo-note">Kalshi allows one game-level leg per game in a combo, so a ladder is bought as separate singles.</span></div>`;
+  return h;
+}
+function scenarioSectionHtml(g) {
+  const b = state.builder, sc = scenFor(g.ev), cf = bbrt.cf;
+  let h = secHtml(`SCENARIO · ${escapeHtml(g.away + '@' + g.home)}`, sc ? `<button type="button" class="backlink" data-bb="scen-clear" data-ev="${g.ev}">clear</button>` : '');
+  h += `<div class="bb-chips">${sc ? sc.constraints.map((c, i) => `<span class="bb-chip scn mono">${escapeHtml(consLabel(c))}<button type="button" class="bb-x" style="font-size:11px" data-bb="cons-remove" data-ev="${g.ev}" data-i="${i}" aria-label="Remove">×</button></span>`).join('') : '<span class="combo-note">No view yet. Add a constraint and every market in this game re-prices under it; the engine chat gets it too.</span>'}</div>`;
+  // presets from the game's lines
+  const idx = gidx();
+  const tots = Object.values(idx).filter(m => m.series === 'KXNFLTOTAL' && sfx(m.event_ticker || m.ticker) === g.sfx && midOf(m) != null);
+  const T = tots.length ? tots.reduce((a, x) => Math.abs(midOf(x) - 0.5) < Math.abs(midOf(a) - 0.5) ? x : a).threshold : null;
+  const fav = favTeam(g), dog = fav === g.home ? g.away : g.home;
+  const presets = [{ team: fav, margin_gte: 7 }, { team: dog, margin_gte: 1 }, { team: fav, margin_gte: 14 }];
+  if (T != null) presets.push({ total_lte: Math.floor(T) }, { total_gte: Math.ceil(T) });
+  h += `<div class="bb-chips" style="padding-top:0">${presets.map(c => `<button type="button" class="bb-chip mono" data-bb="cons-preset" data-ev="${g.ev}" data-c="${escapeHtml(JSON.stringify(c))}">+ ${escapeHtml(consLabel(c))}</button>`).join('')}</div>`;
+  const isPlayer = cf.type.startsWith('player');
+  const players = [...new Set(Object.values(idx).filter(m => m.player_name && sfx(m.event_ticker || m.ticker) === g.sfx).map(m => m.player_name))].sort();
+  h += `<div class="bb-form" style="padding-top:0">
+    <select class="bb-in" data-bbin="cf-type" aria-label="Constraint type" style="width:112px">${CONS_TYPES.map(([id, lb]) => `<option value="${id}" ${cf.type === id ? 'selected' : ''}>${lb}</option>`).join('')}</select>
+    ${isPlayer
+      ? `<input class="bb-in" list="bbPlayers" data-bbin="cf-player" placeholder="player" value="${escapeHtml(cf.player)}" style="width:92px" aria-label="Player">
+         <datalist id="bbPlayers">${players.map(p => `<option value="${escapeHtml(p)}">`).join('')}</datalist>
+         <select class="bb-in" data-bbin="cf-series" aria-label="Stat" style="width:70px">${Object.entries(SERIES_META).map(([id, m]) => `<option value="${id}" ${cf.series === id ? 'selected' : ''}>${m.short}</option>`).join('')}</select>`
+      : cf.type.startsWith('total') ? '' : `<span class="seg">${[g.away, g.home].map(tc => `<button type="button" class="${(cf.team || g.home) === tc ? 'on' : ''}" data-bb="cf-team" data-team="${tc}">${tc}</button>`).join('')}</span>`}
+    <input class="bb-in mono" type="number" step="0.5" data-bbin="cf-value" value="${escapeHtml(cf.value)}" placeholder="${cf.type.startsWith('total') ? '41.5' : cf.type.startsWith('margin') ? '7' : '24'}" style="width:48px" aria-label="Value">
+    <button type="button" class="bb-act" data-bb="cons-add" data-ev="${g.ev}">ADD</button>
+  </div>`;
+  if (bbrt.cfErr) h += `<div class="bb-err" style="padding-top:0">${escapeHtml(bbrt.cfErr)}</div>`;
+  const R = bbrt.scenRes[g.sfx];
+  if (sc && R) {
+    if (R.loading) h += `<div class="bb-note">Re-pricing ${escapeHtml(g.away + '@' + g.home)} under your scenario…</div>`;
+    else if (R.error) h += `<div class="bb-err">Scenario failed: ${escapeHtml(R.error)} <button type="button" class="backlink" data-bb="scen-reapply" data-ev="${g.ev}">retry</button></div>`;
+    else if (R.data) h += scenResultHtml(g, R.data);
+  }
+  const others = b.scenarios.filter(x => sfx(x.event) !== g.sfx);
+  if (others.length) {
+    h += secHtml('OTHER ACTIVE SCENARIOS');
+    h += `<div class="bb-chips">${others.map(x => `<span class="bb-chip scn mono">${escapeHtml(gameTag(x.event))}: ${escapeHtml(x.constraints.map(consLabel).join(' · '))}<button type="button" class="bb-x" style="font-size:11px" data-bb="scen-clear" data-ev="${x.event}" aria-label="Remove">×</button></span>`).join('')}</div>`;
+  }
+  return h;
+}
+function scenResultHtml(g, d) {
+  const b = state.builder, mk = d.markets || [];
+  const mine = [...b.slip.legs, ...b.bookmarks.filter(x => !inSlip(legKey(x)))].filter(s => sfx(s.event_ticker || s.market_ticker) === g.sfx);
+  let h = `<div class="bb-tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+    <div class="stat-tile"><span class="sl">P(SCENARIO)</span><span class="sv mono" style="color:var(--amber)">${pct1(d.p_scenario)}</span></div>
+    <div class="stat-tile"><span class="sl">RE-PRICED</span><span class="sv mono">${mk.length}</span></div>
+    <div class="stat-tile"><span class="sl">YOUR LEGS</span><span class="sv mono">${mine.length}</span></div>
+  </div>`;
+  const gc = 'grid-template-columns:minmax(0,1fr) 40px 44px 44px 40px';
+  if (mine.length) {
+    h += `<div class="mono bb-grid hd" style="${gc}"><span>YOUR LEGS</span><span class="right">BASE</span><span class="right">SCN</span><span class="right">PRICE</span><span class="right">EDGE</span></div>`;
+    h += mine.map(s => {
+      const L = legLive(s), key = legKey(s);
+      return `<div class="mono bb-grid" style="${gc}"><span class="bb-lbl" style="display:flex;gap:4px;align-items:center"><span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(snapLabel(s))}</span>${flagTags(key)}</span>
+        <span class="right" style="color:var(--dim)">${L.cond && L.cond.base != null ? pct1(L.cond.base).replace('%', '') : '--'}</span>
+        <span class="right" style="color:var(--amber)">${L.cond ? pct1(L.cond.fair).replace('%', '') : '--'}</span>
+        <span class="right">${fmtPrice(L.cost)}</span><span class="right">${L.cond ? edgeTxt(L.cond.edge) : '--'}</span></div>`;
+    }).join('');
+  }
+  const best = mk.filter(m => m.edge_cond != null && m.cost > 0 && m.cost < 1).sort((a, b2) => b2.edge_cond - a.edge_cond).slice(0, 10);
+  if (best.length) {
+    const bc = 'grid-template-columns:14px minmax(0,1fr) 44px 44px 40px 36px';
+    h += `<div class="mono bb-grid hd" style="${bc}"><span></span><span>BEST YES UNDER SCENARIO</span><span class="right">PRICE</span><span class="right">FAIR</span><span class="right">EDGE</span><span></span></div>`;
+    h += best.map(m => {
+      const mm = gidx()[m.ticker] || edgeMkt({ ...m, side: 'yes' }), key = m.ticker + '|yes';
+      return `<div class="mono bb-grid" style="${bc}">${bmStar(mm, 'yes')}<span class="bb-lbl" title="${escapeHtml(m.title || '')}">${escapeHtml(mLabel(mm, 'yes'))}</span>
+        <span class="right">${fmtPrice(m.cost)}</span><span class="right" style="color:var(--amber)">${fmtAm(m.fair_cond)}</span><span class="right">${edgeTxt(m.edge_cond)}</span>
+        <span class="right"><button type="button" class="bb-act" data-bb="add-slip" data-key="${escapeHtml(key)}" ${inSlip(key) || isExcl(key) ? 'disabled' : ''}>+SLIP</button></span></div>`;
+    }).join('');
+  }
+  return h;
+}
+
+// ----- ENGINE tab -----
+function engineTabHtml() {
+  const b = state.builder, e = b.eng, st = b.engineStatus;
+  ensureEdges(false);
+  const ev = e.scope === 'event' ? ctxEvent() : null;
+  const chatOn = !!(st && st.chat_enabled);
+  let h = `<div class="bb-form" style="flex-shrink:0;border-bottom:1px solid var(--border)">
+    <span class="seg">${[['game', 'GAME'], ['prop', 'PROP'], ['all', 'ALL']].map(([id, lb]) => `<button type="button" class="${e.kind === id ? 'on' : ''}" data-bb="eng-kind" data-kind="${id}">${lb}</button>`).join('')}</span>
+    <select class="bb-in mono" data-bbin="eng-min" aria-label="Minimum edge" style="width:58px">${[0, 0.01, 0.02, 0.03, 0.05, 0.08].map(v => `<option value="${v}" ${Number(e.minEdge) === v ? 'selected' : ''}>≥${(v * 100).toFixed(0)}%</option>`).join('')}</select>
+    <span class="seg" title="Current game (from the open player/game) or the whole slate">${[['event', ev ? gameTag(ev) : 'GAME'], ['slate', 'SLATE']].map(([id, lb]) => `<button type="button" class="${e.scope === id ? 'on' : ''}" data-bb="eng-scope" data-scope="${id}">${escapeHtml(lb)}</button>`).join('')}</span>
+    <span style="flex-grow:1"></span>
+    <button type="button" class="backlink" data-bb="eng-refresh">refresh</button>
+  </div>`;
+  const E = bbrt.edges;
+  let list = '';
+  if (e.scope === 'event' && !ev) list += `<div class="bb-note">No game in view: showing the whole slate. Open a player or game to focus it.</div>`;
+  if (!E || (E.loading && !E.data)) list += `<div class="bb-note">Loading edges…</div>`;
+  else if (E.error) list += `<div class="bb-err">Edges unavailable: ${escapeHtml(E.error)}</div>`;
+  else {
+    const edges = (E.data && E.data.edges) || [], arbs = (E.data && E.data.arbs) || [];
+    list += secHtml(`EDGES <span class="cnt">${edges.length}${E.data && E.data.as_of ? ' · ' + escapeHtml(String(E.data.as_of).slice(11, 16)) + 'Z' : ''}${E.loading ? ' · updating…' : ''}</span>`);
+    list += edges.length ? edges.map(edgeRowHtml).join('') : `<div class="bb-note">Nothing at ≥${(Number(e.minEdge) * 100).toFixed(0)}% edge here.</div>`;
+    if (arbs.length) {
+      list += secHtml(`ARBS / LADDER INCONSISTENCIES <span class="cnt">${arbs.length}</span>`);
+      list += arbs.map((a, i) => `<div class="bb-row">
+        <div class="bb-l1 mono" style="font-size:10.5px"><span class="bb-lbl" style="white-space:normal">${escapeHtml(a.description || '')}</span></div>
+        <div class="bb-l2 mono" style="padding-left:0"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(a.legs || []).map(l => escapeHtml(legLabelFromTicker(l.ticker || l.market_ticker, l.side)) + ' ' + fmtPrice(l.cost)).join(' + ')}</span>
+          <span style="flex-grow:1"></span><span style="color:${(a.profit_floor || 0) >= 0 ? 'var(--blue)' : 'var(--orange)'}">floor ${a.profit_floor == null ? '--' : (a.profit_floor >= 0 ? '+' : '') + (a.profit_floor * 100).toFixed(1) + '¢'}</span>
+          <button type="button" class="bb-act" data-bb="arb-bm" data-i="${i}">☆ LEGS</button></div></div>`).join('');
+    }
+  }
+  h += `<div class="bb-edges" data-sk="edges" style="${chatOn ? '' : 'flex:1 1 auto'}">${list}</div>`;
+  h += chatHtml();
+  return h;
+}
+function edgeRowHtml(x, i) {
+  const m = gidx()[x.ticker] || edgeMkt(x), key = x.ticker + '|' + x.side, k = escapeHtml(key);
+  const ex = isExcl(key), lk = isLocked(key);
+  const confC = x.confidence === 'high' ? 'var(--blue)' : x.confidence === 'med' ? 'var(--muted)' : 'var(--dim)';
+  const label = x.threshold != null || x.series || m.series ? mLabel({ ...m, title: x.title || m.title }, x.side) : x.title;
+  return `<div class="bb-row${lk ? ' locked' : ''}${ex ? ' excl' : ''}" title="${escapeHtml((x.reasons || []).join(' · '))}">
+    <div class="bb-l1 mono">
+      ${bmStar(m, x.side)}
+      <span class="bb-lbl">${escapeHtml(label)}</span>
+      <span class="bb-gm">${escapeHtml(gameTag(x.event_ticker || x.ticker))}</span>
+      <span class="bb-side ${x.side}">${x.side.toUpperCase()}</span>
+      <span class="bb-px">${fmtPrice(x.cost)}</span>
+    </div>
+    <div class="bb-l2 mono">
+      <span style="color:${confC};font-size:9px;letter-spacing:0.06em">${escapeHtml(String(x.confidence || '').toUpperCase())}</span>
+      <span style="min-width:0;overflow:hidden;white-space:nowrap">${fairTxt(x.fair, x.edge)}</span>
+      ${x.ev_per_dollar != null ? `<span style="color:var(--dim)">EV ${(x.ev_per_dollar * 100).toFixed(0)}%</span>` : ''}
+      ${flagTags(key)}
+      <span style="flex-grow:1"></span>
+      <button type="button" class="bb-act" data-bb="edge-slip" data-i="${i}" ${inSlip(key) || ex ? 'disabled' : ''}>${inSlip(key) ? 'IN SLIP' : '+SLIP'}</button>
+    </div>
+  </div>`;
+}
+function chatHtml() {
+  const b = state.builder, st = b.engineStatus, c = b.chat;
+  let h = secHtml(`ENGINE CHAT${st && st.model ? ` <span class="cnt">${escapeHtml(st.model)}</span>` : ''}`,
+    c.id || c.messages.length ? `<button type="button" class="backlink" data-bb="chat-new">new chat</button>` : '');
+  if (!st) return h + `<div class="bb-note">Checking engine status…</div>`;
+  if (st.offline) return h + `<div class="bb-note">Engine offline (${escapeHtml(st.error || 'no response')}). Chat and fair values need the backend engine routes. <button type="button" class="backlink" data-bb="status-retry">retry</button></div>`;
+  if (!st.chat_enabled) return h + `<div class="bb-note">Set ANTHROPIC_API_KEY to enable the engine chat.</div>`;
+  const orphans = c.proposals.filter(p => !c.messages.some(m => (m.pids || []).includes(p.id)));
+  let msgs = '';
+  if (!c.messages.length && !orphans.length) {
+    const sugg = ['Find the best edges in this game', 'Build a 3-leg parlay around my locked legs', 'What changes if the favorite wins by 7+?'];
+    msgs += `<div class="bb-note">Ask the engine for picks. Every message sends your slip, locks, excludes, scenarios and odds mode. Locked legs stay in its proposals; excluded ones never come back.</div>
+      <div class="bb-chips">${sugg.map(s => `<button type="button" class="bb-chip" data-bb="chat-suggest" data-text="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}</div>`;
+  }
+  if (c.id && !c.messages.length) msgs += `<div class="bb-note">Continuing conversation ${escapeHtml(c.id.slice(0, 10))}. Earlier messages aren't stored in the browser.</div>`;
+  if (orphans.length) msgs += `<div class="bb-msg"><div class="who">EARLIER PROPOSALS</div>${orphans.map(proposalHtml).join('')}</div>`;
+  msgs += c.messages.map(m => {
+    if (m.role === 'user') return `<div class="bb-msg user"><div class="who">YOU</div>${(m.notes || []).map(n => `<div class="note">${escapeHtml(n)}</div>`).join('')}${mdHtml(m.text)}</div>`;
+    if (m.role === 'error') return `<div class="bb-msg err"><div class="who" style="color:var(--orange)">ERROR</div>${escapeHtml(m.text)}</div>`;
+    const props = (m.pids || []).map(propById).filter(Boolean);
+    return `<div class="bb-msg"><div class="who">ENGINE</div>${mdHtml(m.text)}
+      ${(m.trace || []).length ? `<div class="bb-trace">${m.trace.map(t => `<span title="${escapeHtml(t.summary || '')}">${escapeHtml(t.tool || '?')}</span>`).join('')}</div>` : ''}
+      ${props.map(proposalHtml).join('')}</div>`;
+  }).join('');
+  if (bbrt.chatBusy) msgs += `<div class="bb-msg"><div class="who">ENGINE</div><span style="color:var(--dim)">thinking…</span></div>`;
+  h += `<div class="bb-msgs" data-sk="chat">${msgs}</div>`;
+  const b2 = state.builder;
+  h += `<div style="flex-shrink:0">
+    ${c.notes.length ? `<div class="bb-note" style="padding:3px 8px;border-top:1px solid var(--border)">Sent with your next message: ${escapeHtml(c.notes.join(' · '))}</div>` : ''}
+    <div class="mono" style="padding:2px 8px;font-size:9.5px;color:var(--dim);border-top:1px solid var(--border)">CONTEXT · ${b2.slip.legs.length} slip · ${b2.locks.length} locked · ${b2.excludes.length} excluded · ${b2.scenarios.length} scn · ${b2.oddsMode === 'kalshi' ? '¢' : 'US'}</div>
+    <div class="bb-inputbar"><textarea data-bbin="chat" placeholder="Ask the engine… (Enter to send, Shift+Enter for newline)" aria-label="Message the engine" ${bbrt.chatBusy ? 'disabled' : ''}>${escapeHtml(bbrt.chatDraft)}</textarea>
+      <button type="button" class="combo-btn" data-bb="chat-send" ${bbrt.chatBusy ? 'disabled' : ''} style="align-self:stretch">SEND</button></div>
+  </div>`;
+  return `<div style="flex:1 1 56%;min-height:0;display:flex;flex-direction:column">${h}</div>`;
+}
+function proposalHtml(p) {
+  const pid = escapeHtml(p.id);
+  const costs = p.legs.map(l => l.cost);
+  const pc = costs.every(c => c != null) ? costs.reduce((a, c) => a * c, 1) : null;
+  const priceTxt = pc != null ? fmtPrice(pc) : fmtAmerican(p.parlay_american_cost);
+  const jointEdge = p.joint_fair != null && pc != null ? p.joint_fair - pc : null;
+  return `<div class="bb-prop ${p.status || ''}">
+    <div class="bb-prop-hd"><span style="flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(p.title || '')}">${escapeHtml(p.title || 'Proposal')}</span>
+      <span class="bb-tag" style="color:var(--muted);border:1px solid var(--faint)">${escapeHtml(String(p.kind || '').toUpperCase())}</span>
+      ${p.status ? `<span class="bb-tag" style="color:var(--bg);background:${p.status === 'accepted' ? 'var(--blue)' : 'var(--orange)'}">${p.status.toUpperCase()}</span>` : ''}</div>
+    ${p.rationale ? `<div class="bb-prop-why">${mdInline(p.rationale)}</div>` : ''}
+    ${p.legs.map(l => {
+      const key = l.market_ticker + '|' + l.side, k = escapeHtml(key), lk = isLocked(key), ex = isExcl(key);
+      const edge = l.fair != null && l.cost != null ? l.fair - l.cost : null;
+      return `<div class="bb-row${lk ? ' locked' : ''}${ex ? ' excl' : ''}">
+        <div class="bb-l1 mono"><span class="bb-lbl" title="${escapeHtml(l.title || '')}">${escapeHtml(legLabelFromTicker(l.market_ticker, l.side, l.title))}</span>
+          <span class="bb-gm">${escapeHtml(gameTag(l.market_ticker))}</span>
+          <span class="bb-side ${l.side}">${String(l.side).toUpperCase()}</span><span class="bb-px">${fmtPrice(l.cost)}</span></div>
+        <div class="bb-l2 mono"><span style="min-width:0;overflow:hidden;white-space:nowrap">${fairTxt(l.fair, edge)}</span>${ex ? '<span class="bb-tag excl">EXCL</span>' : ''}<span style="flex-grow:1"></span>
+          <button type="button" class="bb-act${lk ? ' on' : ''}" data-bb="prop-lock" data-key="${k}">LOCK</button></div>
+      </div>`;
+    }).join('')}
+    <div class="bb-l2 mono" style="padding:4px 6px;gap:8px;flex-wrap:wrap">
+      <span><span style="color:var(--dim)">JOINT FAIR</span> <span style="color:var(--blue)">${fmtAm(p.joint_fair)}</span></span>
+      <span><span style="color:var(--dim)">PRICE</span> ${priceTxt}</span>${edgeTxt(jointEdge)}
+      ${p.scenario ? '<span class="bb-tag scn">SCN</span>' : ''}
+    </div>
+    <div class="bb-actions" style="padding:0 6px 6px">
+      <button type="button" class="bb-act" data-bb="prop-accept" data-pid="${pid}" ${p.status === 'accepted' ? 'disabled' : ''}>ACCEPT → SLIP</button>
+      <button type="button" class="bb-act" data-bb="prop-bm" data-pid="${pid}">☆ ALL</button>
+      <button type="button" class="bb-act" data-bb="prop-reject" data-pid="${pid}" ${p.status === 'rejected' ? 'disabled' : ''}>REJECT</button>
+    </div>
+  </div>`;
+}
+
+// ---------- events ----------
+function handleBuilderClick(el) {
+  const b = state.builder, act = el.dataset.bb, key = el.dataset.key;
+  bbrt.slip.flash = null;
+  switch (act) {
+    case 'toggle': setBuilderOpen(!b.open); return;
+    case 'close': setBuilderOpen(false); return;
+    case 'open-slip': b.tab = 'slip'; setBuilderOpen(true); return;
+    case 'tab':
+      b.tab = el.dataset.tab; saveBuilder();
+      if (b.tab === 'scen' && !state.slate.games && !state.slate.loading) loadSlate(false);
+      renderBuilder(); return;
+    case 'odds': b.oddsMode = el.dataset.mode === 'kalshi' ? 'kalshi' : 'american'; saveBuilder(); renderBuilder(); return;
+    case 'refresh': refreshPrices(); return;
+    case 'load-slate': loadSlate(true); return;
+    case 'status-retry': b.engineStatus = null; loadEngineStatus(); renderBuilder(); return;
+    case 'bm-remove': b.bookmarks = b.bookmarks.filter(x => legKey(x) !== key); bookmarksChanged(); return;
+    case 'bm-side': {
+      const i = b.bookmarks.findIndex(x => legKey(x) === key);
+      if (i < 0) return;
+      const nb = { ...b.bookmarks[i], side: b.bookmarks[i].side === 'yes' ? 'no' : 'yes' };
+      if (isBm(legKey(nb))) b.bookmarks.splice(i, 1); else b.bookmarks[i] = nb;
+      bookmarksChanged(); return;
+    }
+    case 'add-slip': { const snap = findSnapByKey(key); if (snap && addToSlip(snap)) setFlash(`${snapLabel(snap)} added to the slip.`); slipChanged(); return; }
+    case 'lock': case 'prop-lock': toggleLock(key); return;
+    case 'excl': toggleExcl(key); return;
+    case 'leg-remove': removeFromSlip(key); slipChanged(); return;
+    case 'leg-side': {
+      const i = b.slip.legs.findIndex(l => legKey(l) === key);
+      if (i < 0 || b.slip.legs[i].side === el.dataset.side) return;
+      const nl = { ...b.slip.legs[i], side: el.dataset.side };
+      migrateKey(key, legKey(nl)); b.slip.legs[i] = nl; slipChanged(); return;
+    }
+    case 'leg-step': {
+      const i = b.slip.legs.findIndex(l => legKey(l) === key);
+      if (i < 0) return;
+      const ladder = familyLadderG(b.slip.legs[i]);
+      const j = ladder.findIndex(m => m.ticker === b.slip.legs[i].market_ticker) + Number(el.dataset.dir);
+      if (j < 0 || j >= ladder.length) return;
+      const nl = makeSnap(ladder[j], b.slip.legs[i].side);
+      if (b.slip.legs.some((l, k2) => k2 !== i && l.market_ticker === nl.market_ticker)) return;
+      migrateKey(key, legKey(nl)); b.slip.legs[i] = nl; slipChanged(); return;
+    }
+    case 'slip-clear': b.slip.legs = b.slip.legs.filter(l => isLocked(legKey(l))); slipChanged(); return;
+    case 'quote': requestSlipQuote(); return;
+    case 'q-cancel': {
+      const rt = bbrt.slip;
+      if (rt.quote) { stopQuotePolling(rt); if (rt.quote.rfq_id && rt.quote.phase !== 'accepted') cancelRfq(rt.quote.rfq_id); }
+      rt.quote = null; rt.armed = null; renderBuilder(); return;
+    }
+    case 'q-accept': {
+      // Two-step in-page confirm (no browser dialogs): first click arms, second places.
+      const rt = bbrt.slip, qid = el.dataset.quote;
+      if (rt.armed !== qid) {
+        rt.armed = qid; renderBuilder();
+        setTimeout(() => { if (rt.armed === qid) { rt.armed = null; renderBuilder({ soft: true }); } }, 6000);
+      } else acceptSlipQuote(qid);
+      return;
+    }
+    case 'scen-team': b.scen.team = el.dataset.team; b.scen.strikes = []; bbrt.ladder = null; saveBuilder(); renderBuilder(); return;
+    case 'scen-fam': b.scen.family = el.dataset.fam; b.scen.strikes = []; bbrt.ladder = null; saveBuilder(); renderBuilder(); return;
+    case 'scen-strike': {
+      const k = Number(el.dataset.strike), s = b.scen.strikes;
+      b.scen.strikes = s.includes(k) ? s.filter(x => x !== k) : [...s, k].sort((x, y) => x - y);
+      saveBuilder(); renderBuilder(); return;
+    }
+    case 'ladder-run': runLadder(); return;
+    case 'ladder-bm': {
+      const d = bbrt.ladder && bbrt.ladder.data;
+      (d && d.legs || []).forEach(l => addBookmark(snapFromLeg({ ...l, side: l.side || 'yes' })));
+      setFlash('Ladder legs bookmarked.'); bookmarksChanged(); return;
+    }
+    case 'cf-team': bbrt.cf.team = el.dataset.team; renderBuilder(); return;
+    case 'cons-add': {
+      const g = gameInfo(el.dataset.ev), r = consFromForm(g);
+      if (r.error) { bbrt.cfErr = r.error; renderBuilder(); return; }
+      bbrt.cfErr = null; bbrt.cf.value = '';
+      addConstraint(el.dataset.ev, r.c); return;
+    }
+    case 'cons-preset': { let c = null; try { c = JSON.parse(el.dataset.c); } catch (e) {} if (c) addConstraint(el.dataset.ev, c); return; }
+    case 'cons-remove': {
+      const sc = scenFor(el.dataset.ev);
+      if (sc) sc.constraints.splice(Number(el.dataset.i), 1);
+      scenChanged(el.dataset.ev); return;
+    }
+    case 'scen-clear': {
+      const s = sfx(el.dataset.ev);
+      b.scenarios = b.scenarios.filter(x => sfx(x.event) !== s);
+      scenChanged(el.dataset.ev); return;
+    }
+    case 'scen-reapply': { const sc = scenFor(el.dataset.ev); if (sc) applyScenario(sc); return; }
+    case 'eng-kind': b.eng.kind = el.dataset.kind; saveBuilder(); renderBuilder(); return;
+    case 'eng-scope': b.eng.scope = el.dataset.scope; saveBuilder(); renderBuilder(); return;
+    case 'eng-refresh': ensureEdges(true); renderBuilder(); return;
+    case 'edge-slip': {
+      const x = bbrt.edges && bbrt.edges.data && (bbrt.edges.data.edges || [])[Number(el.dataset.i)];
+      if (!x) return;
+      const snap = snapFromLeg({ ...x, market_ticker: x.ticker });
+      if (addToSlip(snap)) setFlash(`${snapLabel(snap)} added to the slip.`);
+      slipChanged(); return;
+    }
+    case 'arb-bm': {
+      const a = bbrt.edges && bbrt.edges.data && (bbrt.edges.data.arbs || [])[Number(el.dataset.i)];
+      if (!a) return;
+      (a.legs || []).forEach(l => addBookmark(snapFromLeg({ ...l, market_ticker: l.ticker || l.market_ticker })));
+      setFlash('Arb legs bookmarked.'); bookmarksChanged(); return;
+    }
+    case 'chat-send': { const ta = document.querySelector('#builder [data-bbin="chat"]'); chatSend(ta ? ta.value : bbrt.chatDraft); return; }
+    case 'chat-suggest': chatSend(el.dataset.text); return;
+    case 'chat-new': b.chat = { id: null, messages: [], proposals: [], notes: [] }; saveBuilder(); renderBuilder(); return;
+    case 'prop-accept': { const p = propById(el.dataset.pid); if (p) acceptProposal(p); return; }
+    case 'prop-reject': { const p = propById(el.dataset.pid); if (p) rejectProposal(p); return; }
+    case 'prop-bm': {
+      const p = propById(el.dataset.pid);
+      if (!p) return;
+      p.legs.forEach(l => addBookmark(snapFromLeg(l)));
+      setFlash(`${p.legs.length} legs bookmarked.`); bookmarksChanged(); return;
+    }
+  }
+}
+function handleBuilderInput(el, kind) {
+  const b = state.builder, rt = bbrt.slip, k = el.dataset.bbin;
+  if (k === 'chat') { bbrt.chatDraft = el.value; return; }
+  if (k === 'cf-value') { bbrt.cf.value = el.value; return; }
+  if (k === 'cf-player') { bbrt.cf.player = el.value; return; }
+  if (k === 'scen-stake') { b.scen.stakes[el.dataset.strike] = el.value; if (kind === 'change') saveBuilder(); return; }
+  if (kind !== 'change') return;
+  if (k === 'units' || k === 'unit') {
+    const v = Number(el.value);
+    if (v > 0) {
+      if (k === 'unit') { rt.unit = v; saveUnitSize(v); } else rt.units = v;
+      if (rt.quote && rt.quote.phase !== 'accepted') { stopQuotePolling(rt); if (rt.quote.rfq_id) cancelRfq(rt.quote.rfq_id); rt.quote = null; }
+    }
+    renderBuilder(); return;
+  }
+  if (k === 'scen-game') { b.scen.event = el.value; b.scen.team = null; b.scen.strikes = []; bbrt.ladder = null; saveBuilder(); renderBuilder(); return; }
+  if (k === 'scen-use') { b.scen.useScen = el.checked; saveBuilder(); return; }
+  if (k === 'cf-type') { bbrt.cf.type = el.value; bbrt.cfErr = null; renderBuilder(); return; }
+  if (k === 'cf-series') { bbrt.cf.series = el.value; return; }
+  if (k === 'eng-min') { b.eng.minEdge = Number(el.value); saveBuilder(); renderBuilder(); return; }
+}
+
+// ========================================================================
+// ?mock=1 : in-page stand-in for /api/engine/* until the backend lands.
+// A tiny margin/total Monte Carlo per game, centred on the Kalshi moneyline
+// and total, so edges / scenarios / ladders behave plausibly. Everything
+// else (/api/combo/*, /api/week, ...) still goes to the real server.
+// ========================================================================
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function strHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function erfA(x) { const s = Math.sign(x); x = Math.abs(x); const t = 1 / (1 + 0.3275911 * x); return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x)); }
+const normCdf = (z) => 0.5 * (1 + erfA(z / Math.SQRT2));
+function normInv(p) { let lo = -8, hi = 8; for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (normCdf(m) < p) lo = m; else hi = m; } return (lo + hi) / 2; }
+const clampN = (x, a, b) => Math.max(a, Math.min(b, x));
+const mockNoise = (t) => ((strHash(t) % 1000) / 1000 - 0.5) * 0.09;
+const GAME_SERIES = new Set(['KXNFLGAME', 'KXNFLSPREAD', 'KXNFLTOTAL', 'KXNFLTEAMTOTAL']);
+const famOf = (ser) => ({ KXNFLGAME: 'ML', KXNFLSPREAD: 'SPREAD', KXNFLTOTAL: 'TOTAL', KXNFLTEAMTOTAL: 'TEAMTOTAL' })[ser] || ser;
+const mockCache = {};
+
+function mockGame(x) {
+  const s = sfx(x);
+  if (mockCache[s]) return mockCache[s];
+  const gi = gameInfo('KXNFLGAME-' + s) || {};
+  const away = gi.away || 'AWY', home = gi.home || 'HME';
+  const idx = gidx();
+  const mk = Object.values(idx).filter(m => sfx(m.event_ticker || m.ticker) === s && !m.synthetic);
+  const mlH = mk.find(m => m.series === 'KXNFLGAME' && m.team_code === home);
+  const pH = clampN(midOf(mlH) ?? (0.5 + ((strHash(s) % 20) - 10) / 100), 0.03, 0.97);
+  const mu = 13.5 * normInv(pH);
+  const tots = mk.filter(m => m.series === 'KXNFLTOTAL' && m.threshold != null && midOf(m) != null);
+  const T = tots.length ? tots.reduce((a, b) => Math.abs(midOf(b) - 0.5) < Math.abs(midOf(a) - 0.5) ? b : a).threshold : 44.5;
+  const rnd = mulberry32(strHash(s)), N = 6000, M = new Float32Array(N), Tt = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const u1 = Math.max(rnd(), 1e-9), u2 = rnd(), r = Math.sqrt(-2 * Math.log(u1));
+    M[i] = Math.round(mu + 13.5 * r * Math.cos(2 * Math.PI * u2));
+    Tt[i] = Math.max(Math.abs(M[i]) + 3, Math.round(T + 10 * r * Math.sin(2 * Math.PI * u2)));
+  }
+  const g = { s, ev: 'KXNFLGAME-' + s, away, home, mu, T, M, Tt, N, mk };
+  // Slate-only games know one strike per series; synthesize a Kalshi-style
+  // ladder (same ticker pattern) so the ladder builder has chips to pick.
+  const have = (ser, tc) => mk.filter(m => m.series === ser && (!tc || m.team_code === tc)).length;
+  const synth = [];
+  const mkSyn = (ticker, ser, tc, thr, title) => {
+    if (idx[ticker] || synth.some(m => m.ticker === ticker)) return;
+    const fair = mockFairRaw(g, { series: ser, team_code: tc, threshold: thr }, null);
+    const mid = clampN(fair + mockNoise(ticker) * 0.6, 0.03, 0.97);
+    synth.push({ ticker, event_ticker: ser + '-' + s, series: ser, team_code: tc, threshold: thr, title, synthetic: true,
+      yes_bid: +Math.max(0.01, mid - 0.01).toFixed(2), yes_ask: +Math.min(0.99, mid + 0.01).toFixed(2) });
+  };
+  [away, home].forEach(tc => {
+    if (!have('KXNFLGAME', tc)) mkSyn(`KXNFLGAME-${s}-${tc}`, 'KXNFLGAME', tc, null, `${tc} wins`);
+    if (have('KXNFLSPREAD', tc) < 4) [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 9.5, 10.5, 13.5].forEach(t => mkSyn(`KXNFLSPREAD-${s}-${tc}${Math.ceil(t)}`, 'KXNFLSPREAD', tc, t, `${tc} wins by over ${t} points?`));
+    if (have('KXNFLTEAMTOTAL', tc) < 4) { const base = Math.round(T / 2); [-7, -4, -1, 2, 5, 8].forEach(d => { const t = base + d + 0.5; mkSyn(`KXNFLTEAMTOTAL-${s}-${tc}${Math.ceil(t)}`, 'KXNFLTEAMTOTAL', tc, t, `${tc} over ${t} points?`); }); }
+  });
+  if (have('KXNFLTOTAL') < 4) [-9, -6, -3, 0, 3, 6, 9].forEach(d => { const t = Math.round(T) + d + 0.5; mkSyn(`KXNFLTOTAL-${s}-${Math.ceil(t)}`, 'KXNFLTOTAL', null, t, `Over ${t} points scored?`); });
+  g.mk = mk.concat(synth);
+  return (mockCache[s] = g);
+}
+const teamSign = (g, tc) => tc === g.home ? 1 : -1;
+function mockHit(g, m, i) {
+  const sg = teamSign(g, m.team_code);
+  switch (m.series) {
+    case 'KXNFLGAME': return g.M[i] * sg > 0;
+    case 'KXNFLSPREAD': return g.M[i] * sg > m.threshold;
+    case 'KXNFLTOTAL': return g.Tt[i] > m.threshold;
+    case 'KXNFLTEAMTOTAL': return (g.Tt[i] + g.M[i] * sg) / 2 > m.threshold;
+  }
+  return null;
+}
+function mockMask(g, cons) {
+  if (!cons || !cons.length) return null;
+  const mask = new Uint8Array(g.N);
+  for (let i = 0; i < g.N; i++) {
+    mask[i] = cons.every(c => {
+      if (c.player) return true;
+      const sg = c.team ? teamSign(g, c.team) : 1, mg = g.M[i] * sg, pts = (g.Tt[i] + g.M[i] * sg) / 2;
+      if ('margin_gte' in c) return mg >= c.margin_gte;
+      if ('margin_lte' in c) return mg <= c.margin_lte;
+      if ('total_gte' in c) return g.Tt[i] >= c.total_gte;
+      if ('total_lte' in c) return g.Tt[i] <= c.total_lte;
+      if ('points_gte' in c) return pts >= c.points_gte;
+      if ('points_lte' in c) return pts <= c.points_lte;
+      return true;
+    }) ? 1 : 0;
+  }
+  return mask;
+}
+function mockFairRaw(g, m, mask, cons) {
+  if (GAME_SERIES.has(m.series)) {
+    let n = 0, h = 0;
+    for (let i = 0; i < g.N; i++) { if (mask && !mask[i]) continue; n++; if (mockHit(g, m, i)) h++; }
+    return n ? clampN(h / n, 0.005, 0.995) : 0.5;
+  }
+  let base = clampN((midOf(m) ?? 0.5) + mockNoise(m.ticker || ''), 0.02, 0.98);
+  if (mask && m.team_code) {
+    const sg = teamSign(g, m.team_code);
+    let a = 0, c = 0, nc = 0;
+    for (let i = 0; i < g.N; i++) { const p = (g.Tt[i] + g.M[i] * sg) / 2; a += p; if (mask[i]) { c += p; nc++; } }
+    if (nc) base = clampN(base * (1 + 0.9 * ((c / nc) / (a / g.N) - 1)), 0.01, 0.99);
+  }
+  (cons || []).forEach(c => {
+    if (!c.player || !m.player_name || m.series !== c.series || m.threshold == null) return;
+    if (normName(m.player_name).split(' ').pop() !== normName(c.player).split(' ').pop()) return;
+    if ('gte' in c) base = m.threshold < c.gte ? 0.99 : clampN(base * 0.5, 0.01, 0.99);
+    else base = m.threshold >= c.lte ? 0.01 : clampN(base * 1.3, 0.01, 0.99);
+  });
+  return base;
+}
+function mockLookup(t) { return gidx()[t] || mockGame(t).mk.find(m => m.ticker === t) || { ticker: t, series: seriesOfT(t), title: t }; }
+function mockLegPrice(l, scen) {
+  const g = mockGame(l.market_ticker), m = mockLookup(l.market_ticker);
+  const cons = scen && sfx(scen.event) === g.s ? scen.constraints : null;
+  const fy = mockFairRaw(g, m, cons ? mockMask(g, cons) : null, cons);
+  const fair = l.side === 'yes' ? fy : 1 - fy;
+  const cost = l.side === 'yes' ? (m.yes_ask || null) : (m.yes_bid != null ? +(1 - m.yes_bid).toFixed(4) : null);
+  return { market_ticker: m.ticker, side: l.side, title: m.title, event_ticker: m.event_ticker || evOfT(m.ticker), yes_bid: m.yes_bid ?? null, yes_ask: m.yes_ask ?? null,
+    fair: +fair.toFixed(4), cost, edge: cost != null ? +(fair - cost).toFixed(4) : null, american_cost: americanOdds(cost), american_fair: americanOdds(fair), _m: m, _g: g, _cons: cons };
+}
+function mockPrice(body) {
+  const legs = (body.legs || []).map(l => mockLegPrice(l, body.scenario));
+  const indep = legs.reduce((a, l) => a * l.fair, 1);
+  const same = legs.length > 0 && legs.every(l => l._g.s === legs[0]._g.s);
+  let joint = indep;
+  if (same && legs.length > 1) {
+    const g = legs[0]._g, mask = legs[0]._cons ? mockMask(g, legs[0]._cons) : null;
+    const gl = legs.filter(l => GAME_SERIES.has(l._m.series)), pl = legs.filter(l => !GAME_SERIES.has(l._m.series));
+    let n = 0, h = 0;
+    for (let i = 0; i < g.N; i++) { if (mask && !mask[i]) continue; n++; if (gl.every(l => mockHit(g, l._m, i) === (l.side === 'yes'))) h++; }
+    joint = clampN((gl.length ? (n ? h / n : 0) : 1) * pl.reduce((a, l) => a * l.fair, 1) * (pl.length > 1 ? 1.12 : 1), 0, 1);
+  }
+  const pc = legs.every(l => l.cost) ? legs.reduce((a, l) => a * l.cost, 1) : null;
+  return { legs: legs.map(({ _m, _g, _cons, ...x }) => x), joint_fair: +joint.toFixed(4), indep_fair: +indep.toFixed(4),
+    parlay_cost: pc != null ? +pc.toFixed(4) : null, joint_american: americanOdds(joint), parlay_american_cost: americanOdds(pc),
+    ev_per_dollar: pc ? +(joint / pc - 1).toFixed(4) : null, scenario_applied: legs.some(l => l._cons), same_event: same };
+}
+function mockEdges(ev, minEdge, kind) {
+  const games = ev ? [mockGame(ev)] : knownGames().map(k => mockGame(k.ev));
+  const edges = [], arbs = [];
+  games.forEach(g => {
+    g.mk.forEach(m => {
+      const isGame = GAME_SERIES.has(m.series);
+      if ((kind === 'game' && !isGame) || (kind === 'prop' && isGame) || (!isGame && !m.player_name)) return;
+      if (m.yes_ask == null || m.yes_bid == null || !m.yes_ask) return;
+      const fy = mockFairRaw(g, m, null);
+      [['yes', fy, m.yes_ask], ['no', 1 - fy, +(1 - m.yes_bid).toFixed(4)]].forEach(([side, fair, cost]) => {
+        if (!(cost > 0 && cost < 1)) return;
+        const edge = fair - cost;
+        if (edge < minEdge) return;
+        edges.push({ ticker: m.ticker, side, event_ticker: m.event_ticker || evOfT(m.ticker), matchup: g.away + ' @ ' + g.home, title: m.title,
+          kind: isGame ? (m.series === 'KXNFLTEAMTOTAL' ? 'team' : 'game') : 'player', family: famOf(m.series), team_code: m.team_code ?? null,
+          player_name: m.player_name ?? null, threshold: m.threshold ?? null, fair: +fair.toFixed(4), cost, edge: +edge.toFixed(4),
+          ev_per_dollar: +(fair / cost - 1).toFixed(4), american_cost: americanOdds(cost), american_fair: americanOdds(fair),
+          confidence: Math.abs(edge) > 0.07 ? 'low' : (m.volume || 0) > 50000 ? 'high' : 'med',
+          reasons: isGame ? [`mock margin model: ${g.mu >= 0 ? g.home : g.away} by ${Math.abs(g.mu).toFixed(1)}`, `total ${g.T}`] : ['market mid + mock projection tilt'] });
+      });
+    });
+    const ml = g.mk.find(m => m.series === 'KXNFLGAME' && m.team_code === g.home);
+    const sp = g.mk.filter(m => m.series === 'KXNFLSPREAD' && m.team_code === g.home && m.yes_bid != null).sort((a, b) => a.threshold - b.threshold)[0];
+    if (ml && sp && ml.yes_ask != null) {
+      const floor = +(sp.yes_bid - ml.yes_ask).toFixed(3);
+      if (floor > -0.06) arbs.push({ event_ticker: g.ev, description: `MOCK ladder check: ${g.home} -${sp.threshold} bid ${cents(sp.yes_bid)} vs ${g.home} ML ask ${cents(ml.yes_ask)}. Buy the ML, buy NO on the spread; one side always pays.`,
+        legs: [{ ticker: ml.ticker, side: 'yes', cost: ml.yes_ask }, { ticker: sp.ticker, side: 'no', cost: +(1 - sp.yes_bid).toFixed(2) }], profit_floor: floor });
+    }
+  });
+  edges.sort((a, b) => b.edge - a.edge);
+  return { as_of: new Date().toISOString(), edges: edges.slice(0, minEdge <= -0.5 ? 500 : 80), arbs: arbs.slice(0, 3) };
+}
+function mockScenario(body) {
+  const g = mockGame(body.event), cons = body.constraints || [], mask = mockMask(g, cons);
+  let n = 0;
+  if (mask) for (let i = 0; i < g.N; i++) n += mask[i];
+  const markets = g.mk.filter(m => m.yes_ask).map(m => {
+    const fb = mockFairRaw(g, m, null), fc = mockFairRaw(g, m, mask, cons);
+    return { ticker: m.ticker, side: 'yes', title: m.title, family: famOf(m.series), team_code: m.team_code ?? null, player_name: m.player_name ?? null,
+      threshold: m.threshold ?? null, fair_base: +fb.toFixed(4), fair_cond: +fc.toFixed(4), cost: m.yes_ask, edge_cond: +(fc - m.yes_ask).toFixed(4), american_fair_cond: americanOdds(fc) };
+  });
+  return { event: g.ev, constraints: cons, p_scenario: mask ? +(n / g.N).toFixed(4) : 1, markets };
+}
+function mockLadder(body) {
+  const g = mockGame(body.event), tc = body.team, fam = body.family, cons = body.scenario && body.scenario.constraints, mask = mockMask(g, cons);
+  const strikes = [...(body.strikes || [])].sort((a, b) => a - b), sg = teamSign(g, tc);
+  const findM = (k) => fam === 'TEAMTOTAL' ? g.mk.find(m => m.series === 'KXNFLTEAMTOTAL' && m.team_code === tc && m.threshold === k)
+    : k === 0 ? g.mk.find(m => m.series === 'KXNFLGAME' && m.team_code === tc) : g.mk.find(m => m.series === 'KXNFLSPREAD' && m.team_code === tc && m.threshold === k);
+  const legs = strikes.map((k, i) => {
+    const m = findM(k) || mockLookup((fam === 'TEAMTOTAL' ? 'KXNFLTEAMTOTAL-' : 'KXNFLSPREAD-') + g.s + '-' + tc + Math.ceil(k));
+    if (!m || !m.yes_ask) throw new Error(`no priced ${fam} market for ${tc} at ${k}`);
+    const f = mockFairRaw(g, m, mask, cons), stake = (body.stakes && body.stakes[i]) || 10;
+    return { market_ticker: m.ticker, side: 'yes', title: m.title, strike: k, fair: +f.toFixed(4), cost: m.yes_ask, stake, american_cost: americanOdds(m.yes_ask), american_fair: americanOdds(f) };
+  });
+  const val = (i) => fam === 'TEAMTOTAL' ? (g.Tt[i] + g.M[i] * sg) / 2 : g.M[i] * sg;
+  const bounds = [...new Set(strikes.map(k => Math.floor(k) + 1))].sort((a, b) => a - b);
+  const lab = (lo, hi) => fam === 'TEAMTOTAL'
+    ? (lo === null ? `${tc} ≤ ${hi} pts` : hi === null ? `${tc} ${lo}+ pts` : `${tc} ${lo}–${hi} pts`)
+    : (lo === null ? (hi <= 0 ? `${tc} loses / ties` : `${tc} by ≤ ${hi} or loses`) : hi === null ? `${tc} by ${lo}+` : lo === hi ? `${tc} by ${lo}` : `${tc} by ${lo}–${hi}`);
+  const buckets = [{ lo: null, hi: bounds[0] - 1 }];
+  bounds.forEach((bd, j) => buckets.push({ lo: bd, hi: j + 1 < bounds.length ? bounds[j + 1] - 1 : null }));
+  let n = 0;
+  const cnt = buckets.map(() => 0);
+  for (let i = 0; i < g.N; i++) {
+    if (mask && !mask[i]) continue;
+    n++;
+    const v = val(i), bi = buckets.findIndex(b => (b.lo === null || v >= b.lo) && (b.hi === null || v <= b.hi));
+    if (bi >= 0) cnt[bi]++;
+  }
+  const table = buckets.map((b, bi) => {
+    const rep = b.lo === null ? b.hi : b.lo;
+    const hit = legs.filter(l => rep > l.strike).length;
+    const pnl = legs.reduce((a, l) => a + (rep > l.strike ? l.stake * (1 - l.cost) / l.cost : -l.stake), 0);
+    return { label: lab(b.lo, b.hi), margin_lo: b.lo, margin_hi: b.hi, prob: n ? +(cnt[bi] / n).toFixed(4) : 0, legs_hit: hit, pnl: +pnl.toFixed(2) };
+  });
+  return { event: g.ev, team: tc, legs, outcome_table: table, p_all: table[table.length - 1].prob, p_none: table[0].prob,
+    ev: +table.reduce((a, r) => a + r.prob * r.pnl, 0).toFixed(2), max_loss: Math.min(...table.map(r => r.pnl)), max_win: Math.max(...table.map(r => r.pnl)) };
+}
+function mockChat(body) {
+  const slip = body.slip || {}, msg = String(body.message || '');
+  const toKey = (x) => typeof x === 'string' ? x : x.market_ticker + '|' + x.side;
+  const excl = new Set((slip.excludes || []).map(toKey));
+  const locks = (slip.locks || []).map(x => typeof x === 'string' ? { market_ticker: splitKey(x)[0], side: splitKey(x)[1] } : x);
+  const anchor = (slip.legs || [])[0] || locks[0] || (slip.bookmarks || [])[0];
+  const ev = anchor ? gameEv(anchor.market_ticker) : (ctxEvent() || (knownGames()[0] || {}).ev);
+  const cid = body.conversation_id || 'mock-' + Date.now().toString(36);
+  if (!ev) return { conversation_id: cid, reply: 'No games are loaded yet. Open the slate so I have markets to look at.', proposals: [], trace: [] };
+  const g = mockGame(ev), scen = (slip.scenarios || []).find(s => sfx(s.event) === g.s);
+  const E = mockEdges(g.ev, 0, 'all').edges.filter(e => !excl.has(e.ticker + '|' + e.side) && !locks.some(l => l.market_ticker === e.ticker));
+  const pick = [], seen = new Set();
+  for (const e of E) { if (seen.has(e.ticker)) continue; seen.add(e.ticker); pick.push(e); if (pick.length >= 3) break; }
+  const toLeg = (l) => { const p = mockLegPrice(l, scen); return { market_ticker: p.market_ticker, side: l.side, title: p.title, fair: p.fair, cost: p.cost, american_cost: p.american_cost, american_fair: p.american_fair }; };
+  const mkProp = (id, title, kind, legs, why) => { const pr = mockPrice({ legs, scenario: scen }); return { id, title, kind, rationale: why, legs: legs.map(toLeg), joint_fair: pr.joint_fair, parlay_american_cost: pr.parlay_american_cost, scenario: scen || null }; };
+  const proposals = [];
+  const core = locks.slice(0, 3).concat(pick.slice(0, Math.max(1, 3 - locks.length)).map(e => ({ market_ticker: e.ticker, side: e.side })));
+  const nNew = core.length - Math.min(3, locks.length);
+  if (core.length) proposals.push(mkProp('p1', locks.length ? `Locked core + ${nNew} edge leg${nNew === 1 ? '' : 's'}` : `Top edges · ${g.away}@${g.home}`, core.length > 1 ? 'parlay' : 'single', core,
+    `Keeps your ${locks.length} locked leg${locks.length === 1 ? '' : 's'} and adds the highest-edge legs${scen ? ' under your scenario' : ''}. *Mock rationale.*`));
+  if (pick[0]) proposals.push(mkProp('p2', `Single: ${pick[0].title}`, 'single', [{ market_ticker: pick[0].ticker, side: pick[0].side }], `Largest single edge (${(pick[0].edge * 100).toFixed(1)}%). *Mock rationale.*`));
+  const rej = msg.split('\n').filter(l => l.startsWith('Rejected:'));
+  const reply = [
+    rej.length ? `Noted: **${rej.map(r => r.replace('Rejected: ', '')).join(', ')}** is off the table and those legs stay excluded.\n` : '',
+    `**${g.away} @ ${g.home}**: model has ${g.mu >= 0 ? g.home : g.away} by ${Math.abs(g.mu).toFixed(1)}, total ${g.T}.${scen ? ` Conditioning on **${scen.constraints.map(consLabel).join(' · ')}**.` : ''}`,
+    '',
+    pick.length ? 'Best edges right now:' : 'Nothing clears 0% edge after your excludes.',
+    ...pick.map(e => `- ${e.title} **${e.side.toUpperCase()}**: fair ${fmtAmerican(e.american_fair)} vs ${fmtAmerican(e.american_cost)} (\`+${(e.edge * 100).toFixed(1)}%\`)`),
+    '',
+    locks.length ? `Kept your ${locks.length} locked leg${locks.length === 1 ? '' : 's'} in the first proposal.` : 'Lock any leg you want me to keep; reject a proposal to exclude its legs.',
+    '*(mock engine reply)*',
+  ].join('\n');
+  return { conversation_id: cid, reply, proposals, trace: [
+    { tool: 'list_edges', summary: `${E.length} edges ≥ 0% in ${g.away}@${g.home}` },
+    ...(scen ? [{ tool: 'simulate_scenario', summary: scen.constraints.map(consLabel).join(' · ') }] : []),
+    { tool: 'price_parlay', summary: 'joint vs independent' },
+    { tool: 'propose_bets', summary: `${proposals.length} proposals` },
+  ] };
+}
+function mockEngine(url, opts) {
+  const u = new URL(url, location.origin);
+  let body = {};
+  try { body = opts && opts.body ? JSON.parse(opts.body) : {}; } catch (e) {}
+  const route = u.pathname.replace('/api/engine/', '');
+  let status = 200, data;
+  try {
+    if (route === 'status') data = { chat_enabled: !MOCK_NOCHAT, model: 'mock-engine' };
+    else if (route === 'edges') data = mockEdges(u.searchParams.get('event') || '', Number(u.searchParams.get('min_edge') ?? 0.03), u.searchParams.get('kind') || 'all');
+    else if (route === 'price') data = mockPrice(body);
+    else if (route === 'scenario') data = mockScenario(body);
+    else if (route === 'ladder') data = mockLadder(body);
+    else if (route === 'chat') { if (MOCK_NOCHAT) { status = 503; data = { error: 'ANTHROPIC_API_KEY not set', chat_enabled: false }; } else data = mockChat(body); }
+    else { status = 404; data = { error: 'unknown engine route ' + route }; }
+  } catch (e) { status = 500; data = { error: 'mock: ' + e.message }; console.error(e); }
+  return new Promise(res => setTimeout(() => res(new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })), route === 'chat' ? 900 : 200));
+}
+if (MOCK) {
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (url, opts) => {
+    const u = typeof url === 'string' ? url : (url && url.url) || '';
+    if (u.indexOf('/api/engine/') === 0) return mockEngine(u, opts);
+    return realFetch(url, opts);
+  };
+}
+
 // ---------- events ----------
 document.addEventListener('click', (e) => {
+  // Builder first: stars sit inside clickable cards/rows (slate game cards
+  // open the game), so they must win and stop there.
+  const bmT = e.target.closest('[data-bm]');
+  if (bmT) { e.stopPropagation(); toggleBookmarkFromEl(bmT); return; }
+  const bbT = e.target.closest('[data-bb]');
+  if (bbT) { if (!bbT.disabled) handleBuilderClick(bbT); return; }
   const railT = e.target.closest('[data-module]');
   const openT = e.target.closest('[data-open]');
   const closeT = e.target.closest('[data-close]');
@@ -2581,12 +4144,14 @@ function submitSearch(v) {
 }
 
 document.addEventListener('change', (e) => {
-  const t = activeTicket();
-  if (t && e.target.dataset && e.target.dataset.comboInput) handleComboInput(e.target, t);
+  if (e.target.dataset && e.target.dataset.bbin) handleBuilderInput(e.target, 'change');
 });
 
 qEl.addEventListener('input', () => { loadPlayers(); sugg.items = matchPlayers(qEl.value); sugg.idx = -1; renderSuggest(); });
 qEl.addEventListener('blur', () => setTimeout(hideSuggest, 120));
+document.addEventListener('input', (e) => {
+  if (e.target.dataset && e.target.dataset.bbin) handleBuilderInput(e.target, 'input');
+});
 suggestEl.addEventListener('mousedown', (e) => {
   const row = e.target.closest('[data-sg]');
   if (row) { e.preventDefault(); submitSearch(sugg.items[Number(row.dataset.sg)].name); }
@@ -2604,7 +4169,11 @@ qEl.addEventListener('keydown', (e) => {
   }
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === '/' && document.activeElement !== document.getElementById('q')) {
+  if (e.target && e.target.dataset && e.target.dataset.bbin === 'chat' && e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault(); chatSend(e.target.value); return;
+  }
+  const typing = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT');
+  if (e.key === '/' && !typing && document.activeElement !== document.getElementById('q')) {
     e.preventDefault();
     document.getElementById('q').focus();
   }
@@ -2613,6 +4182,7 @@ document.addEventListener('keydown', (e) => {
 buildGridSkeleton(document.getElementById('grid'));
 tickClock();
 render();
+builderInit();
 </script>
 </body>
 </html>
