@@ -119,7 +119,10 @@ def warm() -> None:
         team_ratings(team)
 
 
-def _norm(name: str) -> str:
+def _norm(name) -> str:
+    # depth charts occasionally carry a blank (NaN) player name
+    if not isinstance(name, str):
+        return ""
     s = unicodedata.normalize("NFD", name.lower())
     s = re.sub(r"[̀-ͯ.'\-]", "", s)
     s = re.sub(r"\s+(jr|sr|ii|iii|iv|v)$", "", s.strip())
@@ -133,7 +136,10 @@ def attach_ratings(roster: list[dict], team: str) -> list[dict]:
     by_name = {_norm(f"{r['first']} {r['last']}"): r for r in ratings}
     by_last_jersey = {(_norm(r["last"]), r["jersey"]): r for r in ratings}
     for row in roster:
-        name = _norm(row["full_name"])
+        name = _norm(row.get("full_name"))
+        if not name:
+            row["madden"] = None
+            continue
         jersey = row.get("jersey_number")
         jersey = int(jersey) if jersey is not None and jersey == jersey else None
         r = by_name.get(name) or by_last_jersey.get((name.split(" ")[-1], jersey))
