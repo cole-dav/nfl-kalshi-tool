@@ -2,9 +2,10 @@
 Local web server for the NFL player research tool.
 
 Run:
-  export KALSHI_API_KEY_ID=...
-  export KALSHI_PRIVATE_KEY_PATH=./keys/kalshi_private_key.pem
   python3 server.py [port]
+
+Reads KALSHI_API_KEY_ID / KALSHI_PRIVATE_KEY_PATH from a .env file in the
+project root (see .env.example), or from the environment if already set.
 
 Serves static/index.html at / and JSON at /api/player?name=<player name>.
 """
@@ -20,6 +21,10 @@ import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import combo
 import madden_ratings as mr
