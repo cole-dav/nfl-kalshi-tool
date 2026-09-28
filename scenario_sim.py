@@ -291,28 +291,77 @@ def _normalize_legs(legs) -> list[dict]:
     return out
 
 
-def price_legs(legs: list[dict], scenario: dict | None = None) -> dict:
+def _scenario_map(scenario) -> dict[str, list[dict]]:
+    """scenario may be one {event, constraints} or a list of them (one per game)."""
+    if not scenario:
+        return {}
+    items = scenario if isinstance(scenario, list) else [scenario]
+    out: dict[str, list[dict]] = {}
+    for sc in items:
+        if not isinstance(sc, dict) or not sc.get("event"):
+            raise ScenarioError("scenario needs an event and constraints")
+        cons = sc.get("constraints") or []
+        if not isinstance(cons, list):
+            raise ScenarioError("scenario constraints must be a list")
+        out.setdefault(fv.game_suffix(sc["event"]), []).extend(cons)
+    return out
+
+
+def _fetch_unmodelled(ticker: str) -> dict | None:
+    """A market outside the modelled families (1H, race, ...): fresh quote
+    only; its fair falls back to the Kalshi mid."""
+    try:
+        from kalshi_book import public_get
+        m = public_get(f"/trade-api/v2/markets/{ticker}").get("market")
+        return fv.normalize_market(m) if m else None
+    except Exception:
+        return None
+
+
+def _load_events(suffixes: list[str]) -> dict:
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(sfx):
+        try:
+            ev = fv.load_event(sfx)
+            get_sim(ev)
+            return sfx, ev
+        except Exception as e:
+            return sfx, e
+
+    if len(suffixes) == 1:
+        return dict([one(suffixes[0])])
+    with ThreadPoolExecutor(max_workers=min(8, len(suffixes))) as pool:
+        return dict(pool.map(one, suffixes))
+
+
+def price_legs(legs: list[dict], scenario: dict | list | None = None) -> dict:
     """Correlated parlay price. Legs in the same game are priced jointly from
     that game's sim; different games are independent. Without a scenario,
     single-leg fairs are the analytic ones (same as /edges) and the joint is
-    the analytic product times the sim's correlation ratio."""
+    the analytic product times the sim's correlation ratio.
+
+    Legs that can't be priced (closed / unknown market) come back with an
+    `error` and fair None (joint_fair None) instead of failing the batch."""
     legs = _normalize_legs(legs)
-    scen_suffix = fv.game_suffix(scenario["event"]) if scenario and scenario.get("event") else None
-    constraints = (scenario or {}).get("constraints") or []
+    scen = _scenario_map(scenario)
     by_event: dict[str, list[int]] = {}
     for i, l in enumerate(legs):
         by_event.setdefault(fv.game_suffix(l["market_ticker"]), []).append(i)
+    events = _load_events(list(by_event))
 
-    views: list[dict | None] = [None] * len(legs)
-    joint = 1.0
-    indep = 1.0
+    views: list[dict] = [{} for _ in legs]
+    joint: float | None = 1.0
+    indep: float | None = 1.0
     scenario_applied = False
     for suffix, idxs in by_event.items():
-        ev = fv.load_event(suffix)
-        tick = ev.by_ticker()
-        sim = get_sim(ev)
-        apply = bool(constraints) and scen_suffix == suffix
-        mk = sim.mask(constraints) if apply else np.ones(sim.n, dtype=bool)
+        ev = events.get(suffix)
+        ok = not isinstance(ev, Exception) and ev is not None
+        tick = ev.by_ticker() if ok else {}
+        sim = get_sim(ev) if ok else None
+        constraints = scen.get(suffix) or []
+        apply = bool(constraints) and sim is not None
+        mk = sim.mask(constraints) if apply else (np.ones(sim.n, dtype=bool) if sim is not None else None)
         if apply:
             if mk.sum() < 50:
                 raise ScenarioError("scenario is (nearly) impossible under the model: fewer than 50 of "
@@ -321,10 +370,16 @@ def price_legs(legs: list[dict], scenario: dict | None = None) -> dict:
         hits, sim_marg, fairs = [], [], []
         for i in idxs:
             l = legs[i]
-            m = tick.get(l["market_ticker"])
-            if m is None:
-                raise ScenarioError(f"unknown or closed market: {l['market_ticker']}")
-            y = sim.yes(m)
+            m = tick.get(l["market_ticker"]) or _fetch_unmodelled(l["market_ticker"])
+            if m is None or m.get("status") not in (None, "active", "open"):
+                views[i] = {"market_ticker": l["market_ticker"], "side": l["side"], "title": (m or {}).get("title"),
+                            "event_ticker": (m or {}).get("event_ticker"), "yes_bid": (m or {}).get("yes_bid"),
+                            "yes_ask": (m or {}).get("yes_ask"), "fair": None, "cost": None, "edge": None,
+                            "american_cost": None, "american_fair": None,
+                            "error": "market not found or no longer open"}
+                fairs.append(None)
+                continue
+            y = sim.yes(m) if sim is not None else None
             if y is not None:
                 h = y if l["side"] == "yes" else ~y
                 hits.append(h)
@@ -332,21 +387,28 @@ def price_legs(legs: list[dict], scenario: dict | None = None) -> dict:
             if apply and y is not None:
                 fy = float(y[mk].mean())
             else:
-                fy = analytic_fair(ev, m)
+                fy = analytic_fair(ev, m) if ok else None
                 if fy is None and y is not None:
                     fy = float(y.mean())
                 if fy is None:
                     fy = fv.mid(m)
             v = _leg_view(m, l["side"], fy)
+            if y is None:
+                v["note"] = "not modelled: fair = Kalshi mid, treated as independent"
+            elif ok and ev.in_play:
+                v["note"] = "game in progress: pregame model"
             views[i] = v
-            fairs.append(v["fair"] if v["fair"] is not None else 0.0)
-        # joint for this event
+            fairs.append(v["fair"])
+        if any(f is None for f in fairs):
+            joint = indep = None
+            continue
         prod_fair = float(np.prod(fairs))
-        indep *= prod_fair
-        if hits and len(hits) == len(idxs):
+        if indep is not None:
+            indep *= prod_fair
+        if len(hits) >= 2 or (hits and apply):
             allh = np.logical_and.reduce(hits)[mk]
             sim_joint = float(allh.mean())
-            if apply:
+            if apply and len(hits) == len(idxs):
                 ej = sim_joint
             else:
                 sim_prod = float(np.prod(sim_marg))
@@ -354,18 +416,19 @@ def price_legs(legs: list[dict], scenario: dict | None = None) -> dict:
                 ej = min(prod_fair * ratio, min(fairs))
         else:
             ej = prod_fair
-        joint *= ej
+        if joint is not None:
+            joint *= ej
 
-    costs = [v["cost"] for v in views]
-    parlay_cost = float(np.prod(costs)) if all(c for c in costs) else None
+    costs = [v.get("cost") for v in views]
+    parlay_cost = float(np.prod(costs)) if costs and all(c for c in costs) else None
     return {
         "legs": views,
-        "joint_fair": round(joint, 5),
-        "indep_fair": round(indep, 5),
+        "joint_fair": None if joint is None else round(joint, 5),
+        "indep_fair": None if indep is None else round(indep, 5),
         "parlay_cost": None if parlay_cost is None else round(parlay_cost, 5),
         "joint_american": fv.american(joint),
         "parlay_american_cost": fv.american(parlay_cost),
-        "ev_per_dollar": None if not parlay_cost else round(joint / parlay_cost - 1, 4),
+        "ev_per_dollar": None if not parlay_cost or joint is None else round(joint / parlay_cost - 1, 4),
         "scenario_applied": scenario_applied,
         "same_event": len(by_event) == 1,
     }
