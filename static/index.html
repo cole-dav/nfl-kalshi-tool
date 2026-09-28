@@ -153,6 +153,9 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
 .roster-player:hover{color:var(--amber)}
 .backlink{color:var(--amber);cursor:pointer;font-size:11px}
 .backlink:hover{color:#FFC57A}
+.week-step{background:transparent;border:1px solid var(--head-rule);color:var(--amber);font-size:9px;line-height:1;padding:4px 7px;border-radius:3px;cursor:pointer}
+.week-step:hover:not(:disabled){color:#FFC57A;border-color:var(--amber)}
+.week-step:disabled{color:var(--faint);cursor:default}
 .combo-block{border-bottom:1px solid var(--row-rule);padding:8px 0}
 #rightcol.combo-mode #book{height:auto;flex:5 1 0;min-height:0}
 #rightcol.combo-mode #lowerrow{height:auto;flex:1.4 1 0;min-height:0}
@@ -295,7 +298,7 @@ let nextId = 1;
 const state = {
   tickets: [], activeId: null, kalshiOk: true, module: 'slate',
   games: [], activeGameId: null,
-  slate: { loading: false, error: null, games: null, view: 'list' },
+  slate: { loading: false, error: null, games: null, view: 'list', week: null, weeks: [] },
   book: { loading: false, error: null, data: null },
 };
 
@@ -1876,15 +1879,17 @@ function renderResearch() {
 // click-team-then-player drill-down into combo markets + rosters.
 // ========================================================================
 
-async function loadSlate(force) {
+async function loadSlate(force, week) {
   if (state.slate.games && !force) { render(); return; }
   state.slate.loading = true; state.slate.error = null;
   render();
   try {
-    const resp = await fetch('/api/week');
+    const resp = await fetch('/api/week' + (week ? '?week=' + week : ''));
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'request failed');
     state.slate.games = data.games;
+    state.slate.week = data.week;
+    state.slate.weeks = data.weeks || [];
   } catch (e) {
     state.slate.error = String(e.message || e);
   } finally {
@@ -1985,11 +1990,18 @@ function renderGameList(el) {
     if (last && last.key === slot.key) last.games.push(g);
     else slots.push({ ...slot, games: [g] });
   });
-  const week = games.find(g => g.schedule) ? games.find(g => g.schedule).schedule.week : null;
+  const week = state.slate.week || (games.find(g => g.schedule) ? games.find(g => g.schedule).schedule.week : null);
+  const weeks = state.slate.weeks;
+  const wi = weeks.indexOf(week);
+  const prevWeek = wi > 0 ? weeks[wi - 1] : null;
+  const nextWeek = wi !== -1 && wi < weeks.length - 1 ? weeks[wi + 1] : null;
+  const weekBtn = (w, glyph) => `<button type="button" class="week-step" ${w ? `data-slate-week="${w}" title="Week ${w}"` : 'disabled'}>${glyph}</button>`;
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 4px">
       <span style="font-size:15px;font-weight:600">${week ? 'WEEK ' + week : 'WEEK OVERVIEW'}</span>
       <span class="mono" style="font-size:10.5px;color:var(--dim)">${games.length} GAMES</span>
+      ${weeks.length > 1 ? `<span style="display:flex;gap:4px">${weekBtn(prevWeek, '&#9664;')}${weekBtn(nextWeek, '&#9654;')}</span>` : ''}
+      ${state.slate.loading ? '<span class="mono" style="font-size:10.5px;color:var(--dim)">LOADING…</span>' : ''}
     </div>
     <div style="flex-grow:1;min-height:0;overflow:auto;padding:0 4px 8px">
       ${slots.map(sl => `
@@ -2493,6 +2505,8 @@ document.addEventListener('click', (e) => {
   if (gameT) { openGameDetail(gameT.dataset.openGame); return; }
   if (playerT) { openPlayerFromDrilldown(playerT.dataset.openPlayer); return; }
   if (backSlateT) { backToSlateList(); return; }
+  const slateWeekT = e.target.closest('[data-slate-week]');
+  if (slateWeekT) { if (!state.slate.loading) loadSlate(true, Number(slateWeekT.dataset.slateWeek)); return; }
   const gameViewT = e.target.closest('[data-game-view]');
   if (gameViewT) { const g = activeGameTab(); if (g) { g.view = gameViewT.dataset.gameView; renderSlate(); } return; }
   if (e.target.id === 'newticket') { state.module = 'research'; document.getElementById('q').focus(); return; }
