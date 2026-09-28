@@ -31,6 +31,8 @@ import nflverse_data as nd
 import team_tendencies as tt
 import week_overview as wo
 import player_volume as pvol
+import engine_agent as engine
+import scenario_sim as sim
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 WARM_INTERVAL_SECONDS = 10 * 60
@@ -200,6 +202,22 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"internal error: {e}"}, status=500)
             return
 
+        if parsed.path == "/api/engine/status":
+            self._send_json(engine.status())
+            return
+
+        if parsed.path == "/api/engine/edges":
+            qs = parse_qs(parsed.query)
+            event = (qs.get("event") or [""])[0].strip() or None
+            kind = (qs.get("kind") or ["all"])[0].strip() or "all"
+            try:
+                min_edge = float((qs.get("min_edge") or ["0.03"])[0])
+            except ValueError:
+                self._send_json({"error": "bad 'min_edge' query param"}, status=400)
+                return
+            self._engine_call(lambda: engine.edges(event, min_edge, kind))
+            return
+
         self.send_response(404)
         self.end_headers()
 
@@ -225,6 +243,26 @@ class Handler(BaseHTTPRequestHandler):
             traceback.print_exc()
             self._send_json({"error": f"internal error: {e}"}, status=500)
 
+    def _engine_call(self, fn):
+        """Run an engine action: bad input -> 400, no Anthropic key -> 503,
+        missing Kalshi credentials -> 503."""
+        try:
+            self._send_json(fn())
+        except engine.ChatUnavailable as e:
+            self._send_json({"error": str(e), "chat_enabled": False}, status=503)
+        except (engine.EngineError, sim.ScenarioError, TypeError, ValueError) as e:
+            self._send_json({"error": str(e)}, status=400)
+        except RuntimeError as e:  # missing KALSHI_* credentials
+            self._send_json({"error": f"Kalshi credentials missing on the server: {e}"}, status=503)
+        except Exception as e:
+            resp = getattr(e, "response", None)
+            if resp is not None and getattr(resp, "status_code", None):
+                self._send_json({"error": f"upstream {resp.status_code}: {str(getattr(resp, 'text', ''))[:400]}"},
+                                status=502)
+                return
+            traceback.print_exc()
+            self._send_json({"error": f"internal error: {e}"}, status=500)
+
     def do_POST(self):
         parsed = urlparse(self.path)
         try:
@@ -246,6 +284,22 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/combo/accept":
             self._combo_call(lambda: combo.accept_quote(
                 str(body.get("rfq_id") or ""), str(body.get("quote_id") or ""), str(body.get("side") or "")))
+            return
+
+        if parsed.path == "/api/engine/price":
+            self._engine_call(lambda: sim.price_legs(legs, body.get("scenario")))
+            return
+        if parsed.path == "/api/engine/scenario":
+            self._engine_call(lambda: sim.condition(str(body.get("event") or ""), body.get("constraints")))
+            return
+        if parsed.path == "/api/engine/ladder":
+            self._engine_call(lambda: sim.ladder(
+                str(body.get("event") or ""), str(body.get("team") or ""), str(body.get("family") or ""),
+                body.get("strikes") or [], body.get("stakes"), body.get("scenario"), bool(body.get("include_ml"))))
+            return
+        if parsed.path == "/api/engine/chat":
+            self._engine_call(lambda: engine.chat(
+                body.get("message") or "", body.get("slip") or {}, body.get("conversation_id") or None))
             return
 
         self.send_response(404)

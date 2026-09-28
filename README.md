@@ -79,6 +79,43 @@ the ACCEPT button, start the server with `KALSHI_ENABLE_COMBO_ACCEPT=1`.
 Verify the side semantics with a small stake first -- Kalshi's docs don't
 spell out `accepted_side` precisely.
 
+## Bet recommendation engine
+
+A fair-value engine behind the Bet Builder drawer. It has four backend modules:
+
+- `fair_value.py` fits one margin distribution and one total distribution per game.
+  - Shape: a normal curve reweighted by "key numbers" (how often a final margin of 3, 7, 10 or 14 actually happens), learned from nflverse results against the closing line for 2019-2025.
+  - Center: a weighted least-squares fit to the Kalshi moneyline and every spread (or total) strike, blended 15% toward the nflverse line.
+  - Team totals come from `(T ± M) / 2`.
+  - It also flags hard ladder arbs: nested strikes (e.g. -3.5 bid above the ML ask), disjoint spreads whose bids sum past $1, and both moneylines asking under $1.
+- `prop_model.py` projects each player stat.
+  - Projection: a recency-weighted baseline multiplied by adjustments for opponent defense, implied team points, opponent pace, game script (`team_tendencies`), wind and injury status.
+  - Distributions: lognormal for yards (plus a zero mass), negative binomial for counts, and Poisson for TDs (TD share × implied team TDs).
+  - The final location is a blend: at most 35% model and at least 65% the location fitted to the Kalshi ladder. The model weight shrinks when the player has few games.
+- `scenario_sim.py` runs a seeded Monte Carlo of 20k sims per game.
+  - It draws margin and total, then team points, then player stats through a Gaussian copula. Pass volume rises when a team trails; rush volume rises when it leads.
+  - Uses: correlated parlay prices, "what if" scenarios, and same-team ladders with P&L by margin bucket.
+- `engine_agent.py` serves slate-wide edges, and the Claude chat that drives the tools above.
+
+The chat needs `ANTHROPIC_API_KEY` (see `.env.example`). Without a key, `/api/engine/chat` returns 503 and everything else keeps working.
+
+| Route | Purpose |
+|---|---|
+| `GET /api/engine/status` | `{chat_enabled, model}` |
+| `GET /api/engine/edges?event=&min_edge=0.03&kind=game\|prop\|all` | ranked edges plus arbs; `min_edge=-1` lists every market |
+| `POST /api/engine/price` | `{legs, scenario?}` → joint (correlated) vs independent fair, parlay cost |
+| `POST /api/engine/scenario` | `{event, constraints}` → every market re-priced under the view |
+| `POST /api/engine/ladder` | `{event, team, family, strikes, stakes?}` → stack of singles with an outcome table; strike 0 = ML |
+| `POST /api/engine/chat` | `{conversation_id?, message, slip}` → reply, proposals, tool trace |
+
+Run the tests with `python -m pytest tests`. They are offline, using synthetic markets and a mocked Anthropic client.
+
+Caveats:
+- Edges exclude Kalshi fees (~0.07·p·(1−p) per contract).
+- Game lines are mostly market consensus, so game "edges" are small by design.
+- Prop edges are model opinions: shrunk toward the market, but uncalibrated.
+- Games already in progress are skipped (the model is pregame only).
+
 ## Known data limitations
 
 - **No man/zone coverage rate.** nflverse's free FTN charting release does
