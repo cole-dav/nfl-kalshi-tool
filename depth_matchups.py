@@ -33,20 +33,22 @@ OFFENSE_SLOTS = [
 # (unit, offense label, defense candidates in preference order) per scheme.
 PAIRINGS = {
     "4-3": [
+        ("PASS GAME", "QB", ["FS"]),
         ("PASS GAME", "WR1", ["RCB"]), ("PASS GAME", "WR2", ["LCB"]), ("PASS GAME", "SLOT", ["NB"]),
         ("PASS GAME", "TE", ["SS", "SLB"]),
         ("TRENCHES", "LT", ["RDE"]), ("TRENCHES", "LG", ["RDT"]), ("TRENCHES", "C", []),
         ("TRENCHES", "RG", ["LDT"]), ("TRENCHES", "RT", ["LDE"]),
-        ("BACKFIELD", "RB", ["MLB"]), ("BACKFIELD", "QB", ["FS"]),
+        ("TRENCHES", "RB", ["MLB"]),
     ],
     "3-4": [
+        ("PASS GAME", "QB", ["FS"]),
         ("PASS GAME", "WR1", ["RCB"]), ("PASS GAME", "WR2", ["LCB"]), ("PASS GAME", "SLOT", ["NB"]),
         ("PASS GAME", "TE", ["SS"]),
         # 3-4 OLBs are the edge rushers: weak side sits away from the TE,
         # usually over the left tackle.
         ("TRENCHES", "LT", ["WLB"]), ("TRENCHES", "LG", ["RDE"]), ("TRENCHES", "C", ["NT"]),
         ("TRENCHES", "RG", ["LDE"]), ("TRENCHES", "RT", ["SLB"]),
-        ("BACKFIELD", "RB", ["LILB", "RILB"]), ("BACKFIELD", "QB", ["FS"]),
+        ("TRENCHES", "RB", ["LILB", "RILB"]),
     ],
 }
 
@@ -75,19 +77,23 @@ def _team_depth(team: str) -> dict:
     d = d[d["team"] == team]
     roster = nd.load_rosters()
     roster = roster[roster["team"] == team].drop_duplicates("gsis_id").set_index("gsis_id")
+    injuries = nd.team_injuries(team).drop_duplicates("full_name").set_index("full_name")
 
     def players(rows: pd.DataFrame) -> list[dict]:
         out = []
         for r in rows.sort_values("pos_rank").head(DEPTH_SHOWN).itertuples():
             ro = roster.loc[r.gsis_id] if r.gsis_id in roster.index else None
+            full_name = ro["full_name"] if ro is not None else r.player_name
+            inj = injuries.loc[full_name].to_dict() if full_name in injuries.index else None
             out.append({
-                "full_name": ro["full_name"] if ro is not None else r.player_name,
+                "full_name": full_name,
                 "position": ro["position"] if ro is not None else r.pos_abb,
                 "jersey_number": ro["jersey_number"] if ro is not None else None,
                 "pfr_id": ro["pfr_id"] if ro is not None else None,
                 "gsis_id": r.gsis_id,
                 "status": ro["status"] if ro is not None else None,
                 "headshot_url": _thumb(ro["headshot_url"]) if ro is not None else None,
+                "injury": {"full_name": full_name, **inj} if inj else None,
             })
         return out
 
@@ -147,9 +153,8 @@ def matchup(off_team: str, def_team: str, off_depth: dict, def_depth: dict) -> d
         return _avg([_ovr(r[key]) for r in rows if r["unit"] == unit and r[key]])
 
     summary = []
-    for unit, off_name, def_name in (("PASS GAME", "Pass catchers", "Coverage"),
-                                     ("TRENCHES", "O-line", "D-line / edge"),
-                                     ("BACKFIELD", "QB / RB", "LB / FS")):
+    for unit, off_name, def_name in (("PASS GAME", "QB / pass catchers", "Coverage"),
+                                     ("TRENCHES", "O-line / RB", "Front seven")):
         a, b = unit_avg(unit, "off"), unit_avg(unit, "def")
         summary.append({"unit": unit, "off_label": off_name, "def_label": def_name,
                         "off_avg": a, "def_avg": b,
