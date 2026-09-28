@@ -170,7 +170,8 @@ class Handler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/week":
             try:
-                self._send_json(wo.build_week_overview())
+                week = (parse_qs(parsed.query).get("week") or [""])[0].strip()
+                self._send_json(wo.build_week_overview(int(week) if week.isdigit() else None))
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"internal error: {e}"}, status=500)
