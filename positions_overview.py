@@ -20,8 +20,7 @@ from kalshi_markets import MarketIndex
 WEEKLY_EVENT_RE = re.compile(r"^\d{2}[A-Z]{3}\d{2}[A-Z]{2,3}[A-Z]{2,3}$")
 
 
-def build_positions_overview() -> dict:
-    client = KalshiClient()
+def build_positions_overview(client: KalshiClient) -> dict:
     idx = MarketIndex()
 
     raw_positions = client.get_positions()

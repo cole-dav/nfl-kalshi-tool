@@ -220,6 +220,7 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
       </div>
     </div>
     <div id="statusbar" class="mono">
+      <span id="kalshiAuth"></span>
       <span id="clock" style="color:var(--on)"></span>
     </div>
   </div>
@@ -257,6 +258,8 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
     </div>
   </div>
 </div>
+
+<div id="loginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:1000"></div>
 
 <script>
 const C = { on:'#E3E7EC', label:'#C9D1D9', off:'#7A8591', amber:'#F2A541', blue:'#5AA9FF', orange:'#FF7A45', muted:'#9AA4AF', neutral:'#4A5561' };
@@ -297,6 +300,7 @@ const state = {
   games: [], activeGameId: null,
   slate: { loading: false, error: null, games: null, view: 'list' },
   book: { loading: false, error: null, data: null },
+  session: { connected: false },
 };
 
 function openPlayerFromDrilldown(name) {
@@ -1175,6 +1179,7 @@ function cancelRfq(rfqId) {
 function stopQuotePolling(cs) { if (cs.quote && cs.quote.poll) { clearInterval(cs.quote.poll); cs.quote.poll = null; } }
 
 async function requestComboQuote(t) {
+  if (!state.session.connected) { showLoginModal(); return; }
   const cs = comboState(t);
   const stake = cs.unit * cs.units;
   cs.quote = { phase: 'requesting', started: Date.now() };
@@ -1824,6 +1829,89 @@ function hideOverlay() {
   document.getElementById('overlay').style.display = 'none';
 }
 
+// ---------- Kalshi login (per-visitor session) ----------
+// Odds/matchups/injuries need no Kalshi key at all. Viewing your own
+// positions or using the combo/parlay builder requires connecting your own
+// Kalshi API key -- held server-side only for this session, never a
+// server-wide default. See sessions.py.
+function renderAuthStatus() {
+  const el = document.getElementById('kalshiAuth');
+  el.innerHTML = state.session.connected
+    ? `<button type="button" data-disconnect-kalshi style="color:var(--blue)">CONNECTED · DISCONNECT</button>`
+    : `<button type="button" data-connect-kalshi>CONNECT KALSHI</button>`;
+}
+
+function checkSession() {
+  fetch('/api/session').then(r => r.ok ? r.json() : { connected: false }).then(d => {
+    state.session.connected = !!d.connected;
+    renderAuthStatus();
+  }).catch(() => {});
+}
+
+function showLoginModal() {
+  const modal = document.getElementById('loginModal');
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="panel" style="width:380px;max-width:calc(100vw - 32px)" data-login-stop>
+      <div class="panel-head"><span class="panel-title">CONNECT YOUR KALSHI KEY</span></div>
+      <div class="panel-body" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+        <div class="mono" style="font-size:10.5px;color:var(--dim)">
+          Used only for your own positions and the combo/parlay builder. Held in server
+          memory for this session only -- never written to disk, never shared with other visitors.
+        </div>
+        <label class="mono" style="font-size:9.5px;color:var(--dim)">API KEY ID</label>
+        <input type="text" data-login-field="api_key_id" autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box;background:#0D1117;border:1px solid var(--head-rule);color:var(--on);padding:6px 8px;font-family:inherit">
+        <label class="mono" style="font-size:9.5px;color:var(--dim)">PRIVATE KEY (.pem contents)</label>
+        <textarea data-login-field="private_key_pem" rows="6" spellcheck="false" style="width:100%;box-sizing:border-box;background:#0D1117;border:1px solid var(--head-rule);color:var(--on);padding:6px 8px;font-family:inherit;resize:vertical"></textarea>
+        <div data-login-error class="mono" style="font-size:10.5px;color:var(--orange);display:none"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+          <button type="button" data-login-cancel>CANCEL</button>
+          <button type="button" data-login-submit style="color:var(--blue)">CONNECT</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function hideLoginModal() {
+  const modal = document.getElementById('loginModal');
+  modal.style.display = 'none';
+  modal.innerHTML = '';
+}
+
+async function submitLogin() {
+  const modal = document.getElementById('loginModal');
+  const errEl = modal.querySelector('[data-login-error]');
+  const btn = modal.querySelector('[data-login-submit]');
+  const api_key_id = modal.querySelector('[data-login-field="api_key_id"]').value.trim();
+  const private_key_pem = modal.querySelector('[data-login-field="private_key_pem"]').value.trim();
+  if (!api_key_id || !private_key_pem) {
+    errEl.textContent = 'both fields are required'; errEl.style.display = 'block';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'CONNECTING…';
+  try {
+    const resp = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key_id, private_key_pem }) });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'login failed');
+    state.session.connected = true;
+    hideLoginModal();
+    renderAuthStatus();
+    loadBook(true);
+  } catch (e) {
+    errEl.textContent = String(e.message || e); errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'CONNECT';
+  }
+}
+
+async function logoutKalshi() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
+  state.session.connected = false;
+  state.book = { loading: false, error: null, data: null };
+  renderAuthStatus();
+  if (state.module === 'book') renderBookModule();
+}
+
 // Three modules share the rail: Research (ticket-based player pages, the
 // original build), Slate (week overview + game drill-down), Book (positions
 // overview). Only one is visible at a time; each owns its own DOM subtree so
@@ -2332,6 +2420,7 @@ function outcomeRow(o, even) {
 // ========================================================================
 
 async function loadBook(force) {
+  if (!state.session.connected) { render(); return; }
   if (state.book.data && !force) { render(); return; }
   state.book.loading = true; state.book.error = null;
   render();
@@ -2363,6 +2452,12 @@ function matchupTitleHtml(matchup) {
 
 function renderBookModule() {
   const el = document.getElementById('bookView');
+  if (!state.session.connected) {
+    el.innerHTML = `<div class="empty">Connect your Kalshi key to see your positions.
+      <div style="margin-top:8px"><button type="button" data-connect-kalshi style="color:var(--blue)">CONNECT KALSHI</button></div>
+    </div>`;
+    return;
+  }
   if (state.book.loading && !state.book.data) { el.innerHTML = `<div class="empty">Loading positions…</div>`; return; }
   if (state.book.error) { el.innerHTML = `<div class="empty" style="color:var(--orange)">${escapeHtml(state.book.error)}</div>`; return; }
   if (!state.book.data) { loadBook(false); el.innerHTML = `<div class="empty">Loading positions…</div>`; return; }
@@ -2460,6 +2555,11 @@ function buildGridSkeleton(grid) {
 
 // ---------- events ----------
 document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-connect-kalshi]')) { showLoginModal(); return; }
+  if (e.target.closest('[data-disconnect-kalshi]')) { logoutKalshi(); return; }
+  if (e.target.closest('[data-login-cancel]')) { hideLoginModal(); return; }
+  if (e.target.closest('[data-login-submit]')) { submitLogin(); return; }
+  if (e.target.id === 'loginModal') { hideLoginModal(); return; } // backdrop click
   const railT = e.target.closest('[data-module]');
   const openT = e.target.closest('[data-open]');
   const closeT = e.target.closest('[data-close]');
@@ -2618,6 +2718,8 @@ document.addEventListener('keydown', (e) => {
 buildGridSkeleton(document.getElementById('grid'));
 tickClock();
 render();
+renderAuthStatus();
+checkSession();
 </script>
 </body>
 </html>

@@ -33,7 +33,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Any
 
-from kalshi_book import KalshiClient
+from kalshi_book import KalshiClient, public_get, public_get_events
 
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
 
@@ -155,11 +155,31 @@ class PropMarket:
 
 
 class MarketIndex:
-    """Fetches & caches this week's NFL markets, and resolves player/team UUIDs."""
+    """Fetches & caches this week's NFL markets, and resolves player/team UUIDs.
+
+    With no client, every read goes through Kalshi's unauthenticated public
+    endpoints -- odds/matchups/injuries browsing needs no Kalshi key at all.
+    Pass a signed `client` (e.g. a per-session one) to read as that account
+    instead; nothing here requires it."""
 
     def __init__(self, client: KalshiClient | None = None):
-        self.client = client or KalshiClient()
+        self.client = client
         self._structured_target_cache = _load_json_cache("structured_targets.json")
+
+    # -- signed-or-public read helpers --------------------------------------
+    # Public (no leading underscore): other modules that need a raw read
+    # (e.g. player_volume.py's candlestick lookups) should go through these
+    # rather than reaching into `.client` directly, since that may be None.
+
+    def get(self, path: str, params: dict | None = None) -> dict:
+        if self.client:
+            return self.client.get(path, params=params)
+        return public_get(path, params=params)
+
+    def get_events(self, series_ticker: str | None = None, status: str | None = None) -> list[dict]:
+        if self.client:
+            return self.client.get_events(series_ticker=series_ticker, status=status)
+        return public_get_events(series_ticker=series_ticker, status=status)
 
     # -- structured target (player/team) resolution ------------------------
 
@@ -167,7 +187,7 @@ class MarketIndex:
         if target_id in self._structured_target_cache:
             return self._structured_target_cache[target_id]
         try:
-            data = self.client.get(f"/trade-api/v2/structured_targets/{target_id}")
+            data = self.get(f"/trade-api/v2/structured_targets/{target_id}")
         except Exception:
             return None
         target = data.get("structured_target")
@@ -200,7 +220,7 @@ class MarketIndex:
 
         Returns dicts: event_ticker, away, home, close_time (kickoff-ish), title
         """
-        events = self.client.get_events(series_ticker="KXNFLGAME", status="open")
+        events = self.get_events(series_ticker="KXNFLGAME", status="open")
         games = []
         for ev in events:
             markets = ev.get("markets", [])
@@ -255,7 +275,7 @@ class MarketIndex:
     # -- per-game props --------------------------------------------------------
 
     def get_event_markets(self, event_ticker: str) -> list[dict]:
-        data = self.client.get(
+        data = self.get(
             "/trade-api/v2/events/" + event_ticker, params={"with_nested_markets": True}
         )
         return data.get("event", {}).get("markets", [])
@@ -300,7 +320,7 @@ class MarketIndex:
     def get_season_prop_markets_for_player(self, player_id: str) -> list[PropMarket]:
         out = []
         for series, label in SEASON_PLAYER_PROP_SERIES.items():
-            events = self.client.get_events(series_ticker=series, status="open")
+            events = self.get_events(series_ticker=series, status="open")
             for ev in events:
                 for m in ev.get("markets", []):
                     custom = m.get("custom_strike") or {}
@@ -372,7 +392,7 @@ class MarketIndex:
         # event per game, so it needs its own listing.
         try:
             race_events = [
-                ev for ev in self.client.get_events(series_ticker=RACE_SERIES, status="open")
+                ev for ev in self.get_events(series_ticker=RACE_SERIES, status="open")
                 if ev["event_ticker"].startswith(f"{RACE_SERIES}-{suffix}-")
             ]
         except Exception:

@@ -270,16 +270,18 @@ def _selected(legs: list[dict]) -> list[dict]:
     return [{"market_ticker": l["market_ticker"], "event_ticker": l["event_ticker"], "side": l["side"]} for l in legs]
 
 
-def request_quote(legs: list[dict], target_cost_dollars: float) -> dict:
+def request_quote(legs: list[dict], target_cost_dollars: float, client: KalshiClient) -> dict:
     """Validate, create/lookup the combo market, and open an RFQ sized by
-    dollars to spend. Returns the combo ticker and RFQ id to poll."""
+    dollars to spend. Returns the combo ticker and RFQ id to poll.
+
+    `client` is required (never defaulted) so a quote is always requested
+    against the caller's own Kalshi account, never a server-side default."""
     v = validate(legs)
     if not v["ok"]:
         raise ComboError("combo isn't valid yet: " + "; ".join(
             [x["msg"] for x in v["issues"]] + [f"{l['market_ticker']}: {e}" for l in v["legs"] for e in l["errors"]]))
     if target_cost_dollars <= 0:
         raise ComboError("stake must be positive")
-    client = KalshiClient()
     created = client.post(
         f"/trade-api/v2/multivariate_event_collections/{v['collection']}",
         {"selected_markets": _selected(v["legs"]), "with_market_payload": True},
@@ -321,8 +323,7 @@ def _quote_view(q: dict) -> dict:
     }
 
 
-def get_quotes(rfq_id: str) -> dict:
-    client = KalshiClient()
+def get_quotes(rfq_id: str, client: KalshiClient) -> dict:
     # _request, not get(): quotes must never come from the disk cache.
     data = client._request("GET", "/trade-api/v2/communications/quotes", params={"rfq_id": rfq_id})
     quotes = [_quote_view(q) for q in data.get("quotes", [])]
@@ -336,17 +337,17 @@ def get_quotes(rfq_id: str) -> dict:
     return {"rfq_id": rfq_id, "rfq_status": rfq.get("status"), "quotes": quotes, "best": best}
 
 
-def cancel_rfq(rfq_id: str) -> dict:
-    KalshiClient().delete(f"/trade-api/v2/communications/rfqs/{rfq_id}")
+def cancel_rfq(rfq_id: str, client: KalshiClient) -> dict:
+    client.delete(f"/trade-api/v2/communications/rfqs/{rfq_id}")
     return {"rfq_id": rfq_id, "cancelled": True}
 
 
-def accept_quote(rfq_id: str, quote_id: str, side: str) -> dict:
+def accept_quote(rfq_id: str, quote_id: str, side: str, client: KalshiClient) -> dict:
     if not ACCEPT_ENABLED:
         raise ComboError("accepting quotes is disabled; start the server with KALSHI_ENABLE_COMBO_ACCEPT=1")
     if side not in ("yes", "no"):
         raise ComboError("side must be yes or no")
-    KalshiClient().put(
+    client.put(
         f"/trade-api/v2/communications/rfqs/{rfq_id}/quotes/{quote_id}/accept", {"accepted_side": side}
     )
     return {"rfq_id": rfq_id, "quote_id": quote_id, "accepted_side": side, "status": "accepted, awaiting maker confirm"}
