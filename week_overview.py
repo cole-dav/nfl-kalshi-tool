@@ -6,10 +6,12 @@ click-team-then-player drill-down.
 
 from __future__ import annotations
 
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 import depth_matchups as dm
 import nflverse_data as nd
+import team_tendencies as tt
 from kalshi_markets import MarketIndex
 
 
@@ -45,10 +47,17 @@ def build_game_detail(event_ticker: str) -> dict:
     away_nflverse = nd.kalshi_to_nflverse_team(game["away"])
     home_nflverse = nd.kalshi_to_nflverse_team(game["home"])
 
+    try:
+        tendencies = tt.matchup_tendencies(away_nflverse, home_nflverse, core.get("spread"), core.get("total"))
+    except Exception as e:
+        traceback.print_exc()
+        tendencies = {"error": f"tendencies unavailable: {e}"}
+
     records = nd.team_records()
     return {
         **core,
         "records": {"away": records.get(away_nflverse, "0-0"), "home": records.get(home_nflverse, "0-0")},
         "combos": combos,
         "matchups": dm.game_matchups(away_nflverse, home_nflverse),
+        "tendencies": tendencies,
     }

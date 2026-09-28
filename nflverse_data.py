@@ -220,6 +220,14 @@ def load_ftn(season: int | None = None) -> pd.DataFrame:
     return _parquet_cache("ftn", season, lambda: nfl.load_ftn_charting(seasons=[season]).to_pandas())
 
 
+def load_participation(season: int | None = None) -> pd.DataFrame:
+    """NGS/FTN participation (formation, personnel, coverage shell, man/zone).
+    nflverse only publishes it after a season ends, so the current season
+    raises upstream -- callers use the prior season."""
+    season = season or current_season()
+    return _parquet_cache("participation", season, lambda: nfl.load_participation(seasons=[season]).to_pandas())
+
+
 def load_ff_rankings_week(season: int | None = None) -> pd.DataFrame:
     """FantasyPros weekly ECR. Not season-scoped upstream; keyed by the
     current season so it expires alongside the rest of the game data."""
