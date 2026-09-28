@@ -243,7 +243,6 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 .bb-tag.lock{color:var(--bg);background:var(--amber)}
 .bb-tag.excl{color:var(--bg);background:var(--orange)}
 .bb-tag.scn{color:var(--amber);border:1px solid var(--amber-ring);font-weight:500}
-.bb-tag.mock{color:var(--bg);background:var(--muted)}
 .bb-chips{display:flex;flex-wrap:wrap;gap:4px;padding:4px 8px 6px}
 .bb-chip{font-size:10.5px;padding:1px 6px;border:1px solid var(--faint);color:var(--muted);display:inline-flex;gap:5px;align-items:center;white-space:nowrap}
 .bb-chip:hover{color:var(--on);border-color:var(--muted)}
@@ -2321,8 +2320,6 @@ function buildGridSkeleton(grid) {
 // ========================================================================
 const BB_KEY = 'builder.v1';
 const BB_REFRESH_MS = 30000;
-const MOCK = (() => { try { return new URLSearchParams(location.search).has('mock'); } catch (e) { return false; } })();
-const MOCK_NOCHAT = (() => { try { return new URLSearchParams(location.search).get('mock') === 'nochat'; } catch (e) { return false; } })();
 
 const legKey = (l) => l.market_ticker + '|' + l.side;
 function splitKey(key) { const i = String(key).lastIndexOf('|'); return [key.slice(0, i), key.slice(i + 1)]; }
@@ -3146,7 +3143,6 @@ function renderBuilder(opts) {
   }
   el.innerHTML = `<div class="panel-head" style="padding-left:4px;gap:0">
       ${tabs.map(tb => `<button type="button" class="tab ${b.tab === tb.id ? 'on' : ''}" data-bb="tab" data-tab="${tb.id}"${tb.tip ? ` title="${tb.tip}"` : ''}>${tb.label}${tb.cnt ? `<span class="cnt mono">${tb.cnt}</span>` : ''}</button>`).join('')}
-      ${MOCK ? `<span class="bb-tag mock" style="align-self:center;margin-left:4px" title="?mock=1: /api/engine/* is answered by the in-page mock">MOCK</span>` : ''}
       <span style="flex-grow:1"></span>
       <span class="seg" style="align-self:center;margin-right:6px" title="Odds: American odds from the price you'd pay, or the Kalshi price in cents">
         <button type="button" class="${b.oddsMode === 'american' ? 'on' : ''}" data-bb="odds" data-mode="american">US</button><button type="button" class="${b.oddsMode === 'kalshi' ? 'on' : ''}" data-bb="odds" data-mode="kalshi">¢</button>
@@ -3591,6 +3587,7 @@ function proposalHtml(p) {
   </div>`;
 }
 
+
 // ---------- events ----------
 function handleBuilderClick(el) {
   const b = state.builder, act = el.dataset.bb, key = el.dataset.key;
@@ -3732,282 +3729,6 @@ function handleBuilderInput(el, kind) {
   if (k === 'cf-type') { bbrt.cf.type = el.value; bbrt.cfErr = null; renderBuilder(); return; }
   if (k === 'cf-series') { bbrt.cf.series = el.value; return; }
   if (k === 'eng-min') { b.eng.minEdge = Number(el.value); saveBuilder(); renderBuilder(); return; }
-}
-
-// ========================================================================
-// ?mock=1 : in-page stand-in for /api/engine/* until the backend lands.
-// A tiny margin/total Monte Carlo per game, centred on the Kalshi moneyline
-// and total, so edges / scenarios / ladders behave plausibly. Everything
-// else (/api/combo/*, /api/week, ...) still goes to the real server.
-// ========================================================================
-function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function strHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-function erfA(x) { const s = Math.sign(x); x = Math.abs(x); const t = 1 / (1 + 0.3275911 * x); return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x)); }
-const normCdf = (z) => 0.5 * (1 + erfA(z / Math.SQRT2));
-function normInv(p) { let lo = -8, hi = 8; for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (normCdf(m) < p) lo = m; else hi = m; } return (lo + hi) / 2; }
-const clampN = (x, a, b) => Math.max(a, Math.min(b, x));
-const mockNoise = (t) => ((strHash(t) % 1000) / 1000 - 0.5) * 0.09;
-const GAME_SERIES = new Set(['KXNFLGAME', 'KXNFLSPREAD', 'KXNFLTOTAL', 'KXNFLTEAMTOTAL']);
-const famOf = (ser) => ({ KXNFLGAME: 'ML', KXNFLSPREAD: 'SPREAD', KXNFLTOTAL: 'TOTAL', KXNFLTEAMTOTAL: 'TEAMTOTAL' })[ser] || ser;
-const mockCache = {};
-
-function mockGame(x) {
-  const s = sfx(x);
-  if (mockCache[s]) return mockCache[s];
-  const gi = gameInfo('KXNFLGAME-' + s) || {};
-  const away = gi.away || 'AWY', home = gi.home || 'HME';
-  const idx = gidx();
-  const mk = Object.values(idx).filter(m => sfx(m.event_ticker || m.ticker) === s && !m.synthetic);
-  const mlH = mk.find(m => m.series === 'KXNFLGAME' && m.team_code === home);
-  const pH = clampN(midOf(mlH) ?? (0.5 + ((strHash(s) % 20) - 10) / 100), 0.03, 0.97);
-  const mu = 13.5 * normInv(pH);
-  const tots = mk.filter(m => m.series === 'KXNFLTOTAL' && m.threshold != null && midOf(m) != null);
-  const T = tots.length ? tots.reduce((a, b) => Math.abs(midOf(b) - 0.5) < Math.abs(midOf(a) - 0.5) ? b : a).threshold : 44.5;
-  const rnd = mulberry32(strHash(s)), N = 6000, M = new Float32Array(N), Tt = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    const u1 = Math.max(rnd(), 1e-9), u2 = rnd(), r = Math.sqrt(-2 * Math.log(u1));
-    M[i] = Math.round(mu + 13.5 * r * Math.cos(2 * Math.PI * u2));
-    Tt[i] = Math.max(Math.abs(M[i]) + 3, Math.round(T + 10 * r * Math.sin(2 * Math.PI * u2)));
-  }
-  const g = { s, ev: 'KXNFLGAME-' + s, away, home, mu, T, M, Tt, N, mk };
-  // Slate-only games know one strike per series; synthesize a Kalshi-style
-  // ladder (same ticker pattern) so the ladder builder has chips to pick.
-  const have = (ser, tc) => mk.filter(m => m.series === ser && (!tc || m.team_code === tc)).length;
-  const synth = [];
-  const mkSyn = (ticker, ser, tc, thr, title) => {
-    if (idx[ticker] || synth.some(m => m.ticker === ticker)) return;
-    const fair = mockFairRaw(g, { series: ser, team_code: tc, threshold: thr }, null);
-    const mid = clampN(fair + mockNoise(ticker) * 0.6, 0.03, 0.97);
-    synth.push({ ticker, event_ticker: ser + '-' + s, series: ser, team_code: tc, threshold: thr, title, synthetic: true,
-      yes_bid: +Math.max(0.01, mid - 0.01).toFixed(2), yes_ask: +Math.min(0.99, mid + 0.01).toFixed(2) });
-  };
-  [away, home].forEach(tc => {
-    if (!have('KXNFLGAME', tc)) mkSyn(`KXNFLGAME-${s}-${tc}`, 'KXNFLGAME', tc, null, `${tc} wins`);
-    if (have('KXNFLSPREAD', tc) < 4) [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 9.5, 10.5, 13.5].forEach(t => mkSyn(`KXNFLSPREAD-${s}-${tc}${Math.ceil(t)}`, 'KXNFLSPREAD', tc, t, `${tc} wins by over ${t} points?`));
-    if (have('KXNFLTEAMTOTAL', tc) < 4) { const base = Math.round(T / 2); [-7, -4, -1, 2, 5, 8].forEach(d => { const t = base + d + 0.5; mkSyn(`KXNFLTEAMTOTAL-${s}-${tc}${Math.ceil(t)}`, 'KXNFLTEAMTOTAL', tc, t, `${tc} over ${t} points?`); }); }
-  });
-  if (have('KXNFLTOTAL') < 4) [-9, -6, -3, 0, 3, 6, 9].forEach(d => { const t = Math.round(T) + d + 0.5; mkSyn(`KXNFLTOTAL-${s}-${Math.ceil(t)}`, 'KXNFLTOTAL', null, t, `Over ${t} points scored?`); });
-  g.mk = mk.concat(synth);
-  return (mockCache[s] = g);
-}
-const teamSign = (g, tc) => tc === g.home ? 1 : -1;
-function mockHit(g, m, i) {
-  const sg = teamSign(g, m.team_code);
-  switch (m.series) {
-    case 'KXNFLGAME': return g.M[i] * sg > 0;
-    case 'KXNFLSPREAD': return g.M[i] * sg > m.threshold;
-    case 'KXNFLTOTAL': return g.Tt[i] > m.threshold;
-    case 'KXNFLTEAMTOTAL': return (g.Tt[i] + g.M[i] * sg) / 2 > m.threshold;
-  }
-  return null;
-}
-function mockMask(g, cons) {
-  if (!cons || !cons.length) return null;
-  const mask = new Uint8Array(g.N);
-  for (let i = 0; i < g.N; i++) {
-    mask[i] = cons.every(c => {
-      if (c.player) return true;
-      const sg = c.team ? teamSign(g, c.team) : 1, mg = g.M[i] * sg, pts = (g.Tt[i] + g.M[i] * sg) / 2;
-      if ('margin_gte' in c) return mg >= c.margin_gte;
-      if ('margin_lte' in c) return mg <= c.margin_lte;
-      if ('total_gte' in c) return g.Tt[i] >= c.total_gte;
-      if ('total_lte' in c) return g.Tt[i] <= c.total_lte;
-      if ('points_gte' in c) return pts >= c.points_gte;
-      if ('points_lte' in c) return pts <= c.points_lte;
-      return true;
-    }) ? 1 : 0;
-  }
-  return mask;
-}
-function mockFairRaw(g, m, mask, cons) {
-  if (GAME_SERIES.has(m.series)) {
-    let n = 0, h = 0;
-    for (let i = 0; i < g.N; i++) { if (mask && !mask[i]) continue; n++; if (mockHit(g, m, i)) h++; }
-    return n ? clampN(h / n, 0.005, 0.995) : 0.5;
-  }
-  let base = clampN((midOf(m) ?? 0.5) + mockNoise(m.ticker || ''), 0.02, 0.98);
-  if (mask && m.team_code) {
-    const sg = teamSign(g, m.team_code);
-    let a = 0, c = 0, nc = 0;
-    for (let i = 0; i < g.N; i++) { const p = (g.Tt[i] + g.M[i] * sg) / 2; a += p; if (mask[i]) { c += p; nc++; } }
-    if (nc) base = clampN(base * (1 + 0.9 * ((c / nc) / (a / g.N) - 1)), 0.01, 0.99);
-  }
-  (cons || []).forEach(c => {
-    if (!c.player || !m.player_name || m.series !== c.series || m.threshold == null) return;
-    if (normName(m.player_name).split(' ').pop() !== normName(c.player).split(' ').pop()) return;
-    if ('gte' in c) base = m.threshold < c.gte ? 0.99 : clampN(base * 0.5, 0.01, 0.99);
-    else base = m.threshold >= c.lte ? 0.01 : clampN(base * 1.3, 0.01, 0.99);
-  });
-  return base;
-}
-function mockLookup(t) { return gidx()[t] || mockGame(t).mk.find(m => m.ticker === t) || { ticker: t, series: seriesOfT(t), title: t }; }
-function mockLegPrice(l, scen) {
-  const g = mockGame(l.market_ticker), m = mockLookup(l.market_ticker);
-  const cons = scen && sfx(scen.event) === g.s ? scen.constraints : null;
-  const fy = mockFairRaw(g, m, cons ? mockMask(g, cons) : null, cons);
-  const fair = l.side === 'yes' ? fy : 1 - fy;
-  const cost = l.side === 'yes' ? (m.yes_ask || null) : (m.yes_bid != null ? +(1 - m.yes_bid).toFixed(4) : null);
-  return { market_ticker: m.ticker, side: l.side, title: m.title, event_ticker: m.event_ticker || evOfT(m.ticker), yes_bid: m.yes_bid ?? null, yes_ask: m.yes_ask ?? null,
-    fair: +fair.toFixed(4), cost, edge: cost != null ? +(fair - cost).toFixed(4) : null, american_cost: americanOdds(cost), american_fair: americanOdds(fair), _m: m, _g: g, _cons: cons };
-}
-function mockPrice(body) {
-  const legs = (body.legs || []).map(l => mockLegPrice(l, body.scenario));
-  const indep = legs.reduce((a, l) => a * l.fair, 1);
-  const same = legs.length > 0 && legs.every(l => l._g.s === legs[0]._g.s);
-  let joint = indep;
-  if (same && legs.length > 1) {
-    const g = legs[0]._g, mask = legs[0]._cons ? mockMask(g, legs[0]._cons) : null;
-    const gl = legs.filter(l => GAME_SERIES.has(l._m.series)), pl = legs.filter(l => !GAME_SERIES.has(l._m.series));
-    let n = 0, h = 0;
-    for (let i = 0; i < g.N; i++) { if (mask && !mask[i]) continue; n++; if (gl.every(l => mockHit(g, l._m, i) === (l.side === 'yes'))) h++; }
-    joint = clampN((gl.length ? (n ? h / n : 0) : 1) * pl.reduce((a, l) => a * l.fair, 1) * (pl.length > 1 ? 1.12 : 1), 0, 1);
-  }
-  const pc = legs.every(l => l.cost) ? legs.reduce((a, l) => a * l.cost, 1) : null;
-  return { legs: legs.map(({ _m, _g, _cons, ...x }) => x), joint_fair: +joint.toFixed(4), indep_fair: +indep.toFixed(4),
-    parlay_cost: pc != null ? +pc.toFixed(4) : null, joint_american: americanOdds(joint), parlay_american_cost: americanOdds(pc),
-    ev_per_dollar: pc ? +(joint / pc - 1).toFixed(4) : null, scenario_applied: legs.some(l => l._cons), same_event: same };
-}
-function mockEdges(ev, minEdge, kind) {
-  const games = ev ? [mockGame(ev)] : knownGames().map(k => mockGame(k.ev));
-  const edges = [], arbs = [];
-  games.forEach(g => {
-    g.mk.forEach(m => {
-      const isGame = GAME_SERIES.has(m.series);
-      if ((kind === 'game' && !isGame) || (kind === 'prop' && isGame) || (!isGame && !m.player_name)) return;
-      if (m.yes_ask == null || m.yes_bid == null || !m.yes_ask) return;
-      const fy = mockFairRaw(g, m, null);
-      [['yes', fy, m.yes_ask], ['no', 1 - fy, +(1 - m.yes_bid).toFixed(4)]].forEach(([side, fair, cost]) => {
-        if (!(cost > 0 && cost < 1)) return;
-        const edge = fair - cost;
-        if (edge < minEdge) return;
-        edges.push({ ticker: m.ticker, side, event_ticker: m.event_ticker || evOfT(m.ticker), matchup: g.away + ' @ ' + g.home, title: m.title,
-          kind: isGame ? (m.series === 'KXNFLTEAMTOTAL' ? 'team' : 'game') : 'player', family: famOf(m.series), team_code: m.team_code ?? null,
-          player_name: m.player_name ?? null, threshold: m.threshold ?? null, fair: +fair.toFixed(4), cost, edge: +edge.toFixed(4),
-          ev_per_dollar: +(fair / cost - 1).toFixed(4), american_cost: americanOdds(cost), american_fair: americanOdds(fair),
-          confidence: Math.abs(edge) > 0.07 ? 'low' : (m.volume || 0) > 50000 ? 'high' : 'med',
-          reasons: isGame ? [`mock margin model: ${g.mu >= 0 ? g.home : g.away} by ${Math.abs(g.mu).toFixed(1)}`, `total ${g.T}`] : ['market mid + mock projection tilt'] });
-      });
-    });
-    const ml = g.mk.find(m => m.series === 'KXNFLGAME' && m.team_code === g.home);
-    const sp = g.mk.filter(m => m.series === 'KXNFLSPREAD' && m.team_code === g.home && m.yes_bid != null).sort((a, b) => a.threshold - b.threshold)[0];
-    if (ml && sp && ml.yes_ask != null) {
-      const floor = +(sp.yes_bid - ml.yes_ask).toFixed(3);
-      if (floor > -0.06) arbs.push({ event_ticker: g.ev, description: `MOCK ladder check: ${g.home} -${sp.threshold} bid ${cents(sp.yes_bid)} vs ${g.home} ML ask ${cents(ml.yes_ask)}. Buy the ML, buy NO on the spread; one side always pays.`,
-        legs: [{ ticker: ml.ticker, side: 'yes', cost: ml.yes_ask }, { ticker: sp.ticker, side: 'no', cost: +(1 - sp.yes_bid).toFixed(2) }], profit_floor: floor });
-    }
-  });
-  edges.sort((a, b) => b.edge - a.edge);
-  return { as_of: new Date().toISOString(), edges: edges.slice(0, minEdge <= -0.5 ? 500 : 80), arbs: arbs.slice(0, 3) };
-}
-function mockScenario(body) {
-  const g = mockGame(body.event), cons = body.constraints || [], mask = mockMask(g, cons);
-  let n = 0;
-  if (mask) for (let i = 0; i < g.N; i++) n += mask[i];
-  const markets = g.mk.filter(m => m.yes_ask).map(m => {
-    const fb = mockFairRaw(g, m, null), fc = mockFairRaw(g, m, mask, cons);
-    return { ticker: m.ticker, side: 'yes', title: m.title, family: famOf(m.series), team_code: m.team_code ?? null, player_name: m.player_name ?? null,
-      threshold: m.threshold ?? null, fair_base: +fb.toFixed(4), fair_cond: +fc.toFixed(4), cost: m.yes_ask, edge_cond: +(fc - m.yes_ask).toFixed(4), american_fair_cond: americanOdds(fc) };
-  });
-  return { event: g.ev, constraints: cons, p_scenario: mask ? +(n / g.N).toFixed(4) : 1, markets };
-}
-function mockLadder(body) {
-  const g = mockGame(body.event), tc = body.team, fam = body.family, cons = body.scenario && body.scenario.constraints, mask = mockMask(g, cons);
-  const strikes = [...(body.strikes || [])].sort((a, b) => a - b), sg = teamSign(g, tc);
-  const findM = (k) => fam === 'TEAMTOTAL' ? g.mk.find(m => m.series === 'KXNFLTEAMTOTAL' && m.team_code === tc && m.threshold === k)
-    : k === 0 ? g.mk.find(m => m.series === 'KXNFLGAME' && m.team_code === tc) : g.mk.find(m => m.series === 'KXNFLSPREAD' && m.team_code === tc && m.threshold === k);
-  const legs = strikes.map((k, i) => {
-    const m = findM(k) || mockLookup((fam === 'TEAMTOTAL' ? 'KXNFLTEAMTOTAL-' : 'KXNFLSPREAD-') + g.s + '-' + tc + Math.ceil(k));
-    if (!m || !m.yes_ask) throw new Error(`no priced ${fam} market for ${tc} at ${k}`);
-    const f = mockFairRaw(g, m, mask, cons), stake = (body.stakes && body.stakes[i]) || 10;
-    return { market_ticker: m.ticker, side: 'yes', title: m.title, strike: k, fair: +f.toFixed(4), cost: m.yes_ask, stake, american_cost: americanOdds(m.yes_ask), american_fair: americanOdds(f) };
-  });
-  const val = (i) => fam === 'TEAMTOTAL' ? (g.Tt[i] + g.M[i] * sg) / 2 : g.M[i] * sg;
-  const bounds = [...new Set(strikes.map(k => Math.floor(k) + 1))].sort((a, b) => a - b);
-  const lab = (lo, hi) => fam === 'TEAMTOTAL'
-    ? (lo === null ? `${tc} ≤ ${hi} pts` : hi === null ? `${tc} ${lo}+ pts` : `${tc} ${lo}–${hi} pts`)
-    : (lo === null ? (hi <= 0 ? `${tc} loses / ties` : `${tc} by ≤ ${hi} or loses`) : hi === null ? `${tc} by ${lo}+` : lo === hi ? `${tc} by ${lo}` : `${tc} by ${lo}–${hi}`);
-  const buckets = [{ lo: null, hi: bounds[0] - 1 }];
-  bounds.forEach((bd, j) => buckets.push({ lo: bd, hi: j + 1 < bounds.length ? bounds[j + 1] - 1 : null }));
-  let n = 0;
-  const cnt = buckets.map(() => 0);
-  for (let i = 0; i < g.N; i++) {
-    if (mask && !mask[i]) continue;
-    n++;
-    const v = val(i), bi = buckets.findIndex(b => (b.lo === null || v >= b.lo) && (b.hi === null || v <= b.hi));
-    if (bi >= 0) cnt[bi]++;
-  }
-  const table = buckets.map((b, bi) => {
-    const rep = b.lo === null ? b.hi : b.lo;
-    const hit = legs.filter(l => rep > l.strike).length;
-    const pnl = legs.reduce((a, l) => a + (rep > l.strike ? l.stake * (1 - l.cost) / l.cost : -l.stake), 0);
-    return { label: lab(b.lo, b.hi), margin_lo: b.lo, margin_hi: b.hi, prob: n ? +(cnt[bi] / n).toFixed(4) : 0, legs_hit: hit, pnl: +pnl.toFixed(2) };
-  });
-  return { event: g.ev, team: tc, legs, outcome_table: table, p_all: table[table.length - 1].prob, p_none: table[0].prob,
-    ev: +table.reduce((a, r) => a + r.prob * r.pnl, 0).toFixed(2), max_loss: Math.min(...table.map(r => r.pnl)), max_win: Math.max(...table.map(r => r.pnl)) };
-}
-function mockChat(body) {
-  const slip = body.slip || {}, msg = String(body.message || '');
-  const toKey = (x) => typeof x === 'string' ? x : x.market_ticker + '|' + x.side;
-  const excl = new Set((slip.excludes || []).map(toKey));
-  const locks = (slip.locks || []).map(x => typeof x === 'string' ? { market_ticker: splitKey(x)[0], side: splitKey(x)[1] } : x);
-  const anchor = (slip.legs || [])[0] || locks[0] || (slip.bookmarks || [])[0];
-  const ev = anchor ? gameEv(anchor.market_ticker) : (ctxEvent() || (knownGames()[0] || {}).ev);
-  const cid = body.conversation_id || 'mock-' + Date.now().toString(36);
-  if (!ev) return { conversation_id: cid, reply: 'No games are loaded yet. Open the slate so I have markets to look at.', proposals: [], trace: [] };
-  const g = mockGame(ev), scen = (slip.scenarios || []).find(s => sfx(s.event) === g.s);
-  const E = mockEdges(g.ev, 0, 'all').edges.filter(e => !excl.has(e.ticker + '|' + e.side) && !locks.some(l => l.market_ticker === e.ticker));
-  const pick = [], seen = new Set();
-  for (const e of E) { if (seen.has(e.ticker)) continue; seen.add(e.ticker); pick.push(e); if (pick.length >= 3) break; }
-  const toLeg = (l) => { const p = mockLegPrice(l, scen); return { market_ticker: p.market_ticker, side: l.side, title: p.title, fair: p.fair, cost: p.cost, american_cost: p.american_cost, american_fair: p.american_fair }; };
-  const mkProp = (id, title, kind, legs, why) => { const pr = mockPrice({ legs, scenario: scen }); return { id, title, kind, rationale: why, legs: legs.map(toLeg), joint_fair: pr.joint_fair, parlay_american_cost: pr.parlay_american_cost, scenario: scen || null }; };
-  const proposals = [];
-  const core = locks.slice(0, 3).concat(pick.slice(0, Math.max(1, 3 - locks.length)).map(e => ({ market_ticker: e.ticker, side: e.side })));
-  const nNew = core.length - Math.min(3, locks.length);
-  if (core.length) proposals.push(mkProp('p1', locks.length ? `Locked core + ${nNew} edge leg${nNew === 1 ? '' : 's'}` : `Top edges · ${g.away}@${g.home}`, core.length > 1 ? 'parlay' : 'single', core,
-    `Keeps your ${locks.length} locked leg${locks.length === 1 ? '' : 's'} and adds the highest-edge legs${scen ? ' under your scenario' : ''}. *Mock rationale.*`));
-  if (pick[0]) proposals.push(mkProp('p2', `Single: ${pick[0].title}`, 'single', [{ market_ticker: pick[0].ticker, side: pick[0].side }], `Largest single edge (${(pick[0].edge * 100).toFixed(1)}%). *Mock rationale.*`));
-  const rej = msg.split('\n').filter(l => l.startsWith('Rejected:'));
-  const reply = [
-    rej.length ? `Noted: **${rej.map(r => r.replace('Rejected: ', '')).join(', ')}** is off the table and those legs stay excluded.\n` : '',
-    `**${g.away} @ ${g.home}**: model has ${g.mu >= 0 ? g.home : g.away} by ${Math.abs(g.mu).toFixed(1)}, total ${g.T}.${scen ? ` Conditioning on **${scen.constraints.map(consLabel).join(' · ')}**.` : ''}`,
-    '',
-    pick.length ? 'Best edges right now:' : 'Nothing clears 0% edge after your excludes.',
-    ...pick.map(e => `- ${e.title} **${e.side.toUpperCase()}**: fair ${fmtAmerican(e.american_fair)} vs ${fmtAmerican(e.american_cost)} (\`+${(e.edge * 100).toFixed(1)}%\`)`),
-    '',
-    locks.length ? `Kept your ${locks.length} locked leg${locks.length === 1 ? '' : 's'} in the first proposal.` : 'Lock any leg you want me to keep; reject a proposal to exclude its legs.',
-    '*(mock engine reply)*',
-  ].join('\n');
-  return { conversation_id: cid, reply, proposals, trace: [
-    { tool: 'list_edges', summary: `${E.length} edges ≥ 0% in ${g.away}@${g.home}` },
-    ...(scen ? [{ tool: 'simulate_scenario', summary: scen.constraints.map(consLabel).join(' · ') }] : []),
-    { tool: 'price_parlay', summary: 'joint vs independent' },
-    { tool: 'propose_bets', summary: `${proposals.length} proposals` },
-  ] };
-}
-function mockEngine(url, opts) {
-  const u = new URL(url, location.origin);
-  let body = {};
-  try { body = opts && opts.body ? JSON.parse(opts.body) : {}; } catch (e) {}
-  const route = u.pathname.replace('/api/engine/', '');
-  let status = 200, data;
-  try {
-    if (route === 'status') data = { chat_enabled: !MOCK_NOCHAT, model: 'mock-engine' };
-    else if (route === 'edges') data = mockEdges(u.searchParams.get('event') || '', Number(u.searchParams.get('min_edge') ?? 0.03), u.searchParams.get('kind') || 'all');
-    else if (route === 'price') data = mockPrice(body);
-    else if (route === 'scenario') data = mockScenario(body);
-    else if (route === 'ladder') data = mockLadder(body);
-    else if (route === 'chat') { if (MOCK_NOCHAT) { status = 503; data = { error: 'ANTHROPIC_API_KEY not set', chat_enabled: false }; } else data = mockChat(body); }
-    else { status = 404; data = { error: 'unknown engine route ' + route }; }
-  } catch (e) { status = 500; data = { error: 'mock: ' + e.message }; console.error(e); }
-  return new Promise(res => setTimeout(() => res(new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })), route === 'chat' ? 900 : 200));
-}
-if (MOCK) {
-  const realFetch = window.fetch.bind(window);
-  window.fetch = (url, opts) => {
-    const u = typeof url === 'string' ? url : (url && url.url) || '';
-    if (u.indexOf('/api/engine/') === 0) return mockEngine(u, opts);
-    return realFetch(url, opts);
-  };
 }
 
 // ---------- events ----------
