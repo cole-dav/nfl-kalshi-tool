@@ -116,6 +116,34 @@ Caveats:
 - Prop edges are model opinions: shrunk toward the market, but uncalibrated.
 - Games already in progress are skipped (the model is pregame only).
 
+## Video (YouTube embeds)
+
+`video_index.py` indexes YouTube playlists and matches each video to an
+nflverse game or player-game; nothing is downloaded or re-hosted, the UI only
+embeds YouTube's own player (or links out).
+
+- **Team-logo hover** (every logo on the site): the team's season, newest game
+  first, with the official NFL game highlights for each played game.
+- **Game Log / vs-opponent tables**: a VIDEO column per game -- the player's
+  own cut-up first (`EVERY PLAY` / `EVERY RUN` / `EVERY TARGET` / `BEST PLAYS`),
+  then `GAME` highlights.
+
+Sources: the NFL channel's weekly "Game Recaps/Highlights (Week N)" and
+"Player Highlights (Week N)" playlists, and Curtain Call Replays' "NFL | <season>
+| Week N" playlists of per-player every-play cut-ups (a fan channel: ~15-30
+players a week, 1-4 days after games, and uploads can be taken down).
+
+The NFL blocks its own uploads from playing in players on other sites, so NFL
+videos show a thumbnail that opens YouTube; Curtain Call videos play in place
+(`SOURCE_EMBEDS` in `video_index.py`).
+
+Set `YOUTUBE_API_KEY` in `.env` for complete playlist listings through the
+YouTube Data API (well inside the free quota). Without it the public channel
+pages are read, which only list a channel's newest ~30 playlists -- everything
+seen is kept in `cache/videos_<season>.json`, so a server left running keeps
+every week, but a fresh cache late in the season can miss early weeks. Only the
+current season is indexed.
+
 ## Known data limitations
 
 - **No man/zone coverage rate.** nflverse's free FTN charting release does

@@ -48,6 +48,7 @@ import week_overview as wo
 import player_volume as pvol
 import engine_agent as engine
 import scenario_sim as sim
+import video_index as vi
 
 SESSION_COOKIE = "sid"
 
@@ -59,7 +60,7 @@ def _cache_warmer():
     """Keep nflverse data, rankings and Madden ratings loaded in memory and
     refetch them here when they go stale, so page requests never wait on it."""
     while True:
-        for warm in (nd.warm, prk.warm, mr.warm, tt.warm):
+        for warm in (nd.warm, prk.warm, mr.warm, tt.warm, vi.warm):
             try:
                 warm()
             except Exception:
@@ -162,10 +163,23 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "missing 'id' query param"}, status=400)
                 return
             try:
-                self._send_json({"season": season, "games": nd.player_game_log(gsis_id, season)})
+                games = vi.attach_to_game_log(gsis_id, nd.player_game_log(gsis_id, season))
+                self._send_json({"season": season, "games": games})
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"game log lookup failed: {e}"}, status=502)
+            return
+
+        if parsed.path == "/api/videos/team":
+            team = (parse_qs(parsed.query).get("team") or [""])[0].strip().upper()
+            if not team:
+                self._send_json({"error": "missing 'team' query param"}, status=400)
+                return
+            try:
+                self._send_json(vi.team_season_videos(nd.kalshi_to_nflverse_team(team)))
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"video lookup failed: {e}"}, status=502)
             return
 
         if parsed.path == "/api/players":
