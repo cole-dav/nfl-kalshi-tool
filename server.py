@@ -4,8 +4,16 @@ Local web server for the NFL player research tool.
 Run:
   python3 server.py [port]
 
-Reads KALSHI_API_KEY_ID / KALSHI_PRIVATE_KEY_PATH from a .env file in the
-project root (see .env.example), or from the environment if already set.
+Odds/matchups/injuries browsing needs no Kalshi credentials at all -- market
+data reads go through Kalshi's public endpoints. Viewing your own positions
+or using the combo/parlay builder requires logging in (POST /api/login with
+your own api_key_id + private_key_pem); each session's key lives in server
+memory only, keyed by an HttpOnly cookie, and is never written to disk. See
+sessions.py.
+
+.env (see .env.example) is optional -- only relevant if you want a default
+KALSHI_API_KEY_ID / KALSHI_PRIVATE_KEY_PATH for local CLI debugging via
+kalshi_book.py directly; the HTTP server itself never falls back to it.
 
 Serves static/index.html at / and JSON at /api/player?name=<player name>.
 """
@@ -19,6 +27,7 @@ import sys
 import threading
 import time
 import traceback
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -33,11 +42,14 @@ import player_research as pr
 import positions_overview as po
 import injury_news as inj
 import nflverse_data as nd
+import sessions
 import team_tendencies as tt
 import week_overview as wo
 import player_volume as pvol
 import engine_agent as engine
 import scenario_sim as sim
+
+SESSION_COOKIE = "sid"
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 WARM_INTERVAL_SECONDS = 10 * 60
@@ -76,11 +88,28 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 
-    def _send_json(self, payload: dict, status: int = 200):
+    def _session_token(self) -> str | None:
+        raw = self.headers.get("Cookie")
+        if not raw:
+            return None
+        cookie = SimpleCookie()
+        cookie.load(raw)
+        morsel = cookie.get(SESSION_COOKIE)
+        return morsel.value if morsel else None
+
+    def _session_client(self):
+        """The visiting session's own Kalshi client, or None if not logged
+        in. Never falls back to a server-side/.env default -- account-scoped
+        actions must either use this or refuse."""
+        return sessions.get_session(self._session_token())
+
+    def _send_json(self, payload: dict, status: int = 200, set_cookie: str | None = None):
         body = json.dumps(_sanitize(payload), default=str).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        if set_cookie is not None:
+            self.send_header("Set-Cookie", set_cookie)
         self.end_headers()
         self.wfile.write(body)
 
@@ -112,7 +141,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "missing 'name' query param"}, status=400)
                 return
             try:
-                data = pr.resolve_and_build(name)
+                data = pr.resolve_and_build(name, client=self._session_client())
                 self._send_json(data)
             except pr.PlayerNotFound as e:
                 self._send_json({"error": str(e)}, status=404)
@@ -193,16 +222,22 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/combo/quotes":
+            client = self._require_session_client()
+            if client is None:
+                return
             rfq_id = (parse_qs(parsed.query).get("rfq_id") or [""])[0].strip()
             if not rfq_id:
                 self._send_json({"error": "missing 'rfq_id' query param"}, status=400)
                 return
-            self._combo_call(lambda: combo.get_quotes(rfq_id))
+            self._combo_call(lambda: combo.get_quotes(rfq_id, client))
             return
 
         if parsed.path == "/api/positions":
+            client = self._require_session_client()
+            if client is None:
+                return
             try:
-                self._send_json(po.build_positions_overview())
+                self._send_json(po.build_positions_overview(client))
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"internal error: {e}"}, status=500)
@@ -224,6 +259,10 @@ class Handler(BaseHTTPRequestHandler):
             self._engine_call(lambda: engine.edges(event, min_edge, kind))
             return
 
+        if parsed.path == "/api/session":
+            self._send_json({"connected": self._session_client() is not None})
+            return
+
         self.send_response(404)
         self.end_headers()
 
@@ -231,6 +270,15 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length) if length else b"{}"
         return json.loads(raw or b"{}")
+
+    def _require_session_client(self):
+        """Returns the visiting session's Kalshi client, or sends a 401 and
+        returns None. Used to gate every account-scoped action (positions,
+        combo quote/accept) -- there is no server-side fallback account."""
+        client = self._session_client()
+        if client is None:
+            self._send_json({"error": "connect your Kalshi key to use this"}, status=401)
+        return client
 
     def _combo_call(self, fn):
         """Run a combo action, surfacing Kalshi's own error text (e.g.
@@ -271,6 +319,34 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+
+        if parsed.path == "/api/login":
+            try:
+                body = self._read_json()
+            except (ValueError, json.JSONDecodeError):
+                self._send_json({"error": "body must be JSON"}, status=400)
+                return
+            api_key_id = str(body.get("api_key_id") or "").strip()
+            private_key_pem = str(body.get("private_key_pem") or "").strip()
+            if not api_key_id or not private_key_pem:
+                self._send_json({"error": "api_key_id and private_key_pem are required"}, status=400)
+                return
+            try:
+                token = sessions.create_session(api_key_id, private_key_pem)
+            except Exception as e:
+                resp = getattr(e, "response", None)
+                msg = f"Kalshi {resp.status_code}: {resp.text[:300]}" if resp is not None else str(e)[:300]
+                self._send_json({"error": f"couldn't authenticate that key: {msg}"}, status=401)
+                return
+            cookie = f"{SESSION_COOKIE}={token}; HttpOnly; SameSite=Lax; Path=/; Max-Age={sessions.TTL_SECONDS}"
+            self._send_json({"ok": True}, set_cookie=cookie)
+            return
+
+        if parsed.path == "/api/logout":
+            sessions.destroy_session(self._session_token())
+            self._send_json({"ok": True}, set_cookie=f"{SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0")
+            return
+
         try:
             body = self._read_json()
         except (ValueError, json.JSONDecodeError):
@@ -282,14 +358,23 @@ class Handler(BaseHTTPRequestHandler):
             self._combo_call(lambda: combo.validate(legs))
             return
         if parsed.path == "/api/combo/quote":
-            self._combo_call(lambda: combo.request_quote(legs, float(body.get("stake_dollars") or 0)))
+            client = self._require_session_client()
+            if client is None:
+                return
+            self._combo_call(lambda: combo.request_quote(legs, float(body.get("stake_dollars") or 0), client))
             return
         if parsed.path == "/api/combo/cancel":
-            self._combo_call(lambda: combo.cancel_rfq(str(body.get("rfq_id") or "")))
+            client = self._require_session_client()
+            if client is None:
+                return
+            self._combo_call(lambda: combo.cancel_rfq(str(body.get("rfq_id") or ""), client))
             return
         if parsed.path == "/api/combo/accept":
+            client = self._require_session_client()
+            if client is None:
+                return
             self._combo_call(lambda: combo.accept_quote(
-                str(body.get("rfq_id") or ""), str(body.get("quote_id") or ""), str(body.get("side") or "")))
+                str(body.get("rfq_id") or ""), str(body.get("quote_id") or ""), str(body.get("side") or ""), client))
             return
 
         if parsed.path == "/api/engine/price":
@@ -314,9 +399,6 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
-    if not os.environ.get("KALSHI_API_KEY_ID") or not os.environ.get("KALSHI_PRIVATE_KEY_PATH"):
-        print("WARNING: KALSHI_API_KEY_ID / KALSHI_PRIVATE_KEY_PATH not set -- Kalshi calls will fail.",
-              file=sys.stderr)
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     threading.Thread(target=_cache_warmer, daemon=True, name="cache-warmer").start()
     print(f"Serving on http://127.0.0.1:{port}")

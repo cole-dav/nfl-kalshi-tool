@@ -50,11 +50,12 @@ def _attach_positions(markets: list[dict], my_positions: dict[str, dict]) -> Non
         m["my_position"] = pos
 
 
-def build_my_positions() -> dict[str, dict]:
+def build_my_positions(client: KalshiClient | None) -> dict[str, dict]:
+    if client is None:
+        return {}
     try:
-        client = KalshiClient()
         raw_positions = client.get_positions()
-    except Exception as e:
+    except Exception:
         return {}
     out = {}
     for raw in raw_positions:
@@ -69,7 +70,10 @@ def build_my_positions() -> dict[str, dict]:
     return out
 
 
-def resolve_and_build(name: str) -> dict:
+def resolve_and_build(name: str, client: KalshiClient | None = None) -> dict:
+    """`client` is the visiting session's own Kalshi client, if logged in --
+    used only to attach that visitor's own held positions. Anonymous browsing
+    (client=None) never sees any position data, including the operator's."""
     roster_row = nd.find_player_in_roster(name=name)
     if roster_row is None:
         raise PlayerNotFound(f"No active NFL player matching '{name}' found in current roster.")
@@ -80,7 +84,7 @@ def resolve_and_build(name: str) -> dict:
     sportradar_id = roster_row.get("sportradar_id")
     position = roster_row["position"]
 
-    my_positions = build_my_positions()
+    my_positions = build_my_positions(client)
 
     idx = MarketIndex()
     game = idx.find_game_for_team(team_kalshi)

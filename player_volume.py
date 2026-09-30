@@ -28,7 +28,7 @@ def _open_player_markets(idx: MarketIndex) -> dict[str, tuple[str, str | None]]:
     """ticker -> (Kalshi player target id, team target id), for open weekly
     props that traded in the last 24h."""
     def fetch(series):
-        return idx.client.get_events(series_ticker=series, status="open")
+        return idx.get_events(series_ticker=series, status="open")
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         event_lists = list(pool.map(fetch, WEEKLY_PLAYER_PROP_SERIES))
@@ -45,7 +45,7 @@ def _open_player_markets(idx: MarketIndex) -> dict[str, tuple[str, str | None]]:
 
 def _volume_since(idx: MarketIndex, tickers: list[str], start_ts: int, end_ts: int) -> dict[str, float]:
     def fetch(chunk):
-        data = idx.client.get("/trade-api/v2/markets/candlesticks", params={
+        data = idx.get("/trade-api/v2/markets/candlesticks", params={
             "market_tickers": ",".join(chunk), "start_ts": start_ts, "end_ts": end_ts, "period_interval": 1,
         })
         return {

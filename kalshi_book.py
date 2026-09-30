@@ -74,6 +74,30 @@ def public_get(path: str, params: dict | None = None) -> dict[str, Any]:
     return data
 
 
+def public_get_events(
+    series_ticker: str | None = None, status: str | None = None, with_nested_markets: bool = True
+) -> list[dict]:
+    """Unauthenticated, cursor-paginated /trade-api/v2/events listing -- the
+    keyless equivalent of KalshiClient.get_events, for browsing odds/matchups
+    without any Kalshi credentials at all."""
+    params: dict[str, Any] = {"with_nested_markets": with_nested_markets}
+    if series_ticker:
+        params["series_ticker"] = series_ticker
+    if status:
+        params["status"] = status
+    events: list[dict] = []
+    cursor = None
+    while True:
+        if cursor:
+            params["cursor"] = cursor
+        data = public_get("/trade-api/v2/events", params=params)
+        events.extend(data.get("events", []))
+        cursor = data.get("cursor")
+        if not cursor:
+            break
+    return events
+
+
 def _load_private_key():
     key_path = os.environ.get("KALSHI_PRIVATE_KEY_PATH")
     if not key_path:
@@ -90,13 +114,19 @@ class KalshiClient:
         self,
         api_key_id: str | None = None,
         private_key_path: str | None = None,
+        private_key_pem: str | None = None,
         base_url: str = KALSHI_BASE_URL,
     ):
         self.api_key_id = api_key_id or os.environ.get("KALSHI_API_KEY_ID")
         if not self.api_key_id:
             raise RuntimeError("KALSHI_API_KEY_ID is not set")
 
-        if private_key_path:
+        if private_key_pem:
+            # In-memory only -- never written to disk, e.g. a key pasted into
+            # a per-session login rather than configured via env/file.
+            pem_bytes = private_key_pem.encode("utf-8") if isinstance(private_key_pem, str) else private_key_pem
+            self._private_key = serialization.load_pem_private_key(pem_bytes, password=None)
+        elif private_key_path:
             with open(os.path.expanduser(private_key_path), "rb") as f:
                 self._private_key = serialization.load_pem_private_key(f.read(), password=None)
         else:
