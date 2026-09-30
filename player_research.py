@@ -12,6 +12,7 @@ import traceback
 
 import combo
 import nflverse_data as nd
+import video_index as vi
 import weather as wx
 from kalshi_book import KalshiClient, position_from_kalshi
 from kalshi_markets import MarketIndex, WEEKLY_PLAYER_PROP_SERIES, SEASON_PLAYER_PROP_SERIES
@@ -100,7 +101,7 @@ def resolve_and_build(name: str, client: KalshiClient | None = None) -> dict:
     log_seasons = nd.player_log_seasons(roster_row.get("rookie_year"))
     history_section = _build_history_section(gsis_id, opponent, log_seasons) if opponent else None
     try:
-        game_log = nd.player_game_log(gsis_id)
+        game_log = vi.attach_to_game_log(gsis_id, nd.player_game_log(gsis_id))
     except Exception:
         traceback.print_exc()
         game_log = []
@@ -291,7 +292,7 @@ def _build_environment_section(next_game: dict) -> dict:
 
 def _build_history_section(gsis_id: str, opponent: str, seasons: list[int]) -> list[dict]:
     try:
-        return nd.player_vs_opponent_history(gsis_id, opponent, seasons)
+        return vi.attach_to_game_log(gsis_id, nd.player_vs_opponent_history(gsis_id, opponent, seasons))
     except Exception:
         traceback.print_exc()
         return []

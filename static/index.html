@@ -151,6 +151,31 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
 #injPop a.ip-item:hover{background:var(--amber-soft);color:var(--on)}
 #injPop .ip-src{margin-top:2px;font-size:10px;color:var(--dim)}
 #injPop .ip-src b{color:var(--amber);font-weight:500}
+/* team-logo hover video + full video modal (YouTube embeds) */
+#vidPop{position:fixed;z-index:61;width:376px;background:var(--chrome);border:1px solid var(--amber-ring);box-shadow:0 8px 24px rgba(0,0,0,0.5);font-size:12px}
+#vidPop .vp-head,#vidModal .vm-head{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--head-rule);background:var(--panel-head)}
+#vidPop .vp-head{font-weight:600}
+.vp-frame,.vm-frame{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
+a.yt-link{display:flex;align-items:center;justify-content:center;background:#000 center/cover no-repeat;text-decoration:none}
+a.yt-link .yt-play{background:rgba(0,0,0,0.78);color:var(--on);padding:6px 10px;font-size:10.5px;letter-spacing:0.06em;border:1px solid var(--amber-ring)}
+a.yt-link:hover .yt-play{color:var(--amber)}
+#vidPop .vp-list{max-height:150px;overflow-y:auto}
+#vidPop .vp-row{display:flex;gap:10px;width:100%;padding:4px 10px;border-bottom:1px solid var(--row-rule);color:var(--label);font-size:11px;text-align:left}
+#vidPop .vp-row:hover:not([disabled]){background:var(--amber-soft)}
+#vidPop .vp-row.on{color:var(--amber)}
+#vidPop .vp-row[disabled]{color:var(--faint);cursor:default}
+#vidPop .vp-row .w{color:var(--blue)} #vidPop .vp-row .lo{color:var(--orange)}
+#vidPop .vp-empty{padding:12px 10px;color:var(--dim)}
+.vp-foot{padding:4px 10px;font-size:9.5px;color:var(--dim);border-top:1px solid var(--row-rule)}
+#vidModal{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:1001}
+#vidModal[hidden]{display:none}
+#vidModal .vm-box{width:min(960px,calc(100vw - 32px));background:var(--chrome);border:1px solid var(--head-rule)}
+#vidModal .vm-label{font-size:9.5px;letter-spacing:0.06em;color:var(--amber)}
+#vidModal .vm-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#vidModal [data-vm-close]{margin-left:auto;color:var(--muted);font-size:10.5px}
+table.gl .vid{color:var(--amber);font-size:9px;letter-spacing:0.04em;padding:0 5px;border:1px solid var(--amber-ring);margin-left:4px;text-decoration:none;display:inline-block;line-height:14px}
+table.gl .vid:hover{background:var(--amber-soft)}
+table.gl a.vid{color:var(--muted);border-color:var(--head-rule)}
 .roster-player:hover{color:var(--amber)}
 .backlink{color:var(--amber);cursor:pointer;font-size:11px}
 .backlink:hover{color:#FFC57A}
@@ -379,6 +404,7 @@ button.bb-side:hover{outline:1px solid var(--faint)}
       <div id="slateView" style="display:none;flex-direction:column;flex-grow:1;min-height:0"></div>
       <div id="bookView" style="display:none;flex-direction:column;flex-grow:1;min-height:0;overflow:auto;padding:8px"></div>
       <div id="injPop" hidden></div>
+      <div id="vidPop" hidden></div>
       <div id="overlay" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);align-items:center;justify-content:center;font-size:12px;color:var(--dim)"></div>
     </div>
     <aside id="builder" hidden aria-label="Bet builder"></aside>
@@ -386,6 +412,7 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 </div>
 
 <div id="loginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:1000"></div>
+<div id="vidModal" hidden></div>
 
 <script>
 const C = { on:'#E3E7EC', label:'#C9D1D9', off:'#7A8591', amber:'#F2A541', blue:'#5AA9FF', orange:'#FF7A45', muted:'#9AA4AF', neutral:'#4A5561' };
@@ -1597,6 +1624,128 @@ document.addEventListener('mouseout', (e) => {
   injHideTimer = setTimeout(hideInjPop, 200);
 });
 
+// ---------- video: team-logo hover + player/game modal ----------
+// Every teamLogo() carries data-teamvid. Hovering one opens the team's season
+// in a single shared popover: the latest game's official highlights (muted
+// autoplay) plus every played game to switch to. Videos are YouTube embeds
+// only -- see video_index.py for where the ids come from.
+const vidPop = document.getElementById('vidPop');
+const teamVids = {};
+let vidHoverEl = null, vidShowTimer = null, vidHideTimer = null;
+
+function ytFrame(id, cls, params, title) {
+  const q = new URLSearchParams({ autoplay: '1', rel: '0', playsinline: '1', ...(params || {}) });
+  return `<iframe class="${cls}" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?${q}" title="${escapeHtml(title || 'YouTube video')}"
+    allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+}
+
+// Embeddable videos play in place; the rest (the NFL's own uploads, which it
+// blocks from other sites) show their thumbnail and open on YouTube.
+function videoView(v, cls, params) {
+  if (v.embed) return ytFrame(v.id, cls, params, v.title);
+  return `<a class="${cls} yt-link" href="${escapeHtml(v.url)}" target="_blank" rel="noopener" title="${escapeHtml(v.title)}"
+    style="background-image:url('${escapeHtml(v.thumb)}')"><span class="yt-play mono">▶ WATCH ON YOUTUBE ↗</span></a>`;
+}
+
+function fetchTeamVids(code) {
+  if (!teamVids[code]) {
+    teamVids[code] = fetch('/api/videos/team?team=' + encodeURIComponent(code))
+      .then(r => r.json()).then(d => { if (d.error) throw new Error(d.error); return d; })
+      .catch(err => { delete teamVids[code]; throw err; });
+  }
+  return teamVids[code];
+}
+
+function placeVidPop(el) {
+  const r = el.getBoundingClientRect(), w = 376, pad = 8;
+  const left = Math.max(pad, Math.min(r.left, window.innerWidth - w - pad));
+  let top = r.bottom + 6;
+  if (top + vidPop.offsetHeight > window.innerHeight - pad) top = Math.max(pad, r.top - vidPop.offsetHeight - 6);
+  vidPop.style.left = left + 'px'; vidPop.style.top = top + 'px';
+}
+
+function renderVidPop(gameId) {
+  const d = vidPop._data, code = vidPop._team;
+  const games = d.games || [];
+  const cur = games.find(g => g.game_id === gameId && g.video) || games.find(g => g.video);
+  const res = g => `<span class="${g.result === 'W' ? 'w' : g.result === 'L' ? 'lo' : ''}">${g.result} ${g.score}</span>`;
+  vidPop.innerHTML = `<div class="vp-head"><span>${escapeHtml(code)} · ${d.season} SEASON</span>
+      <span class="mono" style="margin-left:auto;font-size:10px;color:var(--dim);font-weight:400">${cur ? `WK ${cur.week} ${cur.is_home ? 'vs' : '@'} ${nflverseToKalshi(cur.opponent)}` : ''}</span></div>
+    ${cur ? videoView(cur.video, 'vp-frame', { mute: '1' })
+          : `<div class="vp-empty">${games.length ? 'No highlights posted yet.' : 'No games played yet this season.'}</div>`}
+    <div class="vp-list">${games.map(g => `<button type="button" class="vp-row mono${cur && g.game_id === cur.game_id ? ' on' : ''}"${g.video ? ` data-vpgame="${escapeHtml(g.game_id)}"` : ' disabled'}>
+      <span style="width:34px">${g.season_type === 'REG' ? 'WK ' + g.week : g.season_type}</span><span style="width:52px">${g.is_home ? 'vs' : '@'} ${nflverseToKalshi(g.opponent)}</span>${res(g)}
+      <span style="margin-left:auto">${g.video ? '▶' : '—'}</span></button>`).join('')}</div>
+    ${cur ? `<div class="vp-foot mono">YOUTUBE · ${escapeHtml(cur.video.source.toUpperCase())} · ${cur.video.embed ? 'CLICK VIDEO TO UNMUTE' : 'NFL ONLY ALLOWS PLAYBACK ON YOUTUBE'}</div>` : ''}`;
+}
+
+async function showVidPop(el) {
+  clearTimeout(vidHideTimer);
+  const code = el.dataset.teamvid;
+  vidHoverEl = el;
+  vidPop.hidden = false;
+  vidPop.innerHTML = `<div class="vp-empty">Loading ${escapeHtml(code)} highlights…</div>`;
+  placeVidPop(el);
+  try {
+    const d = await fetchTeamVids(code);
+    if (vidHoverEl !== el) return;
+    vidPop._data = d; vidPop._team = code;
+    renderVidPop(null);
+    placeVidPop(el);
+  } catch (err) {
+    if (vidHoverEl === el) vidPop.innerHTML = `<div class="vp-empty" style="color:var(--orange)">${escapeHtml(String(err.message || err))}</div>`;
+  }
+}
+
+function hideVidPop() {
+  clearTimeout(vidShowTimer); clearTimeout(vidHideTimer);
+  vidPop.hidden = true;
+  vidPop.innerHTML = '';  // drops the iframe, which stops playback
+  vidHoverEl = null;
+}
+
+// mouseover only: once the pointer is inside the YouTube iframe this document
+// gets no events, so "left the popover" is detected by the next mouseover
+// anywhere else rather than by mouseout.
+document.addEventListener('mouseover', (e) => {
+  const inPop = e.target.closest('#vidPop');
+  const el = inPop ? null : e.target.closest('[data-teamvid]');
+  if (inPop || (el && el === vidHoverEl)) { clearTimeout(vidHideTimer); clearTimeout(vidShowTimer); return; }
+  clearTimeout(vidShowTimer);
+  if (el) vidShowTimer = setTimeout(() => showVidPop(el), 450);
+  if (vidHoverEl) { clearTimeout(vidHideTimer); vidHideTimer = setTimeout(hideVidPop, 300); }
+});
+window.addEventListener('scroll', (e) => { if (vidHoverEl && !vidPop.contains(e.target)) hideVidPop(); }, true);
+
+function openVideoModal(v) {
+  hideVidPop();
+  const m = document.getElementById('vidModal');
+  m.innerHTML = `<div class="vm-box" role="dialog" aria-label="${escapeHtml(v.title)}">
+    <div class="vm-head"><span class="vm-label mono">${escapeHtml(v.label)}</span><span class="vm-title">${escapeHtml(v.title)}</span><button type="button" data-vm-close>CLOSE ✕</button></div>
+    ${ytFrame(v.id, 'vm-frame', {}, v.title)}
+    <div class="vp-foot mono">YOUTUBE · ${escapeHtml(v.source.toUpperCase())}</div>
+  </div>`;
+  m.hidden = false;
+}
+function closeVideoModal() {
+  const m = document.getElementById('vidModal');
+  m.hidden = true;
+  m.innerHTML = '';
+}
+
+// Game-log cell: the player's own cut-up (every play / run / target) first,
+// then the official game highlights.
+function gameLogVideoButtons(g) {
+  const vids = g.videos || [];
+  const player = vids.find(v => v.kind !== 'game'), game = vids.find(v => v.kind === 'game');
+  const label = v => (v.kind === 'game' ? 'GAME' : escapeHtml(v.label));
+  return [player, game].filter(Boolean).map(v => v.embed
+    ? `<button type="button" class="vid mono" data-vid="${escapeHtml(v.id)}" data-vlabel="${escapeHtml(v.label)}"
+        data-vtitle="${escapeHtml(v.title)}" data-vsrc="${escapeHtml(v.source)}" title="${escapeHtml(v.title)}">▶ ${label(v)}</button>`
+    : `<a class="vid mono" data-vid="${escapeHtml(v.id)}" data-vlink href="${escapeHtml(v.url)}" target="_blank" rel="noopener"
+        title="${escapeHtml(v.title)} (opens YouTube)">▶ ${label(v)} ↗</a>`).join('');
+}
+
 // ---------- render: game log + vs opponent (markets tabs) ----------
 // Stat columns shown depend on position; every game row links to its box
 // score (ESPN, falling back to Pro Football Reference).
@@ -1633,7 +1782,7 @@ function gameLogTableHtml(games, cols, opts) {
   let html = `<table class="gl mono"><thead><tr>
     <th class="l">${withYear ? 'DATE' : 'WK'}</th>${withYear ? '<th class="l">WK</th>' : '<th class="l">DATE</th>'}
     <th class="l">OPP</th><th class="l">RESULT</th>
-    ${cols.map(c => `<th>${c.h}</th>`).join('')}<th></th></tr></thead><tbody>`;
+    ${cols.map(c => `<th>${c.h}</th>`).join('')}<th class="l">VIDEO</th><th></th></tr></thead><tbody>`;
   games.forEach(g => {
     const wk = g.season_type === 'POST' ? `P${g.week}` : g.week;
     const opp = `${g.is_home === false ? '@' : 'vs'} ${nflverseToKalshi(g.opponent_team)}`;
@@ -1644,6 +1793,7 @@ function gameLogTableHtml(games, cols, opts) {
       <td class="l" style="color:var(--muted)">${withYear ? wk : date}</td>
       <td class="l">${opp}</td><td class="l">${res}</td>
       ${cols.map(c => { const v = g[c.k]; return `<td class="${!v ? 'z' : ''}">${fmt(v, c)}</td>`; }).join('')}
+      <td class="l">${gameLogVideoButtons(g)}</td>
       <td class="go">${g.url ? escapeHtml(g.url_source) + ' ↗' : ''}</td>
     </tr>`;
   });
@@ -1651,7 +1801,7 @@ function gameLogTableHtml(games, cols, opts) {
   if (games.length > 1) {
     const sum = (k) => games.reduce((a, g) => a + (Number(g[k]) || 0), 0);
     const row = (label, fn) => `<tr class="tot"><td class="l" colspan="4" style="color:var(--dim);letter-spacing:0.06em;font-size:9.5px">${label}</td>
-      ${cols.map(c => `<td>${fn(c)}</td>`).join('')}<td></td></tr>`;
+      ${cols.map(c => `<td>${fn(c)}</td>`).join('')}<td></td><td></td></tr>`;
     html += `<tfoot>
       ${row('TOTAL', c => c.dec ? sum(c.k).toFixed(c.dec) : Math.round(sum(c.k)))}
       ${row('PER GAME', c => (sum(c.k) / games.length).toFixed(1))}
@@ -1685,7 +1835,7 @@ function renderGameLog(body, t, d) {
 
   let html = `<div class="gl-bar">
     <span class="seg">${gl.seasons.map(s => `<button type="button" class="${s === season ? 'on' : ''}" data-logseason="${s}">${s}</button>`).join('')}</span>
-    <span class="gl-note mono">click a game for the box score</span>
+    <span class="gl-note mono">click a game for the box score · ▶ for video</span>
   </div>`;
   if (!entry || entry.loading) html += `<div class="empty">Loading ${season} game log…</div>`;
   else if (entry.error) html += `<div class="empty" style="color:var(--orange)">${escapeHtml(entry.error)}</div>`;
@@ -1946,13 +2096,13 @@ function backToSlateList() {
   render();
 }
 
-// Team logos (Slate module only). Kalshi codes match ESPN's lowercase
-// abbreviations except these three.
+// Team logos. Kalshi codes match ESPN's lowercase abbreviations except these
+// three. data-teamvid makes every logo open the team's season-highlights hover.
 const ESPN_LOGO_CODE = { JAC: 'jax', WAS: 'wsh', LAR: 'lar' };
 function teamLogo(code, size) {
   if (!code) return '';
   const slug = ESPN_LOGO_CODE[code] || code.toLowerCase();
-  return `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${slug}.png" alt="" width="${size}" height="${size}" loading="lazy" style="flex-shrink:0;object-fit:contain" onerror="this.style.visibility='hidden'">`;
+  return `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${slug}.png" alt="" width="${size}" height="${size}" loading="lazy" data-teamvid="${escapeHtml(code)}" style="flex-shrink:0;object-fit:contain" onerror="this.style.visibility='hidden'">`;
 }
 
 function moneylinePct(side) {
@@ -3924,6 +4074,16 @@ document.addEventListener('click', (e) => {
   const logSeasonT = e.target.closest('[data-logseason]');
   const gameUrlT = e.target.closest('[data-gameurl]');
   const t = activeTicket();
+  // Video buttons sit inside game-log rows, so they must win over the row's box-score link.
+  const vidT = e.target.closest('[data-vid]');
+  if (vidT) {
+    // Links (non-embeddable videos) navigate on their own; just keep the row's box-score link out of it.
+    if (!('vlink' in vidT.dataset)) openVideoModal({ id: vidT.dataset.vid, label: vidT.dataset.vlabel, title: vidT.dataset.vtitle, source: vidT.dataset.vsrc, embed: true });
+    return;
+  }
+  const vpGameT = e.target.closest('[data-vpgame]');
+  if (vpGameT) { renderVidPop(vpGameT.dataset.vpgame); return; }
+  if (e.target.closest('[data-vm-close]') || e.target.id === 'vidModal') { closeVideoModal(); return; }
   if (gameUrlT) { window.open(gameUrlT.dataset.gameurl, '_blank', 'noopener'); return; }
   if (logSeasonT && t) { t.ui.logSeason = Number(logSeasonT.dataset.logseason); renderMarkets(); return; }
   if (comboT && t && t.data) { if (!comboT.disabled) handleComboClick(comboT, t); return; }
@@ -4060,6 +4220,7 @@ qEl.addEventListener('keydown', (e) => {
   }
 });
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !document.getElementById('vidModal').hidden) { closeVideoModal(); return; }
   if (e.target && e.target.dataset && e.target.dataset.bbin === 'chat' && e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault(); chatSend(e.target.value); return;
   }
