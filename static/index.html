@@ -729,6 +729,7 @@ function renderContext() {
   el.innerHTML = `
     <div class="who">
       ${p.headshot_url ? `<img class="headshot" src="${escapeHtml(p.headshot_url)}" alt="" onerror="this.style.visibility='hidden'">` : ''}
+      ${teamLogo(p.team_kalshi, 34)}
       <div class="whotext">
         <div style="display:flex;align-items:baseline;gap:10px">
           <span class="name">${escapeHtml(p.name.toUpperCase())}</span>
