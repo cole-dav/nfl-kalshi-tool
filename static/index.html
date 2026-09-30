@@ -73,14 +73,15 @@ input::placeholder{color:#6F7A86}
 #leftcol{display:flex;flex-direction:column;gap:8px;min-height:0}
 #rightcol{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
 .panel{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--border);min-height:0}
-.panel-head{height:30px;flex-shrink:0;display:flex;align-items:stretch;background:var(--panel-head);border-bottom:1px solid var(--border);padding-left:10px;gap:4px}
+.panel-head{height:30px;flex-shrink:0;display:flex;align-items:stretch;background:var(--panel-head);border-bottom:1px solid var(--border);padding-left:10px;gap:4px;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.panel-head::-webkit-scrollbar{display:none}
 .panel-title{display:flex;align-items:center;font-size:10px;letter-spacing:0.1em;color:var(--dim);font-weight:600;margin-right:8px;white-space:nowrap}
-.tab{padding:0 8px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);border-bottom:2px solid transparent;border-top:2px solid transparent}
+.tab{padding:0 8px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);border-bottom:2px solid transparent;border-top:2px solid transparent;white-space:nowrap;flex-shrink:0}
 .tab.small{font-size:11.5px;padding:0 7px}
 .tab.on{color:var(--on);border-bottom-color:var(--amber)}
 .tab .cnt{font-size:10px;color:var(--dim)}
 .panel-body{flex-grow:1;min-height:0;overflow:auto}
-.legend{display:flex;align-items:center;gap:12px;padding:0 10px;font-size:10px;color:var(--dim);margin-left:auto}
+.legend{display:flex;align-items:center;gap:12px;padding:0 10px;font-size:10px;color:var(--dim);margin-left:auto;white-space:nowrap;flex-shrink:0}
 .swatch{width:8px;height:8px;display:inline-block}
 
 #markets{height:280px;flex-grow:1}
@@ -206,7 +207,35 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
 /* bet builder drawer */
 #builder{width:340px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;background:var(--panel);border-left:1px solid var(--border)}
 #builder[hidden]{display:none}
-body.bb-open #grid{grid-template-columns:minmax(560px,760px) minmax(400px,1fr)}
+/* Responsive layout: keyed to the width the content area actually has (the
+   builder drawer or a small window both shrink it), not to the drawer. */
+#main{container:main / inline-size}
+#rightcol{container:rightcol / inline-size}
+#slateView{container:slate / inline-size}
+@container main (max-width: 1320px){
+  #grid{grid-template-columns:minmax(600px,1.7fr) minmax(340px,1fr)}
+}
+/* too narrow for two columns: one scrolling column, panels keep real heights */
+@container main (max-width: 1000px){
+  #grid{grid-template-columns:minmax(0,1fr);grid-auto-rows:auto;overflow-y:auto}
+  #leftcol,#rightcol{min-height:auto}
+  #markets{height:520px;flex-grow:0}
+  #lowerrow{height:440px;flex-grow:0}
+}
+/* right column too narrow for matchup + injuries side by side: stack them */
+@container rightcol (max-width: 540px){
+  #lowerrow{grid-template-columns:minmax(0,1fr);grid-auto-rows:minmax(300px,1fr);overflow-y:auto}
+}
+/* game page: two matchup panels + a 340px markets column */
+.game-grid{flex-grow:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 340px;gap:8px;padding:0 4px 8px}
+@container slate (max-width: 1340px){
+  .game-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:max-content 420px;overflow-y:auto;align-content:start}
+  .game-grid > .gg-side{grid-column:1 / -1}
+}
+@container slate (max-width: 960px){
+  .game-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:max-content max-content 420px}
+  .game-grid > .gg-side{height:420px}
+}
 #bbToggle{display:flex;align-items:center;gap:6px;padding:0 12px;border-left:1px solid var(--border);font-size:11px;letter-spacing:0.06em;color:var(--muted);flex-shrink:0}
 #bbToggle:hover{color:var(--on)}
 #bbToggle.on{color:var(--amber);background:#141920}
@@ -343,7 +372,7 @@ button.bb-side:hover{outline:1px solid var(--faint)}
       </button>
     </div>
 
-    <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column;position:relative">
+    <div id="main" style="flex-grow:1;min-width:0;display:flex;flex-direction:column;position:relative">
       <div id="ctx"></div>
       <div id="grid"></div>
       <div id="slateView" style="display:none;flex-direction:column;flex-grow:1;min-height:0"></div>
@@ -973,7 +1002,27 @@ function renderSeasonMarkets(body, d, rows, note) {
 }
 
 // ---------- render: implied curve ----------
+// Re-fit the curve whenever its panel changes width (window resize, drawer,
+// layout breakpoints), not only when the drawer toggles.
+let curveRO = null, curveROEl = null;
+function watchCurveWidth() {
+  const body = document.getElementById('curveBody');
+  if (!body || body === curveROEl || typeof ResizeObserver === 'undefined') return;
+  if (curveRO) curveRO.disconnect();
+  curveROEl = body;
+  let raf = 0;
+  curveRO = new ResizeObserver(() => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      if (Math.abs(body.clientWidth - Number(body.dataset.w || 0)) < 4) return;
+      if (state.module === 'research') { const t = activeTicket(); if (t && t.data) renderCurve(); }
+    });
+  });
+  curveRO.observe(body);
+}
+
 function renderCurve() {
+  watchCurveWidth();
   const head = document.getElementById('curveTabs');
   const body = document.getElementById('curveBody');
   const t = activeTicket();
@@ -991,7 +1040,9 @@ function renderCurve() {
 
   // Fit the plot to the panel so it still fits when the builder drawer
   // narrows the left column.
-  const W = Math.max(360, Math.min(712, (body.clientWidth || 756) - 46)), H = 150, pl = 24, pr = 24, pt = 8, pb = 8;
+  // 34px y-axis + 10px right padding + a little slack for the scrollbar
+  const W = Math.max(300, Math.min(712, (body.clientWidth || 756) - 50)), H = 150, pl = 24, pr = 24, pt = 8, pb = 8;
+  body.dataset.w = String(body.clientWidth);
   const t0 = rows[0].threshold, t1 = rows[rows.length - 1].threshold;
   const X = (v) => pl + (t1 === t0 ? 0 : (v - t0) / (t1 - t0)) * (W - pl - pr);
   const Y = (p) => pt + (1 - p / 100) * (H - pt - pb);
@@ -1929,15 +1980,15 @@ function renderGameDetail(el, g) {
   const viewTabs = [{ id: 'depth', label: 'DEPTH MATCHUPS' }, { id: 'tend', label: 'TENDENCIES & SCRIPT' }];
 
   el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 4px">
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:8px 4px">
       <span class="backlink" data-back-slate="1">&larr; ALL GAMES</span>
       <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600">${teamLogo(d.away, 32)}${d.away}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).away || ''}</span><span style="color:var(--dim);font-weight:400">@</span>${teamLogo(d.home, 32)}${d.home}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).home || ''}</span></span>
       <span class="mono" style="font-size:10.5px;color:var(--dim);display:flex;align-items:center;gap:4px">SPREAD ${spreadTxt}${gdStar(d.spread)} &middot; TOTAL ${totalTxt}${gdStar(d.total)}</span>
       <span style="margin-left:auto;display:flex;align-self:stretch">${viewTabs.map(v => `<button type="button" class="tab small ${view === v.id ? 'on' : ''}" data-game-view="${v.id}">${v.label}</button>`).join('')}</span>
     </div>
-    <div style="flex-grow:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 340px;gap:8px;padding:0 4px 8px">
+    <div class="game-grid">
       ${view === 'tend' ? tendencyPanelsHtml(d.tendencies) : (d.matchups || []).map(matchupPanelHtml).join('')}
-      <div class="panel">
+      <div class="panel gg-side">
         <div class="panel-head"><span class="panel-title">GAME &amp; COMBO MARKETS</span></div>
         <div class="panel-body">${combosHtml(d.combos, d.away, d.home)}</div>
       </div>
@@ -1984,8 +2035,8 @@ function depthCellHtml(players, align) {
   if (!players || !players.length) return `<div style="color:var(--faint);text-align:${align}">—</div>`;
   const [st, ...backups] = players;
   const rk = rankInfo(st.rank);
-  const rkHtml = rk ? `<span title="${escapeHtml(rk.tip)}" style="font-size:9.5px;color:${rk.color}">${escapeHtml(rk.txt)}</span>` : '';
-  const name = `<span class="roster-player" data-open-player="${escapeHtml(st.full_name)}" style="color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(st.full_name)}</span>`;
+  const rkHtml = rk ? `<span title="${escapeHtml(rk.tip)}" style="font-size:9.5px;flex-shrink:0;white-space:nowrap;color:${rk.color}">${escapeHtml(rk.txt)}</span>` : '';
+  const name = `<span class="roster-player" data-open-player="${escapeHtml(st.full_name)}" style="color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:3.5em">${escapeHtml(st.full_name)}</span>`;
   const injHtml = (() => {
     if (!st.injury) return '';
     const stat = practiceStatus(st.injury);
@@ -1996,7 +2047,7 @@ function depthCellHtml(players, align) {
     ? `<img src="${escapeHtml(st.headshot_url)}" alt="" loading="lazy" data-open-player="${escapeHtml(st.full_name)}" class="roster-player" style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#161B22;object-fit:cover" onerror="this.style.visibility='hidden'">`
     : `<span style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#161B22"></span>`;
   const bk = backups.map((p, i) => `<span class="roster-player" data-open-player="${escapeHtml(p.full_name)}" title="${escapeHtml(maddenTip(p.madden))}">${i + 2} ${escapeHtml(shortName(p.full_name))} <span style="color:${p.madden ? ovrColor(p.madden.ovr) : 'var(--faint)'}">${p.madden ? p.madden.ovr : '·'}</span></span>`).join(' · ');
-  return `<div style="min-width:0;display:flex;align-items:center;gap:8px;${align === 'right' ? 'flex-direction:row-reverse' : ''}">
+  return `<div style="min-width:0;overflow:hidden;display:flex;align-items:center;gap:8px;${align === 'right' ? 'flex-direction:row-reverse' : ''}">
     ${img}
     <div style="min-width:0;display:flex;flex-direction:column;align-items:${align === 'right' ? 'flex-end' : 'flex-start'}">
       <div style="display:flex;align-items:baseline;gap:6px;max-width:100%;${align === 'right' ? 'flex-direction:row-reverse' : ''}">${name}${injHtml}${rkHtml}</div>
