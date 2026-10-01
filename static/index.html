@@ -396,8 +396,8 @@ button.bb-side:hover{outline:1px solid var(--faint)}
       <button class="railbtn" type="button" aria-label="Correlation map (not built)" title="Not built yet">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="4" r="2"></circle><circle cx="14" cy="5" r="2"></circle><circle cx="8" cy="14" r="2"></circle><path d="M5.7 5.2l1.6 7M12.3 6.3l-3 6.1M6 4.2h6"></path></svg>
       </button>
-      <button class="railbtn" type="button" aria-label="Alerts (not built)" title="Not built yet">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 13V8a5 5 0 0110 0v5l1.5 1.5h-13z"></path><path d="M7 16.5h4"></path></svg>
+      <button class="railbtn" type="button" data-reel aria-label="Play this week's highlights reel" title="Highlights reel: this week's player cut-ups, back to back">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="3.5" width="15" height="11"></rect><path d="M7.5 6.5v5l4-2.5z" fill="currentColor"></path></svg>
       </button>
       <div style="flex-grow:1"></div>
       <button class="railbtn" type="button" aria-label="Settings (not built)" title="Not built yet" style="margin-bottom:6px">
@@ -1770,6 +1770,7 @@ function hideVidPop() {
 // gets no events, so "left the popover" is detected by the next mouseover
 // anywhere else rather than by mouseout.
 document.addEventListener('mouseover', (e) => {
+  if (e.target.closest('[data-reel]')) fetchReel().catch(() => {});
   const inPop = e.target.closest('#vidPop');
   const el = inPop ? null : e.target.closest('[data-teamvid]');
   if (inPop || (el && el === vidHoverEl)) { clearTimeout(vidHideTimer); clearTimeout(vidShowTimer); return; }
@@ -1807,8 +1808,8 @@ function embedTime(id) {
 }
 
 let pipWin = null;
-async function popOutVideo(v) {
-  const start = String(embedTime(v.id));
+async function popOutVideo(v, params) {
+  params = { start: String(embedTime(v.id)), ...(params || {}) };
   closeVideoModal();
   hideVidPop();
   if (window.documentPictureInPicture) {
@@ -1821,17 +1822,41 @@ async function popOutVideo(v) {
       const d = pipWin.document;
       d.title = v.title;
       d.head.innerHTML = '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0}</style>';
-      d.body.innerHTML = ytFrame(v.id, 'pip-frame', { start }, v.title);
+      d.body.innerHTML = ytFrame(v.id, 'pip-frame', params, v.title);
       return;
     } catch (e) { pipWin = null; }  // e.g. unsupported context -- fall back to the mini-player
   }
   const m = document.getElementById('vidMini');
   m.innerHTML = `<div class="vmini-head"><span class="vm-label mono" style="color:var(--amber);font-size:9.5px">${escapeHtml(v.label)}</span>
       <span class="vm-title">${escapeHtml(v.title)}</span><button type="button" data-mini-close>CLOSE ✕</button></div>
-    ${ytFrame(v.id, 'vm-frame', { start }, v.title)}`;
+    ${ytFrame(v.id, 'vm-frame', params, v.title)}`;
   m.hidden = false;
   armEmbeds(m);
 }
+// Rail button: the latest week's playable player cut-ups, back to back.
+// YouTube's own `playlist` embed param queues them, so the player advances by
+// itself and has next/prev, in the PiP window as much as the mini-player.
+// Fetched on hover so the click still counts as a user gesture by the time
+// the PiP window is requested.
+let reelReq = null;
+function fetchReel() {
+  if (!reelReq) reelReq = fetch('/api/videos/reel').then(r => r.json())
+    .then(d => { if (d.error) throw new Error(d.error); return d; })
+    .catch(err => { reelReq = null; throw err; });
+  return reelReq;
+}
+async function playReel(btn) {
+  try {
+    const d = await fetchReel();
+    const vids = d.videos.filter(isPlayable).slice(0, 150);  // YouTube caps playlist length
+    if (!vids.length) { btn.title = 'No playable highlights yet this week'; return; }
+    popOutVideo({ id: vids[0].id, title: `Week ${d.week} highlights reel`, label: `WK ${d.week} REEL`, source: '' },
+      { start: '0', playlist: vids.slice(1).map(v => v.id).join(',') });
+  } catch (err) {
+    btn.title = 'Highlights reel unavailable: ' + (err.message || err);
+  }
+}
+
 function closeMiniPlayer() {
   const m = document.getElementById('vidMini');
   m.hidden = true;
@@ -4198,6 +4223,8 @@ document.addEventListener('click', (e) => {
   }
   const vpGameT = e.target.closest('[data-vpgame]');
   if (vpGameT) { renderVidPop(vpGameT.dataset.vpgame); return; }
+  const reelT = e.target.closest('[data-reel]');
+  if (reelT) { playReel(reelT); return; }
   const popT = e.target.closest('[data-popout]');
   if (popT) { popOutVideo({ id: popT.dataset.popout, label: popT.dataset.vlabel, title: popT.dataset.vtitle, source: popT.dataset.vsrc }); return; }
   if (e.target.closest('[data-mini-close]')) { closeMiniPlayer(); return; }

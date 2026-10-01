@@ -571,3 +571,34 @@ def team_season_videos(team: str, season: int | None = None) -> dict:
             "video": vids[0] if vids else None,
         })
     return {"team": team, "season": season, "games": out}
+
+
+def week_reel(season: int | None = None, week: int | None = None) -> dict:
+    """Player cut-ups that play on this site (see SOURCE_EMBEDS) for one week,
+    the latest with any when `week` is None -- the back-to-back highlights
+    reel. One video per player-game (the fullest playable cut-up), in kickoff
+    order, then team, then player."""
+    season = season or nd.current_season()
+    sched = nd.load_schedules(season).set_index("game_id")
+    rosters = nd.load_rosters(season).drop_duplicates("gsis_id").set_index("gsis_id")
+    items = []
+    for (gsis, game_id), vids in get_index(season).built()["players"].items():
+        v = next((v for v in vids if v["embed"]), None)
+        if v is None or game_id not in sched.index:
+            continue
+        g = sched.loc[game_id]
+        r = rosters.loc[gsis] if gsis in rosters.index else None
+        team = r["team"] if r is not None else None
+        items.append({**v, "week": int(g["week"]), "gsis_id": gsis, "game_id": game_id,
+                      "player": r["full_name"] if r is not None else None, "team": team,
+                      "position": r["position"] if r is not None else None,
+                      "opponent": (g["home_team"] if g["away_team"] == team else g["away_team"]) if team else None,
+                      "_kick": f"{g['gameday']} {g['gametime']}"})
+    weeks = sorted({it["week"] for it in items})
+    if week is None:
+        week = weeks[-1] if weeks else None
+    reel = sorted((it for it in items if it["week"] == week),
+                  key=lambda it: (it["_kick"], it["game_id"], it["team"] or "", it["player"] or ""))
+    for it in reel:
+        del it["_kick"]
+    return {"season": season, "week": week, "weeks": weeks, "videos": reel}
