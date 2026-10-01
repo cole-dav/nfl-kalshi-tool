@@ -10,10 +10,12 @@ since they can't have traded in the last 4h.
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+from kalshi_book import KalshiClient
 from kalshi_markets import MarketIndex, WEEKLY_PLAYER_PROP_SERIES
 
 WINDOW_SECONDS = 4 * 3600
@@ -30,7 +32,7 @@ def _open_player_markets(idx: MarketIndex) -> dict[str, tuple[str, str | None]]:
     def fetch(series):
         return idx.get_events(series_ticker=series, status="open")
 
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=2) as pool:
         event_lists = list(pool.map(fetch, WEEKLY_PLAYER_PROP_SERIES))
     out = {}
     for events in event_lists:
@@ -55,14 +57,25 @@ def _volume_since(idx: MarketIndex, tickers: list[str], start_ts: int, end_ts: i
 
     chunks = [tickers[i:i + BATCH] for i in range(0, len(tickers), BATCH)]
     vols: dict[str, float] = {}
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=2) as pool:
         for part in pool.map(fetch, chunks):
             vols.update(part)
     return vols
 
 
+def _market_index() -> MarketIndex:
+    # A signed client gets Kalshi's higher per-account rate limit; the public
+    # endpoints 429 quickly under this many series + candlestick reads.
+    if os.environ.get("KALSHI_API_KEY_ID"):
+        try:
+            return MarketIndex(KalshiClient())
+        except Exception:
+            pass
+    return MarketIndex()
+
+
 def build_player_volume() -> dict:
-    idx = MarketIndex()
+    idx = _market_index()
     ticker_to_player = _open_player_markets(idx)
     end_ts = int(time.time())
     vols = _volume_since(idx, list(ticker_to_player), end_ts - WINDOW_SECONDS, end_ts)
@@ -86,6 +99,11 @@ def build_player_volume() -> dict:
 def player_volume_cached() -> dict:
     with _lock:
         if _cache["data"] is None or time.time() - _cache["ts"] > CACHE_SECONDS:
-            _cache["data"] = build_player_volume()
+            try:
+                _cache["data"] = build_player_volume()
+            except Exception:
+                # Keep serving the last good ranking through a Kalshi hiccup.
+                if _cache["data"] is None:
+                    raise
             _cache["ts"] = time.time()
         return _cache["data"]

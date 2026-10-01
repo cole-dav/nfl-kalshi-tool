@@ -30,7 +30,7 @@ input::placeholder{color:#6F7A86}
 /* top bar */
 #topbar{height:36px;flex-shrink:0;display:flex;align-items:stretch;border-bottom:1px solid var(--border);background:var(--chrome)}
 #logo{width:48px;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--border)}
-#logo span{width:24px;height:24px;background:var(--amber);color:var(--bg);font-weight:600;font-size:11px;display:flex;align-items:center;justify-content:center}
+#logo svg{display:block}
 #tickets{display:flex;align-items:stretch;overflow-x:auto}
 .ticket{display:flex;align-items:center;gap:8px;padding:0 12px;border-right:1px solid var(--border);white-space:nowrap;border-top:2px solid transparent}
 .ticket .tname{font-weight:600;font-size:12px;letter-spacing:0.04em}
@@ -351,7 +351,7 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 <div id="app">
 
   <div id="topbar">
-    <div id="logo"><span>NK</span></div>
+    <div id="logo"><svg width="24" height="24" viewBox="0 0 24 24" role="img" aria-label="Player Research Terminal"><rect width="24" height="24" fill="var(--bg)"></rect><path d="M6 4.5V12H18V9M12 12V19.5" fill="none" stroke="#FFD23F" stroke-width="2.2" stroke-linecap="square"></path><path d="M18 9V3.8M15.3 6.3L18 3.6L20.7 6.3" fill="none" stroke="#3FD17A" stroke-width="1.8" stroke-linecap="square"></path></svg></div>
     <div id="tickets"></div>
     <button id="newticket" type="button" aria-label="Open new player ticket">
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M5 0v10M0 5h10"></path></svg>
@@ -933,7 +933,12 @@ function renderMarketsGroupedByName(body, rows, correlated, note) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(r);
   });
-  const names = [...groups.keys()].sort((a, b) => a.localeCompare(b));
+  // Highest 4h Kalshi prop volume first, same ranking as the search bar.
+  const names = [...groups.keys()].sort((a, b) => {
+    const va = playerVol({ name: a, team: groups.get(a)[0].team_code });
+    const vb = playerVol({ name: b, team: groups.get(b)[0].team_code });
+    return vb - va || a.localeCompare(b);
+  });
 
   let html = `<div style="padding:4px 8px 8px;display:flex;flex-direction:column">
     <div class="mono" style="height:18px;display:grid;grid-template-columns:16px minmax(0,1fr) 200px 90px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">

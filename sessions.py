@@ -8,6 +8,7 @@ to disk, never logged. Cleared on logout, TTL expiry, or server restart.
 
 from __future__ import annotations
 
+import os
 import secrets
 import threading
 import time
@@ -51,3 +52,22 @@ def destroy_session(token: str | None) -> None:
         return
     with _lock:
         _sessions.pop(token, None)
+
+
+_default: dict = {"client": None, "tried": False}
+
+
+def default_client() -> KalshiClient | None:
+    """The owner's env-configured client (KALSHI_API_KEY_ID /
+    KALSHI_PRIVATE_KEY_PATH), only when KALSHI_DEFAULT_LOGIN=1. The server
+    restricts this to direct local requests."""
+    if os.environ.get("KALSHI_DEFAULT_LOGIN") != "1":
+        return None
+    with _lock:
+        if not _default["tried"]:
+            _default["tried"] = True
+            try:
+                _default["client"] = KalshiClient()
+            except Exception as e:
+                print(f"default Kalshi login unavailable: {e}")
+        return _default["client"]

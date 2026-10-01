@@ -13,7 +13,8 @@ sessions.py.
 
 .env (see .env.example) is optional -- only relevant if you want a default
 KALSHI_API_KEY_ID / KALSHI_PRIVATE_KEY_PATH for local CLI debugging via
-kalshi_book.py directly; the HTTP server itself never falls back to it.
+kalshi_book.py directly. The HTTP server only falls back to it when
+KALSHI_DEFAULT_LOGIN=1, and only for direct requests from this machine.
 
 Serves static/index.html at / and JSON at /api/player?name=<player name>.
 """
@@ -98,11 +99,26 @@ class Handler(BaseHTTPRequestHandler):
         morsel = cookie.get(SESSION_COOKIE)
         return morsel.value if morsel else None
 
+    def _is_direct_local(self) -> bool:
+        """True only for a browser on this machine hitting the server directly
+        -- not via a Cloudflare tunnel, which also connects from loopback but
+        adds Cf-Connecting-Ip / X-Forwarded-For and a public Host."""
+        if self.client_address[0] not in ("127.0.0.1", "::1"):
+            return False
+        if self.headers.get("Cf-Connecting-Ip") or self.headers.get("X-Forwarded-For"):
+            return False
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]")
+        return host in ("127.0.0.1", "localhost", "::1")
+
     def _session_client(self):
         """The visiting session's own Kalshi client, or None if not logged
-        in. Never falls back to a server-side/.env default -- account-scoped
-        actions must either use this or refuse."""
-        return sessions.get_session(self._session_token())
+        in. With KALSHI_DEFAULT_LOGIN=1, a direct local visitor with no session
+        falls back to the owner's env key (for testing); public/tunneled
+        visitors never do."""
+        client = sessions.get_session(self._session_token())
+        if client is None and self._is_direct_local():
+            client = sessions.default_client()
+        return client
 
     def _send_json(self, payload: dict, status: int = 200, set_cookie: str | None = None):
         body = json.dumps(_sanitize(payload), default=str).encode("utf-8")

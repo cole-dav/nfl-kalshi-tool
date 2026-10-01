@@ -67,7 +67,12 @@ def public_get(path: str, params: dict | None = None) -> dict[str, Any]:
     if cached is not None:
         return cached
     host = KALSHI_BASE_URL.split("/trade-api", 1)[0]
-    resp = requests.get(host + path, params=params, timeout=20)
+    # Public endpoints rate-limit hard; back off on 429/5xx like the signed client.
+    for attempt in range(4):
+        resp = requests.get(host + path, params=params, timeout=20)
+        if resp.status_code != 429 and resp.status_code < 500:
+            break
+        time.sleep(0.5 * (2 ** attempt))
     resp.raise_for_status()
     data = resp.json()
     _cache_write(path, params, data)
