@@ -276,6 +276,19 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"video lookup failed: {e}"}, status=502)
             return
 
+        if parsed.path == "/api/videos/reel":
+            wk = (parse_qs(parsed.query).get("week") or [""])[0].strip()
+            if wk and not wk.isdigit():
+                self._send_json({"error": "'week' must be a number"}, status=400)
+                return
+            try:
+                self._send_json(snap.get("videos:reel:" + (wk or "latest"), lambda: vi.week_reel(
+                    week=int(wk) if wk else None), TTL_STATIC), cache=CACHE_SLOW)
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"reel lookup failed: {e}"}, status=502)
+            return
+
         if parsed.path == "/api/players":
             try:
                 self._send_json(snap.get("players", lambda: {"players": nd.all_player_names()}, TTL_STATIC),
