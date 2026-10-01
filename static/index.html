@@ -121,6 +121,16 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
 .stat-tile .sl{font-size:9.5px;letter-spacing:0.08em;color:var(--dim)}
 .stat-tile .sv{font-size:13px}
 .rankbar{height:6px;background:#161B22;position:relative}
+.zmap{display:grid;grid-template-columns:62px repeat(3,minmax(0,1fr));gap:2px;font-size:11px}
+.zmap .zh{font-size:9.5px;letter-spacing:0.06em;color:var(--dim);text-align:center;padding:2px 0}
+.zmap .zd{font-size:9.5px;letter-spacing:0.04em;color:var(--dim);display:flex;align-items:center}
+.zmap .zc{height:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#161B22;cursor:default}
+.zmap .zc .zv{color:var(--on)}
+.zmap .zc .zn{font-size:9px;color:var(--muted);margin-top:1px}
+.zmap .zc.thin .zv{color:var(--muted)}
+.zctl{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;font-size:9.5px;color:var(--dim);padding:2px 0 6px}
+.zctl button{font:inherit;font-size:10px;color:var(--dim);background:none;border:0;padding:1px 4px;cursor:pointer}
+.zctl button.on{color:var(--amber)}
 .rankbar-fill{position:absolute;left:0;top:0;bottom:0}
 .pill{font-size:9.5px;font-weight:600;padding:1px 5px}
 .empty{padding:16px;color:var(--dim);font-size:12px;text-align:center}
@@ -1437,8 +1447,9 @@ function renderMatchup() {
   const d = t.data;
   const oppKalshi = nflverseToKalshi(d.opponent);
   const ownKalshi = d.player.team_kalshi;
-  const tabs = [{ id: 'def', label: `${oppKalshi} Def` }, { id: 'off', label: `${ownKalshi} Off` }, { id: 'env', label: 'Game' }];
+  const tabs = [{ id: 'def', label: `${oppKalshi} Def` }, { id: 'off', label: `${ownKalshi} Off` }, { id: 'zones', label: 'Pass Zones' }, { id: 'env', label: 'Game' }];
   head.innerHTML = tabs.map(tb => `<button type="button" class="tab small ${t.ui.match === tb.id ? 'on' : ''}" data-match="${tb.id}">${tb.label}</button>`).join('');
+  if (t.ui.match === 'zones') { renderZonesMatchup(body, t); return; }
 
   let rows = [], note = '';
   if (t.ui.match === 'def') {
@@ -1500,6 +1511,194 @@ function renderMatchup() {
       <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:6px;background:var(--neutral);display:inline-block"></span>NEUTRAL</span>
     </div>
   </div>`;
+}
+
+// ---------- pass-zone heat maps ----------
+// Field split left/middle/right x air-yard depth. Each cell is colored by how
+// far it sits from the league average for that same cell, always from the
+// passer's point of view: blue = better for the offense (QB efficient there,
+// or the defense leaks there), orange = worse. Cells with few attempts fade.
+const ZONE_METRICS = {
+  epa: { label: 'EPA/ATT', scale: 0.4, fmt: v => (v > 0 ? '+' : '') + v.toFixed(2) },
+  ypa: { label: 'Y/A', scale: 3, fmt: v => v.toFixed(1) },
+  cmp: { label: 'CMP%', scale: 0.15, fmt: v => Math.round(v * 100) + '%' },
+  share: { label: 'SHARE', scale: 0.08, fmt: v => (v * 100).toFixed(0) + '%' },
+};
+const ZONE_FULL_CONF = 12;   // attempts at which a cell's color is fully trusted
+
+function zoneCellColor(c, metric) {
+  const v = c[metric], lg = c.lg && c.lg[metric];
+  if (v === null || v === undefined || lg === null || lg === undefined || !c.att) return null;
+  const diff = v - lg;
+  const conf = Math.min(1, c.att / ZONE_FULL_CONF);
+  const a = Math.min(1, Math.abs(diff) / ZONE_METRICS[metric].scale) * 0.75 * conf;
+  if (a < 0.04) return null;
+  // Share is a tendency, not good/bad: amber = more of the volume goes here than league.
+  if (metric === 'share') return diff > 0 ? `rgba(242,165,65,${a.toFixed(2)})` : null;
+  return diff > 0 ? `rgba(90,169,255,${a.toFixed(2)})` : `rgba(255,122,69,${a.toFixed(2)})`;
+}
+
+function zoneTip(c, depthLabel, who, outOf) {
+  const loc = c.loc.toUpperCase();
+  if (!c.att) return `${depthLabel} ${loc}: no attempts`;
+  const lg = c.lg || {};
+  const p = (v) => v === null || v === undefined ? '--' : Math.round(v * 100) + '%';
+  const f = (v, d) => v === null || v === undefined ? '--' : v.toFixed(d);
+  return `${who} · ${depthLabel} ${loc}\n` +
+    `${c.att} att (${p(c.share)} of total; lg ${p(lg.share)})\n` +
+    `CMP ${p(c.cmp)} (lg ${p(lg.cmp)})\n` +
+    `Y/A ${f(c.ypa, 1)} (lg ${f(lg.ypa, 1)})\n` +
+    `EPA/att ${f(c.epa, 2)} (lg ${f(lg.epa, 2)})\n` +
+    `TD ${c.td} · INT ${c.int}` + (c.rank ? `\nEPA allowed rank #${c.rank}/${outOf} (1 = stingiest)` : '');
+}
+
+function zoneMapHtml(z, grid, metric, title) {
+  if (!grid) return '';
+  const m = ZONE_METRICS[metric];
+  const seasonTag = grid.fallback_from ? `${grid.season} (no ${grid.fallback_from} sample yet)` : grid.season;
+  let html = `<div class="mono" style="display:flex;align-items:baseline;gap:6px;margin:6px 0 3px;font-size:10px;letter-spacing:0.06em">
+      <span style="color:var(--label)">${title}</span>
+      <span style="margin-left:auto;color:var(--dim)">${seasonTag} · ${grid.total_att} ATT</span></div>`;
+  if (!grid.total_att) return html + `<div class="empty" style="padding:8px">No charted attempts.</div>`;
+  html += `<div class="zmap mono"><span></span>${z.locations.map(l => `<span class="zh">${l.toUpperCase()}</span>`).join('')}`;
+  const byKey = {};
+  grid.cells.forEach(c => { byKey[c.depth + '|' + c.loc] = c; });
+  z.depths.forEach(d => {
+    html += `<span class="zd">${d.label}</span>`;
+    z.locations.forEach(loc => {
+      const c = byKey[d.key + '|' + loc];
+      const bg = zoneCellColor(c, metric);
+      const v = c[metric];
+      const thin = c.att < 5;
+      html += `<div class="zc${thin ? ' thin' : ''}" title="${escapeHtml(zoneTip(c, d.label, title, grid.out_of))}"${bg ? ` style="background:${bg}"` : ''}>
+        <span class="zv">${c.att && v !== null && v !== undefined ? m.fmt(v) : '·'}</span>
+        <span class="zn">${c.att}${c.rank ? ' · #' + c.rank : ''}</span></div>`;
+    });
+  });
+  return html + `</div>`;
+}
+
+// Cells where the passer is above league AND the defense allows above league
+// (EPA/att), weighted by how much of the passer's volume goes there.
+function zoneOverlaps(z) {
+  if (!z.player || !z.defense || !z.player.total_att) return [];
+  const dk = {};
+  z.defense.cells.forEach(c => { dk[c.depth + '|' + c.loc] = c; });
+  const label = Object.fromEntries(z.depths.map(d => [d.key, d.label]));
+  return z.player.cells.map(c => {
+    const d = dk[c.depth + '|' + c.loc];
+    if (!d || c.att < 3 || d.att < 3 || c.epa === null || d.epa === null || !c.lg) return null;
+    const pe = c.epa - c.lg.epa, de = d.epa - d.lg.epa;
+    return { name: `${label[c.depth]} ${c.loc.toUpperCase()}`, pe, de, score: (pe + de) * (c.share || 0) };
+  }).filter(x => x && x.pe > 0 && x.de > 0).sort((a, b) => b.score - a.score).slice(0, 2);
+}
+
+function zoneControlsHtml(scope, metric, season, seasons) {
+  return `<div class="zctl mono">
+    <span>COLOR</span>${Object.entries(ZONE_METRICS).map(([k, v]) => `<button type="button" class="${metric === k ? 'on' : ''}" data-zmetric="${k}" data-zscope="${scope}">${v.label}</button>`).join('')}
+    <span style="margin-left:auto">SEASON</span>${seasons.map(s => `<button type="button" class="${season === s ? 'on' : ''}" data-zseason="${s}" data-zscope="${scope}">${s}</button>`).join('')}
+  </div>`;
+}
+
+function zoneLegendHtml(metric, offName) {
+  const txt = metric === 'share'
+    ? `Amber = more of the volume goes there than league. Number under each value = attempts.`
+    : `Blue = better for ${offName} than league avg in that zone, orange = worse. Faded = few attempts. Defense cells show EPA-allowed rank (#1 = stingiest).`;
+  return `<div style="margin-top:6px;font-size:10px;line-height:1.4;color:var(--faint)">${escapeHtml(txt)} Hover a cell for full splits. Depth = air yards at the catch point; sacks, spikes and throwaways without a charted spot are excluded.</div>`;
+}
+
+async function fetchZones(holder, season, params) {
+  holder.zones = holder.zones || {};
+  if (holder.zones[season]) return;
+  holder.zones[season] = { loading: true };
+  try {
+    const qs = new URLSearchParams({ ...params, season }).toString();
+    const resp = await fetch('/api/pass_zones?' + qs);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'request failed');
+    holder.zones[season] = { data };
+  } catch (e) {
+    holder.zones[season] = { error: String(e.message || e) };
+  }
+}
+
+function playerZoneRole(pos) { return pos === 'QB' ? 'pass' : ['WR', 'TE', 'RB', 'FB'].includes(pos) ? 'target' : null; }
+
+function renderZonesMatchup(body, t) {
+  const d = t.data;
+  const cur = d.game_log.season;
+  const season = t.ui.zoneSeason || cur;
+  const metric = t.ui.zoneMetric || 'epa';
+  const role = playerZoneRole(d.player.position);
+  const ent = t.zones && t.zones[season];
+  if (!ent) {
+    const params = { def: d.opponent, role: role || 'pass' };
+    if (role) params.player = d.player.gsis_id;
+    fetchZones(t, season, params).then(() => { if (activeTicket() === t && t.ui.match === 'zones') renderMatchup(); });
+  }
+  let inner;
+  if (!ent || ent.loading) inner = `<div class="empty">Loading pass zones…</div>`;
+  else if (ent.error) inner = `<div class="empty" style="color:var(--orange)">${escapeHtml(ent.error)}</div>`;
+  else {
+    const z = ent.data, opp = nflverseToKalshi(d.opponent);
+    const who = shortName(d.player.name).toUpperCase();
+    const ov = zoneOverlaps(z);
+    inner = (z.player ? zoneMapHtml(z, z.player, metric, role === 'pass' ? `${who} THROWS` : `${who} TARGETS`) : '')
+      + zoneMapHtml(z, z.defense, metric, `${opp} DEF ALLOWS`)
+      + (ov.length ? `<div style="margin-top:6px;font-size:11px;line-height:1.4;color:var(--label)"><span class="mono" style="font-size:9.5px;color:var(--blue)">OVERLAP</span> ${ov.map(o => `${o.name} (${who} ${signed(o.pe, 2)}, ${opp} allows ${signed(o.de, 2)} EPA/att vs lg)`).map(escapeHtml).join(' · ')}</div>` : '')
+      + zoneLegendHtml(metric, d.player.team_kalshi);
+  }
+  body.innerHTML = `<div style="padding:4px 8px 8px">${zoneControlsHtml('t', metric, season, [cur, cur - 1])}${inner}</div>`;
+}
+
+function gameZonesPanelsHtml(g) {
+  const d = g.data;
+  const cur = (d.tendencies && d.tendencies.season) || new Date().getFullYear();
+  const season = g.zoneSeason || cur;
+  const metric = g.zoneMetric || 'epa';
+  const sides = (d.matchups || []).map(mu => {
+    const qbRow = (mu.rows || []).find(r => r.off_pos === 'QB');
+    const qb = qbRow && qbRow.offense[0];
+    return { off: mu.offense_team, def: mu.defense_team, qb };
+  });
+  const key = season;
+  if (!g.zones || !g.zones[key]) {
+    g.zones = g.zones || {};
+    g.zones[key] = { loading: true };
+    Promise.all(sides.map(async s => {
+      const holder = {};
+      const params = { def: s.def, role: 'pass' };
+      if (s.qb && s.qb.gsis_id) params.player = s.qb.gsis_id; else params.team = s.off;
+      await fetchZones(holder, season, params);
+      return holder.zones[season];
+    })).then(res => {
+      const err = res.find(r => r.error);
+      g.zones[key] = err ? { error: err.error } : { data: res.map(r => r.data) };
+      if (activeGameTab() === g && g.view === 'zones') renderSlate();
+    });
+  }
+  const ent = g.zones[key];
+  const ctl = zoneControlsHtml('g', metric, season, [cur, cur - 1]);
+  if (ent.loading || ent.error) {
+    return `<div class="panel" style="grid-column:span 2"><div class="panel-body" style="padding:4px 8px">${ctl}<div class="empty"${ent.error ? ' style="color:var(--orange)"' : ''}>${ent.error ? escapeHtml(ent.error) : 'Loading pass zones…'}</div></div></div>`;
+  }
+  return sides.map((s, i) => {
+    const z = ent.data[i];
+    const qbName = s.qb ? shortName(s.qb.full_name).toUpperCase() : `${s.off} QB`;
+    const ov = zoneOverlaps(z);
+    return `<div class="panel">
+      <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(s.off, 16)}${s.off} PASS <span style="color:var(--dim);font-weight:400">vs</span> ${teamLogo(s.def, 16)}${s.def} DEF</span></div>
+      <div class="panel-body" style="padding:4px 8px 8px">
+        ${i === 0 ? ctl : `<div class="zctl mono" style="visibility:hidden"><button>.</button></div>`}
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:4px 14px">
+          <div>${zoneMapHtml(z, z.player, metric, `${qbName} THROWS`)}</div>
+          <div>${zoneMapHtml(z, z.defense, metric, `${s.def} DEF ALLOWS`)}</div>
+        </div>
+        ${ov.length ? `<div style="margin-top:6px;font-size:11px;line-height:1.4;color:var(--label)"><span class="mono" style="font-size:9.5px;color:var(--blue)">OVERLAP</span> ${ov.map(o => escapeHtml(`${o.name} (${qbName} ${signed(o.pe, 2)}, ${s.def} allows ${signed(o.de, 2)} EPA/att vs lg)`)).join(' · ')}</div>` : ''}
+        ${zoneLegendHtml(metric, s.off)}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ---------- render: injuries ----------
@@ -2272,7 +2471,7 @@ function renderGameDetail(el, g) {
   const gdm = {};
   coreMkts(d).forEach(m => { gdm[m.ticker] = m; });
   const gdStar = (q) => q && q.ticker && gdm[q.ticker] ? bmStar(gdm[q.ticker]) : '';
-  const viewTabs = [{ id: 'depth', label: 'DEPTH MATCHUPS' }, { id: 'tend', label: 'TENDENCIES & SCRIPT' }];
+  const viewTabs = [{ id: 'depth', label: 'DEPTH MATCHUPS' }, { id: 'tend', label: 'TENDENCIES & SCRIPT' }, { id: 'zones', label: 'PASS ZONES' }];
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:8px 4px">
@@ -2282,7 +2481,7 @@ function renderGameDetail(el, g) {
       <span style="margin-left:auto;display:flex;align-self:stretch">${viewTabs.map(v => `<button type="button" class="tab small ${view === v.id ? 'on' : ''}" data-game-view="${v.id}">${v.label}</button>`).join('')}</span>
     </div>
     <div class="game-grid">
-      ${view === 'tend' ? tendencyPanelsHtml(d.tendencies) : (d.matchups || []).map(matchupPanelHtml).join('')}
+      ${view === 'tend' ? tendencyPanelsHtml(d.tendencies) : view === 'zones' ? gameZonesPanelsHtml(g) : (d.matchups || []).map(matchupPanelHtml).join('')}
       <div class="panel gg-side">
         <div class="panel-head"><span class="panel-title">GAME &amp; COMBO MARKETS</span></div>
         <div class="panel-body">${combosHtml(d.combos, d.away, d.home)}</div>
@@ -4160,6 +4359,17 @@ document.addEventListener('click', (e) => {
   if (backSlateT) { backToSlateList(); return; }
   const slateWeekT = e.target.closest('[data-slate-week]');
   if (slateWeekT) { if (!state.slate.loading) loadSlate(true, Number(slateWeekT.dataset.slateWeek)); return; }
+  const zT = e.target.closest('[data-zmetric],[data-zseason]');
+  if (zT) {
+    const isGame = zT.dataset.zscope === 'g';
+    const tgt = isGame ? activeGameTab() : t && t.ui;
+    if (tgt) {
+      if (zT.dataset.zmetric) tgt.zoneMetric = zT.dataset.zmetric;
+      if (zT.dataset.zseason) tgt.zoneSeason = Number(zT.dataset.zseason);
+      if (isGame) renderSlate(); else renderMatchup();
+    }
+    return;
+  }
   const gameViewT = e.target.closest('[data-game-view]');
   if (gameViewT) { const g = activeGameTab(); if (g) { g.view = gameViewT.dataset.gameView; renderSlate(); } return; }
   if (e.target.id === 'newticket') { state.module = 'research'; document.getElementById('q').focus(); return; }

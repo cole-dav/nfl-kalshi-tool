@@ -46,6 +46,7 @@ import nflverse_data as nd
 import sessions
 import snapshots as snap
 import team_tendencies as tt
+import pass_zones as pz
 import week_overview as wo
 import player_volume as pvol
 import engine_agent as engine
@@ -83,7 +84,7 @@ def _cache_warmer():
     """Keep nflverse data, rankings and Madden ratings loaded in memory and
     refetch them here when they go stale, so page requests never wait on it."""
     while True:
-        for warm in (nd.warm, prk.warm, mr.warm, tt.warm, vi.warm):
+        for warm in (nd.warm, prk.warm, mr.warm, tt.warm, pz.warm, vi.warm):
             try:
                 warm()
             except Exception:
@@ -261,6 +262,34 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"game log lookup failed: {e}"}, status=502)
+            return
+
+        if parsed.path == "/api/pass_zones":
+            # player=<gsis id> (or team=<offense> to use its current starting QB),
+            # role=pass|target, def=<defense team>, season=<optional>
+            qs = parse_qs(parsed.query)
+            arg = lambda k: (qs.get(k) or [""])[0].strip()
+            defense = nd.kalshi_to_nflverse_team(arg("def").upper())
+            role = arg("role") or "pass"
+            if not defense or role not in ("pass", "target"):
+                self._send_json({"error": "need 'def' and role=pass|target"}, status=400)
+                return
+            try:
+                season = int(arg("season")) if arg("season") else None
+            except ValueError:
+                self._send_json({"error": "bad 'season' query param"}, status=400)
+                return
+            try:
+                def build():
+                    pid = arg("player")
+                    if not pid and arg("team"):
+                        pid = pz.team_starting_qb(nd.kalshi_to_nflverse_team(arg("team").upper()), season)
+                    return pz.matchup_zones(pid or None, defense, role, season)
+                key = f"zones:{arg('player') or arg('team').upper()}:{role}:{defense}:{season or ''}"
+                self._send_json(snap.get(key, build, TTL_STATIC), cache=CACHE_SLOW)
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"pass zone lookup failed: {e}"}, status=502)
             return
 
         if parsed.path == "/api/videos/team":

@@ -41,6 +41,13 @@ Open http://127.0.0.1:8765 and search a player.
   the game page under TENDENCIES & SCRIPT. Coverage shells/man-zone come from
   nflverse participation, which is only published for completed seasons, so
   they're last season's.
+- `pass_zones.py` -- pass-zone heat maps from pbp: left/middle/right x air-yard
+  depth (behind LOS, 1-9, 10-19, 20+) with attempts, comp %, Y/A and EPA/att per
+  cell vs the league average for that cell. Covers a QB's throws, a receiver's
+  targets, and what a defense allows (with a league EPA-allowed rank per cell).
+  Served at `/api/pass_zones`; shown under Matchup -> Pass Zones on the player
+  page and the PASS ZONES tab on the game page. Falls back to last season when
+  the current one has too few attempts.
 - `weather.py` -- Open-Meteo forecast lookup for the game's stadium.
 - `player_research.py` -- ties it all together into one JSON payload per player.
 - `combo.py` -- combo (parlay) builder backend: leg validation against Kalshi's
