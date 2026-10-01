@@ -8,11 +8,17 @@ Sources are playlists, which keep each week's videos together:
     "Player Highlights (Week N)" for the season.
   - Curtain Call Replays (fan channel): "NFL | <season> | Week N" playlists of
     "<Player> Week N Highlights vs <Opp> | Every Play/Run/Target and Catch".
+  - STACKED Fantasy (fan channel): "Week N <season>" playlists of
+    "<Player>: Every Touch|Dropback of <season> Week N | Full Film Compilation"
+    -- the widest per-player coverage (~100-180 offensive players a week).
+  - Hall Highlights (fan channel): its uploads list, titled
+    "<Player> Week N Highlights (Every Target) | NFL <season> - <Team>".
 
 With YOUTUBE_API_KEY set, playlists are listed through the YouTube Data API
 (complete, ~1 quota unit per 50 videos). Without it, the public channel and
-playlist pages are read instead -- that only sees a channel's newest ~30
-playlists, but everything seen is kept in cache/videos_<season>.json, so a
+playlist pages are read instead (following YouTube's own "load more"
+continuations past the first 100 videos) -- that only sees a channel's newest
+~30 playlists, but everything seen is kept in cache/videos_<season>.json, so a
 server that runs through the season keeps every week.
 
 We only ever store video ids and embed them with YouTube's own player; nothing
@@ -37,16 +43,24 @@ import pandas as pd
 
 import nflverse_data as nd
 
+# "uploads": index the channel's whole uploads list instead of picking weekly
+# playlists (Hall files by team, not week; titles carry the week).
 CHANNELS = {
     "nfl": {"id": "UCDVYQ4Zhbm3S2dlz7P1GBDg", "handle": "NFL"},
     "ccr": {"id": "UC_hzY5r_WT4C5gi0Tl2u0yg", "handle": "curtaincallreplays"},
+    "stacked": {"id": "UCgaRVS9c1T-4rK0bZMs1WUQ", "handle": "stackedfantasyfilm"},
+    "hall": {"id": "UCipM1ooeLtPlfIv9b02Z9jg", "handle": "HallsHighlights", "uploads": True},
 }
-SOURCE_LABEL = {"nfl": "NFL", "ccr": "Curtain Call Replays"}
-# The NFL blocks its own uploads from playing in players on other sites ("NFL
-# has blocked it from display on this website or application"), even though
-# oEmbed and the Data API still call them embeddable -- the block only shows up
-# in the player. Those render as a thumbnail that opens YouTube instead.
-SOURCE_EMBEDS = {"nfl": False, "ccr": True}
+SOURCE_LABEL = {"nfl": "NFL", "ccr": "Curtain Call Replays", "stacked": "STACKED Fantasy", "hall": "Hall Highlights"}
+# The NFL blocks its own uploads -- and fan uploads its Content ID claims --
+# from playing in players on other sites ("NFL has blocked it from display on
+# this website or application"), even though oEmbed and the Data API still call
+# them embeddable; the block only shows up in the player. Checked per channel in
+# a browser: NFL and STACKED videos are blocked, Curtain Call and Hall play.
+# Blocked sources render as a thumbnail that opens YouTube; the page also falls
+# back to that if an "embeddable" video errors in the player.
+SOURCE_EMBEDS = {"nfl": False, "ccr": True, "stacked": False, "hall": True}
+UPLOADS_MAX_PAGES = 5
 
 # Playlists for the current/last week keep changing (late uploads, takedowns);
 # older weeks settle, so re-read them daily rather than hourly.
@@ -71,10 +85,15 @@ KIND_LABEL = {
     "every_run": "EVERY RUN",
     "every_target": "EVERY TARGET",
     "every_catch": "EVERY CATCH",
+    "every_dropback": "EVERY DROPBACK",
     "best_plays": "BEST PLAYS",
+    "highlights": "HIGHLIGHTS",
 }
 # Player-video preference when a game has several: the fullest cut-up first.
-KIND_ORDER = ["every_play", "every_touch", "every_run", "every_target", "every_catch", "best_plays"]
+KIND_ORDER = ["every_play", "every_touch", "every_dropback", "every_run", "every_target", "every_catch",
+              "best_plays", "highlights"]
+
+OFFENSE_POSITIONS = {"QB", "RB", "FB", "WR", "TE"}
 
 _UA = {"User-Agent": "Mozilla/5.0", "Accept-Language": "en-US"}
 
@@ -103,6 +122,9 @@ def classify_playlist(title: str, season: int) -> tuple[str, int] | None:
     m = re.match(r"^NFL \| (\d{4}) \| Week (\d+)$", t)
     if m and int(m.group(1)) == season:
         return "player", int(m.group(2))
+    m = re.match(r"^Week (\d+) (\d{4})$", t)  # STACKED
+    if m and int(m.group(2)) == season:
+        return "player", int(m.group(1))
     return None
 
 
@@ -123,6 +145,8 @@ def parse_game_title(title: str, week: int | None = None) -> dict | None:
 
 def _kind_from_every(text: str) -> str:
     t = text.lower()
+    if "dropback" in t:
+        return "every_dropback"
     if "play" in t or "throw" in t or "pass" in t:
         return "every_play"
     if "touch" in t:
@@ -137,9 +161,15 @@ def _kind_from_every(text: str) -> str:
 
 
 def parse_player_title(title: str, week: int | None = None) -> dict | None:
-    """Player cut-up titles -> {name, week, opp, team (nflverse or None), kind}.
-    `week` (the playlist's) fills in when the title leaves it out.
+    """Player cut-up titles -> {name, week, opp, team (nflverse or None), kind,
+    season (when the title names one)}. `week` (the playlist's) fills in when
+    the title leaves it out.
 
+    STACKED:      'Rome Odunze: Every Touch of 2026 Week 3 | Full Film Compilation'
+                  'Jalen Hurts: Every Dropback of 2026 Week 3 | Full Film Compilation'
+    Hall:         'Chris Olave Week 3 Highlights (Every Target) | NFL 2026 - New Orleans Saints'
+                  'Keldric Faulk Week 2 Every Play | NFL 2026 - Tennesee Titans'
+                  'C. J. Henderson Highlights | Week 3 NFL 2026 - Atlanta Falcons'
     Curtain Call: 'Jeremiyah Love Week 3 Highlights vs 49ers | Every Play'
                   'Devin Neal Week 14 Highlights | Every Run, Target, and Catch vs Buccaneers'
                   'Kaleb Johnson Packers Debut Highlights | Every Run'
@@ -150,10 +180,22 @@ def parse_player_title(title: str, week: int | None = None) -> dict | None:
     """
     t = title.strip()
 
-    def out(name, wk, opp, kind, team=None):
+    def out(name, wk, opp, kind, team=None, season=None):
         if wk is None:
             return None
-        return {"name": name.strip().rstrip("'’"), "week": wk, "opp": opp, "team": team, "kind": kind}
+        return {"name": name.strip().rstrip("'’"), "week": wk, "opp": opp, "team": team, "kind": kind,
+                "season": season}
+
+    m = re.match(r"^(.+?): Every (\w+) of (\d{4}) Week (\d+)\b", t)
+    if m:
+        return out(m.group(1), int(m.group(4)), None, _kind_from_every(m.group(2)), season=int(m.group(3)))
+    m = re.match(r"^(.+?)(?: (?:NFL )?Debut)? (?:Week (\d+) )?(Highlights(?: \(([^)]*)\))?|Every [\w ,]+?) \| "
+                 r"(?:Week (\d+) )?NFL (\d{4}) - (.+)$", t)
+    if m:
+        what, paren = m.group(3), m.group(4)
+        kind = _kind_from_every(paren or what) if (paren or what.startswith("Every")) else "highlights"
+        wk = m.group(2) or m.group(5)
+        return out(m.group(1), int(wk) if wk else week, None, kind, team_from_text(m.group(7)), int(m.group(6)))
 
     m = re.match(r"^(.+?) Week (\d+) Highlights(?: vs\.? ([^|]+?))? \| (Every [^|]*?)(?: vs\.? (.+))?$", t)
     if m:
@@ -187,13 +229,50 @@ def _http_json(url: str) -> dict:
         return json.loads(r.read().decode())
 
 
-def _page_data(url: str) -> dict:
+def _page_html(url: str) -> tuple[dict, str]:
+    """(ytInitialData, innertube client version) of a YouTube page."""
     with urllib.request.urlopen(urllib.request.Request(url, headers=_UA), timeout=20) as r:
         html = r.read().decode()
     m = re.search(r"var ytInitialData = (\{.*?\});</script>", html)
     if not m:
         raise RuntimeError(f"no ytInitialData on {url}")
-    return json.loads(m.group(1))
+    ver = re.search(r'"INNERTUBE_CLIENT_VERSION":"([^"]+)"', html)
+    return json.loads(m.group(1)), (ver.group(1) if ver else "2.20250101.00.00")
+
+
+def _page_data(url: str) -> dict:
+    return _page_html(url)[0]
+
+
+def _continuations(obj, out: list) -> list:
+    if isinstance(obj, dict):
+        if "continuationCommand" in obj:
+            out.append(obj["continuationCommand"]["token"])
+        for x in obj.values():
+            _continuations(x, out)
+    elif isinstance(obj, list):
+        for x in obj:
+            _continuations(x, out)
+    return out
+
+
+def _paged_lockups(url: str, max_pages: int) -> list[tuple[str, str]]:
+    """Tiles on a page plus up to max_pages-1 of its "load more" continuations
+    (a playlist page shows 100 videos; the rest come from these)."""
+    data, ver = _page_html(url)
+    items = _lockups(data, [])
+    tokens = _continuations(data, [])
+    for _ in range(max_pages - 1):
+        if not tokens:
+            break
+        body = {"context": {"client": {"clientName": "WEB", "clientVersion": ver, "hl": "en"}}, "continuation": tokens[-1]}
+        req = urllib.request.Request("https://www.youtube.com/youtubei/v1/browse?prettyPrint=false",
+                                     data=json.dumps(body).encode(), headers={**_UA, "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            more = json.loads(r.read().decode()).get("onResponseReceivedActions", [])
+        items += _lockups(more, [])
+        tokens = _continuations(more, [])
+    return items
 
 
 def _lockups(obj, out: list) -> list:
@@ -224,15 +303,16 @@ def _api_key() -> str | None:
     return os.environ.get("YOUTUBE_API_KEY") or None
 
 
-def _api_paged(endpoint: str, params: dict) -> list[dict]:
+def _api_paged(endpoint: str, params: dict, max_pages: int = 100) -> list[dict]:
     items, token = [], None
-    while True:
+    for _ in range(max_pages):
         q = {**params, "key": _api_key(), "maxResults": 50, **({"pageToken": token} if token else {})}
         data = _http_json(f"https://www.googleapis.com/youtube/v3/{endpoint}?{urllib.parse.urlencode(q)}")
         items += data.get("items", [])
         token = data.get("nextPageToken")
         if not token:
-            return items
+            break
+    return items
 
 
 def list_channel_playlists(channel: str) -> list[tuple[str, str]]:
@@ -243,12 +323,13 @@ def list_channel_playlists(channel: str) -> list[tuple[str, str]]:
     return _lockups(_page_data(f"https://www.youtube.com/@{ch['handle']}/playlists"), [])
 
 
-def list_playlist_videos(playlist_id: str) -> list[tuple[str, str]]:
+def list_playlist_videos(playlist_id: str, max_pages: int = 10) -> list[tuple[str, str]]:
+    """Newest-first for uploads lists; max_pages caps both paths (50 or 100 a page)."""
     if _api_key():
-        items = _api_paged("playlistItems", {"part": "snippet", "playlistId": playlist_id})
+        items = _api_paged("playlistItems", {"part": "snippet", "playlistId": playlist_id}, max_pages * 2)
         return [(it["snippet"]["resourceId"]["videoId"], it["snippet"]["title"]) for it in items
                 if it["snippet"].get("resourceId", {}).get("videoId")]
-    return _lockups(_page_data(f"https://www.youtube.com/playlist?list={playlist_id}"), [])
+    return _paged_lockups(f"https://www.youtube.com/playlist?list={playlist_id}", max_pages)
 
 
 def embeddable(video_id: str) -> bool:
@@ -274,7 +355,9 @@ def _game_row(sched: pd.DataFrame, week: int, a: str, b: str | None) -> pd.Serie
 
 def match_player(name: str, team: str | None, rosters: pd.DataFrame) -> str | None:
     """gsis_id for `name` (on `team` when known). Exact normalized name first,
-    then a unique last-name match on the team (covers nicknames)."""
+    then a unique last-name match on the team (covers nicknames). Namesakes
+    (e.g. a practice-squad DB sharing a starting WR's name) resolve to the
+    active player, then to the offensive one -- what these cut-ups cover."""
     norm = nd._normalize_name(name)
     if not norm:
         return None
@@ -286,9 +369,11 @@ def match_player(name: str, team: str | None, rosters: pd.DataFrame) -> str | No
         rosters[on_team & names.map(lambda n: n.split()[-1:] == [last])],
         rosters[names == norm],  # traded since, or no opponent in the title
     ):
-        ids = hit["gsis_id"].dropna().unique()
-        if len(ids) == 1:
-            return ids[0]
+        col = lambda c: hit[c] if c in hit.columns else pd.Series(None, index=hit.index, dtype=object)
+        for narrowed in (hit, hit[col("status") == "ACT"], hit[col("position").isin(OFFENSE_POSITIONS)]):
+            ids = narrowed["gsis_id"].dropna().unique()
+            if len(ids) == 1:
+                return ids[0]
     return None
 
 
@@ -322,7 +407,13 @@ class VideoIndex:
         with self.lock:
             state = json.loads(json.dumps(self.state))
         pls = state["playlists"]
-        for channel in CHANNELS:
+        for channel, ch in CHANNELS.items():
+            if ch.get("uploads"):
+                # A channel's uploads list is the playlist "UU" + its id minus "UC".
+                pls.setdefault("UU" + ch["id"][2:], {
+                    "channel": channel, "title": f"{SOURCE_LABEL[channel]} uploads", "kind": "player",
+                    "week": None, "uploads": True, "fetched_at": 0, "videos": []})
+                continue
             if now - state["listed_at"].get(channel, 0) < LISTING_TTL:
                 continue
             try:
@@ -335,13 +426,21 @@ class VideoIndex:
             except Exception:
                 traceback.print_exc()
 
-        newest = max((p["week"] for p in pls.values()), default=0)
+        newest = max((p["week"] for p in pls.values() if p["week"] is not None), default=0)
         due = [pid for pid, p in pls.items()
-               if now - p["fetched_at"] > (FRESH_TTL if p["week"] >= newest - 1 else SETTLED_TTL)]
+               if now - p["fetched_at"] > (FRESH_TTL if p["week"] is None or p["week"] >= newest - 1 else SETTLED_TTL)]
         for pid in due:
+            p = pls[pid]
             try:
-                pls[pid]["videos"] = list_playlist_videos(pid)
-                pls[pid]["fetched_at"] = now
+                if p.get("uploads"):
+                    # Only the newest pages are re-read; older uploads are kept
+                    # from earlier fetches rather than refetched every hour.
+                    fresh = list_playlist_videos(pid, UPLOADS_MAX_PAGES)
+                    ids = {vid for vid, _ in fresh}
+                    p["videos"] = fresh + [v for v in p["videos"] if v[0] not in ids]
+                else:
+                    p["videos"] = list_playlist_videos(pid)
+                p["fetched_at"] = now
             except Exception:
                 traceback.print_exc()
 
@@ -383,12 +482,14 @@ class VideoIndex:
                         games.setdefault(row["game_id"], []).append({**base, "kind": "game", "label": KIND_LABEL["game"]})
                     continue
                 pp = parse_player_title(title, p["week"])
-                if not pp:
+                if not pp or (pp["season"] and pp["season"] != self.season):
                     continue
                 row = _game_row(sched, pp["week"], pp["opp"], None) if pp["opp"] else None
                 team = pp["team"]
                 if row is not None:
                     team = row["home_team"] if row["away_team"] == pp["opp"] else row["away_team"]
+                elif team:
+                    row = _game_row(sched, pp["week"], team, None)
                 gsis = match_player(pp["name"], team, rosters)
                 if gsis and row is None:
                     # No opponent in the title: find the player's game that week.

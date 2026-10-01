@@ -128,14 +128,21 @@ embeds YouTube's own player (or links out).
   own cut-up first (`EVERY PLAY` / `EVERY RUN` / `EVERY TARGET` / `BEST PLAYS`),
   then `GAME` highlights.
 
-Sources: the NFL channel's weekly "Game Recaps/Highlights (Week N)" and
-"Player Highlights (Week N)" playlists, and Curtain Call Replays' "NFL | <season>
-| Week N" playlists of per-player every-play cut-ups (a fan channel: ~15-30
-players a week, 1-4 days after games, and uploads can be taken down).
+Sources (fan channels can have uploads taken down at any time):
 
-The NFL blocks its own uploads from playing in players on other sites, so NFL
-videos show a thumbnail that opens YouTube; Curtain Call videos play in place
-(`SOURCE_EMBEDS` in `video_index.py`).
+| Channel | What | Coverage | Plays on the site? |
+|---|---|---|---|
+| NFL | game highlights, "best plays" per player | every game, standout players | no -- opens YouTube |
+| STACKED Fantasy | "Every Touch" / "Every Dropback" film per player | ~100-180 offensive players a week | no -- NFL Content ID blocks it |
+| Curtain Call Replays | "Every Play / Run / Target" per player | ~15-30 players a week | yes |
+| Hall Highlights | per-player highlights, some "Every Target" | ~20-40 players a week, incl. defense | yes |
+
+Whether a video plays off YouTube is up to the rights holder and only shows up
+in the player, so `SOURCE_EMBEDS` in `video_index.py` records what was checked
+per channel, and the page also swaps any embed the player refuses for a
+"Watch on YouTube" link (remembered per browser). The game log shows the
+fullest cut-up that plays here, plus a fuller link-only one (usually STACKED's
+every-touch film) when there is one, then the game highlights.
 
 Set `YOUTUBE_API_KEY` in `.env` for complete playlist listings through the
 YouTube Data API (well inside the free quota). Without it the public channel

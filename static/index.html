@@ -1640,15 +1640,60 @@ const teamVids = {};
 let vidHoverEl = null, vidShowTimer = null, vidHideTimer = null;
 
 function ytFrame(id, cls, params, title) {
-  const q = new URLSearchParams({ autoplay: '1', rel: '0', playsinline: '1', ...(params || {}) });
-  return `<iframe class="${cls}" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?${q}" title="${escapeHtml(title || 'YouTube video')}"
+  const q = new URLSearchParams({ autoplay: '1', rel: '0', playsinline: '1', enablejsapi: '1', origin: location.origin, ...(params || {}) });
+  return `<iframe class="${cls}" data-ytv="${escapeHtml(id)}" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?${q}" title="${escapeHtml(title || 'YouTube video')}"
     allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+}
+
+// Whether a video plays here is only known for sure once YouTube's player
+// tries: rights holders (the NFL, via Content ID) block individual uploads
+// from other sites. Videos the player refused are remembered per browser and
+// shown as YouTube links from then on.
+const BLOCKED_VIDS_KEY = 'blockedVideos';
+let blockedVids = new Set();
+try { blockedVids = new Set(JSON.parse(localStorage.getItem(BLOCKED_VIDS_KEY) || '[]')); } catch (e) {}
+function isPlayable(v) { return !!v.embed && !blockedVids.has(v.id); }
+function markBlocked(id) {
+  blockedVids.add(id);
+  try { localStorage.setItem(BLOCKED_VIDS_KEY, JSON.stringify([...blockedVids])); } catch (e) {}
+}
+
+let ytApi = null;
+function loadYtApi() {
+  if (!ytApi) {
+    ytApi = new Promise(resolve => {
+      if (window.YT && window.YT.Player) { resolve(window.YT); return; }
+      window.onYouTubeIframeAPIReady = () => resolve(window.YT);
+      const s = document.createElement('script');
+      s.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(s);
+    });
+  }
+  return ytApi;
+}
+
+// Watches the embeds under `root`; on 101/150 (owner blocks embedding) or 100
+// (removed) the iframe is swapped for the thumbnail link.
+function armEmbeds(root) {
+  root.querySelectorAll('iframe[data-ytv]').forEach(fr => {
+    loadYtApi().then(YT => new YT.Player(fr, { events: { onError: (e) => {
+      if (![100, 101, 150].includes(e.data)) return;
+      const id = fr.dataset.ytv;
+      markBlocked(id);
+      if (fr.isConnected) fr.outerHTML = videoView(ytVideo(id, fr.title), fr.className);
+    } } }));
+  });
+}
+
+function ytVideo(id, title) {
+  return { id, title, embed: false, url: 'https://www.youtube.com/watch?v=' + encodeURIComponent(id),
+    thumb: `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg` };
 }
 
 // Embeddable videos play in place; the rest (the NFL's own uploads, which it
 // blocks from other sites) show their thumbnail and open on YouTube.
 function videoView(v, cls, params) {
-  if (v.embed) return ytFrame(v.id, cls, params, v.title);
+  if (isPlayable(v)) return ytFrame(v.id, cls, params, v.title);
   return `<a class="${cls} yt-link" href="${escapeHtml(v.url)}" target="_blank" rel="noopener" title="${escapeHtml(v.title)}"
     style="background-image:url('${escapeHtml(v.thumb)}')"><span class="yt-play mono">▶ WATCH ON YOUTUBE ↗</span></a>`;
 }
@@ -1682,7 +1727,8 @@ function renderVidPop(gameId) {
     <div class="vp-list">${games.map(g => `<button type="button" class="vp-row mono${cur && g.game_id === cur.game_id ? ' on' : ''}"${g.video ? ` data-vpgame="${escapeHtml(g.game_id)}"` : ' disabled'}>
       <span style="width:34px">${g.season_type === 'REG' ? 'WK ' + g.week : g.season_type}</span><span style="width:52px">${g.is_home ? 'vs' : '@'} ${nflverseToKalshi(g.opponent)}</span>${res(g)}
       <span style="margin-left:auto">${g.video ? '▶' : '—'}</span></button>`).join('')}</div>
-    ${cur ? `<div class="vp-foot mono">YOUTUBE · ${escapeHtml(cur.video.source.toUpperCase())} · ${cur.video.embed ? 'CLICK VIDEO TO UNMUTE' : 'NFL ONLY ALLOWS PLAYBACK ON YOUTUBE'}</div>` : ''}`;
+    ${cur ? `<div class="vp-foot mono">YOUTUBE · ${escapeHtml(cur.video.source.toUpperCase())} · ${isPlayable(cur.video) ? 'CLICK VIDEO TO UNMUTE' : 'NFL ONLY ALLOWS PLAYBACK ON YOUTUBE'}</div>` : ''}`;
+  armEmbeds(vidPop);
 }
 
 async function showVidPop(el) {
@@ -1728,10 +1774,11 @@ function openVideoModal(v) {
   const m = document.getElementById('vidModal');
   m.innerHTML = `<div class="vm-box" role="dialog" aria-label="${escapeHtml(v.title)}">
     <div class="vm-head"><span class="vm-label mono">${escapeHtml(v.label)}</span><span class="vm-title">${escapeHtml(v.title)}</span><button type="button" data-vm-close>CLOSE ✕</button></div>
-    ${ytFrame(v.id, 'vm-frame', {}, v.title)}
+    ${videoView({ ...ytVideo(v.id, v.title), embed: true }, 'vm-frame', {})}
     <div class="vp-foot mono">YOUTUBE · ${escapeHtml(v.source.toUpperCase())}</div>
   </div>`;
   m.hidden = false;
+  armEmbeds(m);
 }
 function closeVideoModal() {
   const m = document.getElementById('vidModal');
@@ -1739,13 +1786,17 @@ function closeVideoModal() {
   m.innerHTML = '';
 }
 
-// Game-log cell: the player's own cut-up (every play / run / target) first,
-// then the official game highlights.
+// Game-log cell: the fullest cut-up that plays here, plus a fuller link-only
+// one (e.g. STACKED's every-touch film) when it beats it, then the game's
+// highlights. The server lists player videos fullest first.
 function gameLogVideoButtons(g) {
   const vids = g.videos || [];
-  const player = vids.find(v => v.kind !== 'game'), game = vids.find(v => v.kind === 'game');
+  const pv = vids.filter(v => v.kind !== 'game');
+  const playable = pv.find(isPlayable), link = pv.find(v => !isPlayable(v));
+  const fullerLink = link && (!playable || pv.indexOf(link) < pv.indexOf(playable)) ? link : null;
+  const game = vids.find(v => v.kind === 'game');
   const label = v => (v.kind === 'game' ? 'GAME' : escapeHtml(v.label));
-  return [player, game].filter(Boolean).map(v => v.embed
+  return [playable, fullerLink, game].filter(Boolean).map(v => isPlayable(v)
     ? `<button type="button" class="vid mono" data-vid="${escapeHtml(v.id)}" data-vlabel="${escapeHtml(v.label)}"
         data-vtitle="${escapeHtml(v.title)}" data-vsrc="${escapeHtml(v.source)}" title="${escapeHtml(v.title)}">▶ ${label(v)}</button>`
     : `<a class="vid mono" data-vid="${escapeHtml(v.id)}" data-vlink href="${escapeHtml(v.url)}" target="_blank" rel="noopener"
