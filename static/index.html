@@ -1848,7 +1848,10 @@ function fetchReel() {
 async function playReel(btn) {
   try {
     const d = await fetchReel();
-    const vids = d.videos.filter(isPlayable).slice(0, 150);  // YouTube caps playlist length
+    // Shuffled per click, so each play of the reel runs in a fresh order.
+    const vids = d.videos.filter(isPlayable);
+    for (let i = vids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [vids[i], vids[j]] = [vids[j], vids[i]]; }
+    vids.length = Math.min(vids.length, 150);  // YouTube caps playlist length
     if (!vids.length) { btn.title = 'No playable highlights yet this week'; return; }
     popOutVideo({ id: vids[0].id, title: `Week ${d.week} highlights reel`, label: `WK ${d.week} REEL`, source: '' },
       { start: '0', playlist: vids.slice(1).map(v => v.id).join(',') });
