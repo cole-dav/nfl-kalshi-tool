@@ -173,6 +173,13 @@ a.yt-link:hover .yt-play{color:var(--amber)}
 #vidModal .vm-label{font-size:9.5px;letter-spacing:0.06em;color:var(--amber)}
 #vidModal .vm-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #vidModal [data-vm-close]{margin-left:auto;color:var(--muted);font-size:10.5px}
+.vp-popout{color:var(--amber);font-size:10px;letter-spacing:0.04em;font-weight:400}
+.vp-popout:hover{color:#FFC57A}
+#vidMini{position:fixed;right:16px;bottom:16px;z-index:1000;width:min(400px,calc(100vw - 32px));background:var(--chrome);border:1px solid var(--amber-ring);box-shadow:0 8px 24px rgba(0,0,0,0.5)}
+#vidMini[hidden]{display:none}
+#vidMini .vmini-head{display:flex;align-items:center;gap:8px;padding:4px 8px;border-bottom:1px solid var(--head-rule);background:var(--panel-head);font-size:11px}
+#vidMini .vm-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#vidMini [data-mini-close]{margin-left:auto;flex-shrink:0;color:var(--muted);font-size:10px}
 table.gl .vid{color:var(--amber);font-size:9px;letter-spacing:0.04em;padding:0 5px;border:1px solid var(--amber-ring);margin-left:4px;text-decoration:none;display:inline-block;line-height:14px}
 table.gl .vid:hover{background:var(--amber-soft)}
 table.gl a.vid{color:var(--muted);border-color:var(--head-rule)}
@@ -413,6 +420,7 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 
 <div id="loginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:1000"></div>
 <div id="vidModal" hidden></div>
+<div id="vidMini" hidden></div>
 
 <script>
 const C = { on:'#E3E7EC', label:'#C9D1D9', off:'#7A8591', amber:'#F2A541', blue:'#5AA9FF', orange:'#FF7A45', muted:'#9AA4AF', neutral:'#4A5561' };
@@ -1677,7 +1685,7 @@ function loadYtApi() {
 // (removed) the iframe is swapped for the thumbnail link.
 function armEmbeds(root) {
   root.querySelectorAll('iframe[data-ytv]').forEach(fr => {
-    loadYtApi().then(YT => new YT.Player(fr, { events: { onError: (e) => {
+    loadYtApi().then(YT => fr._ytp = new YT.Player(fr, { events: { onError: (e) => {
       if (![100, 101, 150].includes(e.data)) return;
       const id = fr.dataset.ytv;
       markBlocked(id);
@@ -1722,7 +1730,8 @@ function renderVidPop(gameId) {
   const cur = games.find(g => g.game_id === gameId && g.video) || games.find(g => g.video);
   const res = g => `<span class="${g.result === 'W' ? 'w' : g.result === 'L' ? 'lo' : ''}">${g.result} ${g.score}</span>`;
   vidPop.innerHTML = `<div class="vp-head"><span>${escapeHtml(code)} · ${d.season} SEASON</span>
-      <span class="mono" style="margin-left:auto;font-size:10px;color:var(--dim);font-weight:400">${cur ? `WK ${cur.week} ${cur.is_home ? 'vs' : '@'} ${nflverseToKalshi(cur.opponent)}` : ''}</span></div>
+      <span class="mono" style="margin-left:auto;font-size:10px;color:var(--dim);font-weight:400">${cur ? `WK ${cur.week} ${cur.is_home ? 'vs' : '@'} ${nflverseToKalshi(cur.opponent)}` : ''}</span>
+      ${cur && isPlayable(cur.video) ? popoutButton({ ...cur.video, label: `${code} WK ${cur.week}` }) : ''}</div>
     ${cur ? videoView(cur.video, 'vp-frame', { mute: '1' })
           : `<div class="vp-empty">${games.length ? 'No highlights posted yet.' : 'No games played yet this season.'}</div>`}
     <div class="vp-list">${games.map(g => `<button type="button" class="vp-row mono${cur && g.game_id === cur.game_id ? ' on' : ''}"${g.video ? ` data-vpgame="${escapeHtml(g.game_id)}"` : ' disabled'}>
@@ -1774,13 +1783,61 @@ function openVideoModal(v) {
   hideVidPop();
   const m = document.getElementById('vidModal');
   m.innerHTML = `<div class="vm-box" role="dialog" aria-label="${escapeHtml(v.title)}">
-    <div class="vm-head"><span class="vm-label mono">${escapeHtml(v.label)}</span><span class="vm-title">${escapeHtml(v.title)}</span><button type="button" data-vm-close>CLOSE ✕</button></div>
+    <div class="vm-head"><span class="vm-label mono">${escapeHtml(v.label)}</span><span class="vm-title">${escapeHtml(v.title)}</span>${popoutButton(v)}<button type="button" data-vm-close style="margin-left:0">CLOSE ✕</button></div>
     ${videoView({ ...ytVideo(v.id, v.title), embed: true }, 'vm-frame', {})}
     <div class="vp-foot mono">YOUTUBE · ${escapeHtml(v.source.toUpperCase())}</div>
   </div>`;
   m.hidden = false;
   armEmbeds(m);
 }
+// ---------- video: picture-in-picture ----------
+// YouTube's <video> lives in a cross-origin iframe, so the page can't call
+// requestPictureInPicture() on it. Where the Document PiP API exists
+// (Chrome/Edge) the video reopens in an always-on-top window; elsewhere it
+// docks as a corner mini-player that keeps playing while you browse. Either
+// way it resumes from where the embed was.
+function popoutButton(v) {
+  return `<button type="button" class="vp-popout mono" data-popout="${escapeHtml(v.id)}" data-vlabel="${escapeHtml(v.label || '')}"
+    data-vtitle="${escapeHtml(v.title)}" data-vsrc="${escapeHtml(v.source || '')}" title="Keep watching in a floating player">⧉ POP OUT</button>`;
+}
+
+function embedTime(id) {
+  const fr = document.querySelector(`iframe[data-ytv="${CSS.escape(id)}"]`);
+  try { return Math.floor(fr._ytp.getCurrentTime() || 0); } catch (e) { return 0; }
+}
+
+let pipWin = null;
+async function popOutVideo(v) {
+  const start = String(embedTime(v.id));
+  closeVideoModal();
+  hideVidPop();
+  if (window.documentPictureInPicture) {
+    try {
+      if (!pipWin || pipWin.closed) {
+        pipWin = await documentPictureInPicture.requestWindow({ width: 480, height: 270 });
+        pipWin.addEventListener('pagehide', () => { pipWin = null; });
+      }
+      closeMiniPlayer();
+      const d = pipWin.document;
+      d.title = v.title;
+      d.head.innerHTML = '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0}</style>';
+      d.body.innerHTML = ytFrame(v.id, 'pip-frame', { start }, v.title);
+      return;
+    } catch (e) { pipWin = null; }  // e.g. unsupported context -- fall back to the mini-player
+  }
+  const m = document.getElementById('vidMini');
+  m.innerHTML = `<div class="vmini-head"><span class="vm-label mono" style="color:var(--amber);font-size:9.5px">${escapeHtml(v.label)}</span>
+      <span class="vm-title">${escapeHtml(v.title)}</span><button type="button" data-mini-close>CLOSE ✕</button></div>
+    ${ytFrame(v.id, 'vm-frame', { start }, v.title)}`;
+  m.hidden = false;
+  armEmbeds(m);
+}
+function closeMiniPlayer() {
+  const m = document.getElementById('vidMini');
+  m.hidden = true;
+  m.innerHTML = '';
+}
+
 function closeVideoModal() {
   const m = document.getElementById('vidModal');
   m.hidden = true;
@@ -4141,6 +4198,9 @@ document.addEventListener('click', (e) => {
   }
   const vpGameT = e.target.closest('[data-vpgame]');
   if (vpGameT) { renderVidPop(vpGameT.dataset.vpgame); return; }
+  const popT = e.target.closest('[data-popout]');
+  if (popT) { popOutVideo({ id: popT.dataset.popout, label: popT.dataset.vlabel, title: popT.dataset.vtitle, source: popT.dataset.vsrc }); return; }
+  if (e.target.closest('[data-mini-close]')) { closeMiniPlayer(); return; }
   if (e.target.closest('[data-vm-close]') || e.target.id === 'vidModal') { closeVideoModal(); return; }
   if (gameUrlT) { window.open(gameUrlT.dataset.gameurl, '_blank', 'noopener'); return; }
   if (logSeasonT && t) { t.ui.logSeason = Number(logSeasonT.dataset.logseason); renderMarkets(); return; }
