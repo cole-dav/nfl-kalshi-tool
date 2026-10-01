@@ -151,6 +151,28 @@ seen is kept in `cache/videos_<season>.json`, so a server left running keeps
 every week, but a fresh cache late in the season can miss early weeks. Only the
 current season is indexed.
 
+## Serving publicly
+
+Visitor traffic never fans out to upstream sources:
+
+- `snapshots.py`: every public GET (`/api/week`, `/api/game`, `/api/player`, `/api/engine/edges`, `/api/player_volume`, `/api/players`, `/api/gamelog`, `/api/videos/team`, `/api/injury_news`) reads a shared payload.
+  - It is rebuilt at most once per TTL (30s for odds pages, 5 min for volume, 30-60 min for news, game logs and videos).
+  - Stale payloads keep being served while one background rebuild runs, and the last good payload survives upstream failures.
+  - A refresher thread rebuilds the current week and the volume ranking every 30s.
+- `kalshi_book.py`: all outbound Kalshi requests share one throttle (`KALSHI_MAX_RPS`, default 8).
+  - Identical concurrent cache misses make one request.
+  - Only public market-data paths are cached. `/portfolio` and `/communications` are per-user and never cached.
+- Cache-Control headers:
+  - Anonymous payloads are `public, s-maxage=...`.
+  - Anything session-scoped, and every error, is `private, no-store`.
+  - When logged in, the UI asks for `/api/player?...&acct=1`, so the CDN never serves the anonymous copy in place of one with positions.
+- Engine chat spends the operator's Anthropic key. Tunneled visitors get a 403 unless `ENGINE_CHAT_PUBLIC=1`; then it is capped at `ENGINE_CHAT_DAILY_LIMIT` messages per IP per day.
+
+Cloudflare does not cache JSON by default. To let the edge answer most API traffic, add a Cache Rule:
+- Match: hostname is yours and URI path starts with `/api/`.
+- Set "Eligible for cache".
+- Edge TTL: "Use cache-control header if present".
+
 ## Known data limitations
 
 - **No man/zone coverage rate.** nflverse's free FTN charting release does

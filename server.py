@@ -44,6 +44,7 @@ import positions_overview as po
 import injury_news as inj
 import nflverse_data as nd
 import sessions
+import snapshots as snap
 import team_tendencies as tt
 import week_overview as wo
 import player_volume as pvol
@@ -56,6 +57,27 @@ SESSION_COOKIE = "sid"
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 WARM_INTERVAL_SECONDS = 10 * 60
 
+# Snapshot TTLs (seconds). Visitors are served the shared payload; at most one
+# rebuild per key per TTL reaches upstream. See snapshots.py.
+TTL_LIVE = 30          # odds-driven pages: week, game, player, edges
+TTL_VOLUME = 300       # trailing 4h prop volume
+TTL_NEWS = 30 * 60
+TTL_STATIC = 60 * 60   # player list, game logs, video index
+SLATE_REFRESH_SECONDS = 30
+
+# Cache-Control for anonymous, shared payloads. Cloudflare honors s-maxage once
+# a Cache Rule marks /api/* as eligible; browsers use max-age.
+CACHE_LIVE = "public, max-age=15, s-maxage=30, stale-while-revalidate=60"
+CACHE_SLOW = "public, max-age=300, s-maxage=600, stale-while-revalidate=1800"
+CACHE_PRIVATE = "private, no-store"
+
+# Engine chat spends the operator's Anthropic credits. Off for public visitors
+# unless ENGINE_CHAT_PUBLIC=1, then capped per IP per day.
+CHAT_PUBLIC = os.environ.get("ENGINE_CHAT_PUBLIC") == "1"
+CHAT_DAILY_LIMIT = int(os.environ.get("ENGINE_CHAT_DAILY_LIMIT", "20"))
+_chat_counts: dict[tuple[str, str], int] = {}
+_chat_lock = threading.Lock()
+
 
 def _cache_warmer():
     """Keep nflverse data, rankings and Madden ratings loaded in memory and
@@ -67,6 +89,23 @@ def _cache_warmer():
             except Exception:
                 traceback.print_exc()
         time.sleep(WARM_INTERVAL_SECONDS)
+
+
+def _slate_refresher():
+    """Rebuild the pages every visitor opens first (current week, volume
+    ranking) before they go stale, so even the first request after a TTL is
+    instant. Per-game and per-player pages refresh on demand (stale entries
+    are served while one background rebuild runs)."""
+    while True:
+        for key, build, ttl in (
+            ("week:current", lambda: wo.build_week_overview(None), TTL_LIVE),
+            ("player_volume", pvol.player_volume_cached, TTL_VOLUME),
+        ):
+            try:
+                snap.refresh(key, build, ttl)
+            except Exception:
+                traceback.print_exc()
+        time.sleep(SLATE_REFRESH_SECONDS)
 
 
 def _sanitize(obj):
@@ -120,17 +159,44 @@ class Handler(BaseHTTPRequestHandler):
             client = sessions.default_client()
         return client
 
-    def _send_json(self, payload: dict, status: int = 200, set_cookie: str | None = None):
+    def _client_ip(self) -> str:
+        # Behind the Cloudflare tunnel every request arrives from loopback;
+        # only then is Cf-Connecting-Ip trustworthy.
+        if self.client_address[0] in ("127.0.0.1", "::1"):
+            return self.headers.get("Cf-Connecting-Ip") or self.client_address[0]
+        return self.client_address[0]
+
+    def _chat_allowed(self, count: bool = False) -> bool:
+        """Direct local use is unlimited; public visitors only with
+        ENGINE_CHAT_PUBLIC=1, up to CHAT_DAILY_LIMIT messages per IP per day."""
+        if self._is_direct_local():
+            return True
+        if not CHAT_PUBLIC:
+            return False
+        key = (self._client_ip(), time.strftime("%Y-%m-%d"))
+        with _chat_lock:
+            used = _chat_counts.get(key, 0)
+            if used >= CHAT_DAILY_LIMIT:
+                return False
+            if count:
+                if len(_chat_counts) > 50000:
+                    _chat_counts.clear()
+                _chat_counts[key] = used + 1
+        return True
+
+    def _send_json(self, payload: dict, status: int = 200, set_cookie: str | None = None,
+                   cache: str = CACHE_PRIVATE):
         body = json.dumps(_sanitize(payload), default=str).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", cache if status == 200 and set_cookie is None else CACHE_PRIVATE)
         if set_cookie is not None:
             self.send_header("Set-Cookie", set_cookie)
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_file(self, path: str, content_type: str):
+    def _send_file(self, path: str, content_type: str, cache: str = "no-cache"):
         try:
             with open(path, "rb") as f:
                 body = f.read()
@@ -141,6 +207,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", cache)
         self.end_headers()
         self.wfile.write(body)
 
@@ -158,8 +225,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "missing 'name' query param"}, status=400)
                 return
             try:
-                data = pr.resolve_and_build(name, client=self._session_client())
-                self._send_json(data)
+                # Logged-in visitors get their own positions attached, so that
+                # payload is private. The UI adds acct=1 when connected so a
+                # CDN-cached anonymous copy is never served in its place.
+                client = self._session_client()
+                if client is not None or (parse_qs(parsed.query).get("acct") or [""])[0] == "1":
+                    self._send_json(pr.resolve_and_build(name, client=client))
+                else:
+                    self._send_json(snap.get("player:" + name.lower(),
+                                             lambda: pr.resolve_and_build(name, client=None), TTL_LIVE),
+                                    cache=CACHE_LIVE)
             except pr.PlayerNotFound as e:
                 self._send_json({"error": str(e)}, status=404)
             except Exception as e:
@@ -179,8 +254,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "missing 'id' query param"}, status=400)
                 return
             try:
-                games = vi.attach_to_game_log(gsis_id, nd.player_game_log(gsis_id, season))
-                self._send_json({"season": season, "games": games})
+                data = snap.get(f"gamelog:{gsis_id}:{season}", lambda: {
+                    "season": season, "games": vi.attach_to_game_log(gsis_id, nd.player_game_log(gsis_id, season))},
+                    TTL_STATIC)
+                self._send_json(data, cache=CACHE_SLOW)
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"game log lookup failed: {e}"}, status=502)
@@ -192,7 +269,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "missing 'team' query param"}, status=400)
                 return
             try:
-                self._send_json(vi.team_season_videos(nd.kalshi_to_nflverse_team(team)))
+                self._send_json(snap.get("videos:" + team, lambda: vi.team_season_videos(
+                    nd.kalshi_to_nflverse_team(team)), TTL_STATIC), cache=CACHE_SLOW)
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"video lookup failed: {e}"}, status=502)
@@ -200,7 +278,8 @@ class Handler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/players":
             try:
-                self._send_json({"players": nd.all_player_names()})
+                self._send_json(snap.get("players", lambda: {"players": nd.all_player_names()}, TTL_STATIC),
+                                cache=CACHE_SLOW)
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"internal error: {e}"}, status=500)
@@ -208,7 +287,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/player_volume":
             try:
-                self._send_json(pvol.player_volume_cached())
+                self._send_json(snap.get("player_volume", pvol.player_volume_cached, TTL_VOLUME), cache=CACHE_LIVE)
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"volume lookup failed: {e}"}, status=502)
@@ -221,7 +300,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "missing 'name' query param"}, status=400)
                 return
             try:
-                self._send_json({"name": name, "items": inj.player_injury_news(name)})
+                self._send_json(snap.get("news:" + name.lower(), lambda: {
+                    "name": name, "items": inj.player_injury_news(name)}, TTL_NEWS), cache=CACHE_SLOW)
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"news lookup failed: {e}"}, status=502)
@@ -230,7 +310,11 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/week":
             try:
                 week = (parse_qs(parsed.query).get("week") or [""])[0].strip()
-                self._send_json(wo.build_week_overview(int(week) if week.isdigit() else None))
+                if week.isdigit():
+                    data = snap.get(f"week:{int(week)}", lambda: wo.build_week_overview(int(week)), TTL_LIVE)
+                else:
+                    data = snap.get("week:current", lambda: wo.build_week_overview(None), TTL_LIVE)
+                self._send_json(data, cache=CACHE_LIVE)
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"internal error: {e}"}, status=500)
@@ -243,7 +327,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "missing 'event' query param"}, status=400)
                 return
             try:
-                self._send_json(wo.build_game_detail(event_ticker))
+                self._send_json(snap.get("game:" + event_ticker.upper(),
+                                         lambda: wo.build_game_detail(event_ticker), TTL_LIVE), cache=CACHE_LIVE)
             except ValueError as e:
                 self._send_json({"error": str(e)}, status=404)
             except Exception as e:
@@ -274,7 +359,14 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/engine/status":
-            self._send_json(engine.status())
+            st = engine.status()
+            if not st.get("chat_enabled"):
+                st["chat_note"] = "Set ANTHROPIC_API_KEY to enable the engine chat."
+            elif not self._chat_allowed():
+                st["chat_enabled"] = False
+                st["chat_note"] = ("Engine chat isn't available on the public site." if not CHAT_PUBLIC
+                                   else f"Daily chat limit reached ({CHAT_DAILY_LIMIT} messages). Try again tomorrow.")
+            self._send_json(st)
             return
 
         if parsed.path == "/api/engine/edges":
@@ -286,7 +378,10 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 self._send_json({"error": "bad 'min_edge' query param"}, status=400)
                 return
-            self._engine_call(lambda: engine.edges(event, min_edge, kind))
+            min_edge = round(min_edge, 3)
+            self._engine_call(lambda: snap.get(f"edges:{event}:{kind}:{min_edge}",
+                                               lambda: engine.edges(event, min_edge, kind), TTL_LIVE),
+                              cache=CACHE_LIVE)
             return
 
         if parsed.path == "/api/session":
@@ -327,11 +422,11 @@ class Handler(BaseHTTPRequestHandler):
             traceback.print_exc()
             self._send_json({"error": f"internal error: {e}"}, status=500)
 
-    def _engine_call(self, fn):
+    def _engine_call(self, fn, cache: str = CACHE_PRIVATE):
         """Run an engine action: bad input -> 400, no Anthropic key -> 503,
         missing Kalshi credentials -> 503."""
         try:
-            self._send_json(fn())
+            self._send_json(fn(), cache=cache)
         except engine.ChatUnavailable as e:
             self._send_json({"error": str(e), "chat_enabled": False}, status=503)
         except (engine.EngineError, sim.ScenarioError, TypeError, ValueError) as e:
@@ -419,6 +514,11 @@ class Handler(BaseHTTPRequestHandler):
                 body.get("strikes") or [], body.get("stakes"), body.get("scenario"), bool(body.get("include_ml"))))
             return
         if parsed.path == "/api/engine/chat":
+            if not self._chat_allowed(count=True):
+                msg = ("engine chat is only available on the operator's machine" if not CHAT_PUBLIC
+                       else f"daily chat limit reached ({CHAT_DAILY_LIMIT} messages)")
+                self._send_json({"error": msg, "chat_enabled": False}, status=429 if CHAT_PUBLIC else 403)
+                return
             self._engine_call(lambda: engine.chat(
                 body.get("message") or "", body.get("slip") or {}, body.get("conversation_id") or None))
             return
@@ -431,6 +531,7 @@ def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     threading.Thread(target=_cache_warmer, daemon=True, name="cache-warmer").start()
+    threading.Thread(target=_slate_refresher, daemon=True, name="slate-refresher").start()
     print(f"Serving on http://127.0.0.1:{port}")
     try:
         server.serve_forever()

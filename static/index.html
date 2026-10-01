@@ -477,7 +477,8 @@ function newTicket(query) {
 
 async function loadTicket(t) {
   try {
-    const resp = await fetch('/api/player?name=' + encodeURIComponent(t.query));
+    // acct=1 keeps the logged-in (positions) payload separate from the CDN-cached anonymous one.
+    const resp = await fetch('/api/player?name=' + encodeURIComponent(t.query) + (state.session.connected ? '&acct=1' : ''));
     const data = await resp.json();
     state.kalshiOk = resp.ok;
     if (!resp.ok) { t.error = data.error || 'request failed'; t.loading = false; render(); return; }
@@ -2984,7 +2985,7 @@ async function loadEngineStatus() {
   bbrt.statusLoading = true;
   try {
     const d = await bbFetch('/api/engine/status');
-    state.builder.engineStatus = { chat_enabled: !!d.chat_enabled, model: d.model || null };
+    state.builder.engineStatus = { chat_enabled: !!d.chat_enabled, model: d.model || null, note: d.chat_note || null };
   } catch (e) {
     state.builder.engineStatus = { chat_enabled: false, offline: true, error: e.message };
   }
@@ -3391,7 +3392,7 @@ async function chatSend(text) {
     c.proposals.push(...props);
     c.messages.push({ role: 'assistant', text: data.reply || '', trace: data.trace || [], pids: props.map(p => p.id) });
   } catch (e) {
-    if (e.status === 503) b.engineStatus = { ...(b.engineStatus || {}), chat_enabled: false };
+    if ([403, 429, 503].includes(e.status)) b.engineStatus = { ...(b.engineStatus || {}), chat_enabled: false, note: e.message };
     c.messages.push({ role: 'error', text: 'Engine chat failed: ' + e.message });
     c.notes.unshift(...notes);
   }
@@ -3893,7 +3894,7 @@ function chatHtml() {
     c.id || c.messages.length ? `<button type="button" class="backlink" data-bb="chat-new">new chat</button>` : '');
   if (!st) return h + `<div class="bb-note">Checking engine status…</div>`;
   if (st.offline) return h + `<div class="bb-note">Engine offline (${escapeHtml(st.error || 'no response')}). Chat and fair values need the backend engine routes. <button type="button" class="backlink" data-bb="status-retry">retry</button></div>`;
-  if (!st.chat_enabled) return h + `<div class="bb-note">Set ANTHROPIC_API_KEY to enable the engine chat.</div>`;
+  if (!st.chat_enabled) return h + `<div class="bb-note">${escapeHtml(st.note || 'Set ANTHROPIC_API_KEY to enable the engine chat.')}</div>`;
   const orphans = c.proposals.filter(p => !c.messages.some(m => (m.pids || []).includes(p.id)));
   let msgs = '';
   if (!c.messages.length && !orphans.length) {

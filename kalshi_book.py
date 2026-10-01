@@ -12,6 +12,7 @@ import base64
 import hashlib
 import json
 import os
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Iterable
@@ -32,13 +33,24 @@ CACHE_TTL_SECONDS = float(os.environ.get("KALSHI_CACHE_TTL", "20"))
 _API_CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "kalshi_api")
 
 
+# Only public market data is cached. Anything account-scoped (/portfolio,
+# /communications RFQs and quotes) is keyed by the signing user, so caching it
+# by path alone would hand one visitor another's positions.
+_CACHEABLE_PREFIXES = tuple("/trade-api/v2/" + p for p in (
+    "series", "markets", "events", "multivariate_event_collections", "structured_targets"))
+
+
+def _cacheable(path: str) -> bool:
+    return CACHE_TTL_SECONDS > 0 and path.startswith(_CACHEABLE_PREFIXES)
+
+
 def _cache_key(path: str, params: dict | None) -> str:
     raw = json.dumps({"path": path, "params": params or {}}, sort_keys=True)
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()
 
 
 def _cache_read(path: str, params: dict | None) -> dict | None:
-    if CACHE_TTL_SECONDS <= 0:
+    if not _cacheable(path):
         return None
     fpath = os.path.join(_API_CACHE_DIR, _cache_key(path, params) + ".json")
     try:
@@ -51,32 +63,82 @@ def _cache_read(path: str, params: dict | None) -> dict | None:
 
 
 def _cache_write(path: str, params: dict | None, data: dict) -> None:
-    if CACHE_TTL_SECONDS <= 0:
+    if not _cacheable(path):
         return
     os.makedirs(_API_CACHE_DIR, exist_ok=True)
     fpath = os.path.join(_API_CACHE_DIR, _cache_key(path, params) + ".json")
-    with open(fpath, "w") as f:
+    tmp = f"{fpath}.{threading.get_ident()}.tmp"
+    with open(tmp, "w") as f:
         json.dump(data, f)
+    os.replace(tmp, fpath)
+
+
+# Every outbound Kalshi request (public or signed, any visitor) shares one
+# budget, so a burst of page loads can't push this server's IP past Kalshi's
+# rate limit. KALSHI_MAX_RPS is the sustained rate; bursts up to the same size.
+MAX_RPS = float(os.environ.get("KALSHI_MAX_RPS", "8"))
+_bucket = {"tokens": MAX_RPS, "ts": time.monotonic()}
+_bucket_lock = threading.Lock()
+
+
+def _throttle() -> None:
+    if MAX_RPS <= 0:
+        return
+    while True:
+        with _bucket_lock:
+            now = time.monotonic()
+            _bucket["tokens"] = min(MAX_RPS, _bucket["tokens"] + (now - _bucket["ts"]) * MAX_RPS)
+            _bucket["ts"] = now
+            if _bucket["tokens"] >= 1:
+                _bucket["tokens"] -= 1
+                return
+            wait = (1 - _bucket["tokens"]) / MAX_RPS
+        time.sleep(wait)
+
+
+# Concurrent misses on the same cached GET wait for one fetch instead of each
+# hitting Kalshi.
+_inflight: dict[str, threading.Lock] = {}
+_inflight_lock = threading.Lock()
+
+
+def _cached_get(path: str, params: dict | None, fetch) -> dict[str, Any]:
+    cached = _cache_read(path, params)
+    if cached is not None:
+        return cached
+    if not _cacheable(path):
+        return fetch()
+    key = _cache_key(path, params)
+    with _inflight_lock:
+        lock = _inflight.setdefault(key, threading.Lock())
+    with lock:
+        cached = _cache_read(path, params)
+        if cached is not None:
+            return cached
+        data = fetch()
+        _cache_write(path, params, data)
+        return data
 
 
 def public_get(path: str, params: dict | None = None) -> dict[str, Any]:
     """Unauthenticated GET for public market-data endpoints (markets, events,
     multivariate collections). Shares the signed client's disk cache; `path`
     is the same /trade-api/v2/... form."""
-    cached = _cache_read(path, params)
-    if cached is not None:
-        return cached
-    host = KALSHI_BASE_URL.split("/trade-api", 1)[0]
-    # Public endpoints rate-limit hard; back off on 429/5xx like the signed client.
-    for attempt in range(4):
-        resp = requests.get(host + path, params=params, timeout=20)
-        if resp.status_code != 429 and resp.status_code < 500:
-            break
-        time.sleep(0.5 * (2 ** attempt))
-    resp.raise_for_status()
-    data = resp.json()
-    _cache_write(path, params, data)
-    return data
+    params = dict(params) if params else None
+
+    def fetch():
+        host = KALSHI_BASE_URL.split("/trade-api", 1)[0]
+        # Public endpoints rate-limit hard; back off on 429/5xx like the signed client.
+        for attempt in range(4):
+            _throttle()
+            resp = requests.get(host + path, params=params, timeout=20)
+            if resp.status_code != 429 and resp.status_code < 500:
+                break
+            time.sleep(0.5 * (2 ** attempt))
+        resp.raise_for_status()
+        return resp.json()
+
+    return _cached_get(path, params, fetch)
 
 
 def public_get_events(
@@ -175,6 +237,7 @@ class KalshiClient:
         last_exc: Exception | None = None
         for attempt in range(max_retries):
             try:
+                _throttle()
                 headers = self._headers(method, path)
                 resp = self._session.request(method, url, headers=headers, timeout=20, **kwargs)
                 resp.raise_for_status()
@@ -192,12 +255,8 @@ class KalshiClient:
         raise last_exc
 
     def get(self, path: str, params: dict | None = None) -> dict[str, Any]:
-        cached = _cache_read(path, params)
-        if cached is not None:
-            return cached
-        data = self._request("GET", path, params=params)
-        _cache_write(path, params, data)
-        return data
+        params = dict(params) if params else None
+        return _cached_get(path, params, lambda: self._request("GET", path, params=params))
 
     # Writes are never cached and never retried: a timed-out POST may still
     # have landed (e.g. an RFQ was created), and blindly re-sending it would
