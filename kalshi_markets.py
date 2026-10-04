@@ -118,8 +118,11 @@ class MarketQuote:
 
     @property
     def implied_prob_yes(self) -> float | None:
-        """Mid-market implied probability, falling back to last trade."""
-        if self.yes_bid is not None and self.yes_ask is not None:
+        """Mid-market implied probability, falling back to last trade.
+        A closed/finalized market has an empty book (bid 0, ask 1), whose
+        mid is a meaningless 50%, so that also falls back to last trade."""
+        empty_book = not self.yes_bid and self.yes_ask in (None, 1.0)
+        if self.yes_bid is not None and self.yes_ask is not None and not empty_book:
             return round((self.yes_bid + self.yes_ask) / 2, 4)
         return self.last_price
 

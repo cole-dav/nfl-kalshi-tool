@@ -81,6 +81,9 @@ def _team_depth(team: str) -> dict:
 
     def players(rows: pd.DataFrame) -> list[dict]:
         out = []
+        # nflverse occasionally publishes a blank depth slot (no name, no id);
+        # skip it so the next player moves up instead of a null-named entry.
+        rows = rows[rows["player_name"].notna() | rows["gsis_id"].notna()]
         for r in rows.sort_values("pos_rank").head(DEPTH_SHOWN).itertuples():
             ro = roster.loc[r.gsis_id] if r.gsis_id in roster.index else None
             full_name = ro["full_name"] if ro is not None else r.player_name
