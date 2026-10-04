@@ -333,6 +333,19 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"internal error: {e}"}, status=500)
             return
 
+        if parsed.path == "/api/team/next":
+            team = (parse_qs(parsed.query).get("team") or [""])[0].strip().upper()
+            if not team:
+                self._send_json({"error": "missing 'team' query param"}, status=400)
+                return
+            try:
+                data = snap.get("teamnext:" + team, lambda: {"team": team, "game": wo.find_team_next_game(team)}, TTL_LIVE)
+                self._send_json(data, cache=CACHE_LIVE)
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"internal error: {e}"}, status=500)
+            return
+
         if parsed.path == "/api/game":
             qs = parse_qs(parsed.query)
             event_ticker = (qs.get("event") or [""])[0].strip()

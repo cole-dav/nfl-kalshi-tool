@@ -137,6 +137,14 @@ table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:n
 .game-card .gc-code{font-size:15px;font-weight:600;letter-spacing:0.03em}
 .game-card .gc-rec{font-size:10.5px;color:var(--dim);margin-left:8px}
 .game-card .gc-ml{font-size:13px;text-align:right}
+.game-card .gc-score{font-size:15px;font-weight:700;text-align:right;min-width:22px}
+.gc-poss{color:var(--amber);font-size:8px;margin:0 4px;vertical-align:middle}
+.live-tag{display:inline-flex;align-items:center;gap:5px;color:var(--orange);font-weight:600}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);animation:livepulse 1.6s ease-in-out infinite}
+@keyframes livepulse{50%{opacity:.25}}
+.live-strip{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;margin:0 4px 8px;padding:8px 10px;border:1px solid var(--border);background:var(--panel-head);font-size:11px}
+.live-strip .ls-wp{color:var(--muted)}
+.live-strip .ls-play{flex-basis:100%;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .game-card .gc-foot{height:26px;display:flex;align-items:center;gap:14px;padding:0 10px;border-top:1px solid var(--border);font-size:10.5px;color:var(--label)}
 .game-card .gc-foot .k{color:var(--dim);margin-right:4px}
 .roster-player{cursor:pointer}
@@ -2160,10 +2168,9 @@ function renderResearch() {
 // click-team-then-player drill-down into combo markets + rosters.
 // ========================================================================
 
-async function loadSlate(force, week) {
+async function loadSlate(force, week, quiet) {
   if (state.slate.games && !force) { render(); return; }
-  state.slate.loading = true; state.slate.error = null;
-  render();
+  if (!quiet) { state.slate.loading = true; state.slate.error = null; render(); }
   try {
     const resp = await fetch('/api/week' + (week ? '?week=' + week : ''));
     const data = await resp.json();
@@ -2172,16 +2179,17 @@ async function loadSlate(force, week) {
     state.slate.week = data.week;
     state.slate.weeks = data.weeks || [];
   } catch (e) {
-    state.slate.error = String(e.message || e);
+    // A failed background refresh keeps the last good slate on screen.
+    if (!quiet) state.slate.error = String(e.message || e);
   } finally {
     state.slate.loading = false;
-    render();
+    if (quiet) keepScroll(document.getElementById('slateView'), render); else render();
   }
 }
 
 function activeGameTab() { return state.games.find(g => g.id === state.activeGameId) || null; }
 
-function openGameDetail(eventTicker) {
+function openGameDetail(eventTicker, known) {
   const existing = state.games.find(g => g.eventTicker === eventTicker);
   if (existing) {
     state.activeGameId = existing.id;
@@ -2190,7 +2198,7 @@ function openGameDetail(eventTicker) {
     render();
     return;
   }
-  const meta = (state.slate.games || []).find(x => x.event_ticker === eventTicker);
+  const meta = (state.slate.games || []).find(x => x.event_ticker === eventTicker) || known;
   const g = {
     id: nextId++, eventTicker,
     away: meta ? meta.away : null, home: meta ? meta.home : null,
@@ -2205,7 +2213,7 @@ function openGameDetail(eventTicker) {
   render();
 }
 
-async function loadGameTab(g) {
+async function loadGameTab(g, quiet) {
   try {
     const resp = await fetch('/api/game?event=' + encodeURIComponent(g.eventTicker));
     const data = await resp.json();
@@ -2214,12 +2222,53 @@ async function loadGameTab(g) {
     g.away = data.away; g.home = data.home;
     g.label = `${data.away} @ ${data.home}`;
   } catch (e) {
-    g.error = String(e.message || e);
+    if (!quiet) g.error = String(e.message || e);
   } finally {
     g.loading = false;
-    render();
+    if (quiet) keepScroll(document.getElementById('slateView'), render); else render();
   }
 }
+
+// Re-render without yanking any scrolled panel back to the top: restore each
+// scrolled descendant by its position in the tree.
+function keepScroll(root, fn) {
+  const nodes = root ? [...root.querySelectorAll('*')] : [];
+  const saved = nodes.map((n, i) => [i, n.scrollTop]).filter(([, t]) => t > 0);
+  fn();
+  if (!root) return;
+  const after = root.querySelectorAll('*');
+  saved.forEach(([i, t]) => { if (after[i]) after[i].scrollTop = t; });
+}
+
+// Live refresh: while games are on (or about to kick off), re-pull the open
+// slate / game tab every 30s so Kalshi prices and ESPN scores move; otherwise
+// every 5 min. Paused while the tab is hidden.
+const LIVE_POLL_MS = 30 * 1000, IDLE_POLL_MS = 5 * 60 * 1000;
+let lastLivePoll = Date.now();
+function gamesHot(games) {
+  const now = Date.now();
+  return (games || []).some(g => {
+    const lv = g.live;
+    if (lv && lv.state === 'in') return true;
+    if (lv && lv.state === 'post') return false;
+    const s = g.schedule;
+    if (!s) return false;
+    const ko = Date.parse(`${s.gameday}T${s.gametime}:00-04:00`);
+    return ko - now < 10 * 60 * 1000 && now - ko < 5 * 3600 * 1000;
+  });
+}
+function livePollTick() {
+  if (document.hidden || state.module !== 'slate') return;
+  const g = state.slate.view === 'detail' ? activeGameTab() : null;
+  const hot = g ? gamesHot(g.data ? [{ ...g.data, schedule: ((state.slate.games || []).find(x => x.event_ticker === g.eventTicker) || {}).schedule }] : [])
+                : gamesHot(state.slate.games);
+  if (Date.now() - lastLivePoll < (hot ? LIVE_POLL_MS : IDLE_POLL_MS) - 1000) return;
+  lastLivePoll = Date.now();
+  if (g) { if (!g.loading && g.data) loadGameTab(g, true); }
+  else if (state.slate.games && !state.slate.loading) loadSlate(true, state.slate.week, true);
+}
+setInterval(livePollTick, LIVE_POLL_MS);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { lastLivePoll = 0; livePollTick(); } });
 
 function closeGameTab(id) {
   const i = state.games.findIndex(g => g.id === id);
@@ -2233,6 +2282,29 @@ function closeGameTab(id) {
   render();
 }
 
+// Clicking any team logo opens that team's next open Kalshi game.
+const teamNextGame = {};
+async function openTeamNextGame(el) {
+  const code = el.dataset.teamvid;
+  hideVidPop();
+  try {
+    if (!teamNextGame[code]) {
+      teamNextGame[code] = fetch('/api/team/next?team=' + encodeURIComponent(code))
+        .then(r => r.json().catch(() => { throw new Error(`Next-game lookup failed (HTTP ${r.status}). Restart the server?`); }))
+        .then(d => { if (d.error) throw new Error(d.error); return d.game; })
+        .catch(err => { delete teamNextGame[code]; throw err; });
+    }
+    const g = await teamNextGame[code];
+    if (!g) throw new Error(`No upcoming ${code} game open on Kalshi.`);
+    openGameDetail(g.event_ticker, g);
+  } catch (err) {
+    vidPop.hidden = false;
+    vidPop.innerHTML = `<div class="vp-empty" style="color:var(--orange)">${escapeHtml(String(err.message || err))}</div>`;
+    if (el.isConnected) placeVidPop(el);
+    vidHoverEl = el;
+  }
+}
+
 function backToSlateList() {
   state.slate.view = 'list';
   state.activeGameId = null;
@@ -2240,12 +2312,13 @@ function backToSlateList() {
 }
 
 // Team logos. Kalshi codes match ESPN's lowercase abbreviations except these
-// three. data-teamvid makes every logo open the team's season-highlights hover.
+// three. data-teamvid makes every logo open the team's season-highlights hover,
+// and clicking one opens the team's next game.
 const ESPN_LOGO_CODE = { JAC: 'jax', WAS: 'wsh', LAR: 'lar' };
 function teamLogo(code, size) {
   if (!code) return '';
   const slug = ESPN_LOGO_CODE[code] || code.toLowerCase();
-  return `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${slug}.png" alt="" width="${size}" height="${size}" loading="lazy" data-teamvid="${escapeHtml(code)}" style="flex-shrink:0;object-fit:contain" onerror="this.style.visibility='hidden'">`;
+  return `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${slug}.png" alt="" width="${size}" height="${size}" loading="lazy" data-teamvid="${escapeHtml(code)}" title="Open ${escapeHtml(code)}'s next game" style="flex-shrink:0;object-fit:contain;cursor:pointer" onerror="this.style.visibility='hidden'">`;
 }
 
 function moneylinePct(side) {
@@ -2321,18 +2394,45 @@ function renderGameCard(g) {
   const cm = {};
   coreMkts(g).forEach(m => { cm[m.ticker] = m; });
   const star = (q) => q && q.ticker && cm[q.ticker] ? bmStar(cm[q.ticker]) : '';
-  const teamRow = (code, record, side) => `<div class="gc-team mono" style="grid-template-columns:30px minmax(0,1fr) auto 14px">
+  const lv = g.live && g.live.state !== 'pre' ? g.live : null;
+  const scoreCell = (k) => lv ? `<span class="gc-score" style="color:${lv.state === 'post' && lv.score[k] < lv.score[k === 'away' ? 'home' : 'away'] ? 'var(--dim)' : 'inherit'}">${lv.score[k]}</span>` : '';
+  const teamRow = (code, record, side, k) => `<div class="gc-team mono" style="grid-template-columns:30px minmax(0,1fr) ${lv ? 'auto ' : ''}auto 14px">
       ${teamLogo(code, 30)}
-      <span><span class="gc-code">${code}</span><span class="gc-rec">${record || ''}</span></span>
+      <span><span class="gc-code">${code}</span>${lv && lv.possession === code ? '<span class="gc-poss" title="Possession">&#9679;</span>' : ''}<span class="gc-rec">${record || ''}</span></span>
+      ${scoreCell(k)}
       <span class="gc-ml" style="color:${moneylineColor(side)}">${moneylinePct(side)}</span>
       ${star(side) || '<span></span>'}
     </div>`;
   return `<div class="game-card" data-open-game="${g.event_ticker}">
-    <div class="gc-top mono"><span>${gameKickoffText(g)}</span><span>AWAY @ HOME</span></div>
-    ${teamRow(g.away, rec.away, g.moneyline.away)}
-    ${teamRow(g.home, rec.home, g.moneyline.home)}
+    <div class="gc-top mono">${liveStatusHtml(lv) || `<span>${gameKickoffText(g)}</span>`}<span>${lv && lv.state === 'in' && lv.down_distance ? escapeHtml(lv.down_distance + (lv.yard_line ? ' · ' + lv.yard_line : '')) : 'AWAY @ HOME'}</span></div>
+    ${teamRow(g.away, rec.away, g.moneyline.away, 'away')}
+    ${teamRow(g.home, rec.home, g.moneyline.home, 'home')}
     <div class="gc-foot mono"><span style="display:flex;align-items:center;gap:3px"><span class="k">SPREAD</span>${spreadTxt}${star(g.spread)}</span><span style="display:flex;align-items:center;gap:3px"><span class="k">O/U</span>${totalTxt}${star(g.total)}</span></div>
   </div>`;
+}
+
+function liveStatusHtml(lv) {
+  if (!lv || lv.state === 'pre') return '';
+  if (lv.state === 'post') return `<span style="color:var(--muted)">${escapeHtml((lv.detail || 'FINAL').toUpperCase())}</span>`;
+  return `<span class="live-tag"><span class="live-dot"></span>${escapeHtml((lv.detail || 'LIVE').toUpperCase())}</span>`;
+}
+
+// Score / clock / situation strip for an in-progress or final game, with
+// ESPN's win probability next to Kalshi's moneyline for comparison.
+function liveStripHtml(d) {
+  const lv = d.live;
+  if (!lv || lv.state === 'pre') return '';
+  const ml = d.moneyline || {};
+  const pct = (v) => v === null || v === undefined ? '--' : Math.round(v * 100) + '%';
+  const side = (code, k) => `<span style="display:flex;align-items:center;gap:6px">${teamLogo(code, 22)}<span>${code}</span>${lv.possession === code ? '<span class="gc-poss">&#9679;</span>' : ''}<span style="font-size:20px;font-weight:700">${lv.score[k]}</span></span>`;
+  const sit = lv.state === 'in' ? [lv.down_distance, lv.yard_line].filter(Boolean).join(' · ') + (lv.red_zone && lv.possession ? ' · RED ZONE' : '') : '';
+  return `<div class="live-strip mono">
+      ${liveStatusHtml(lv)}
+      ${side(d.away, 'away')}<span style="color:var(--dim)">–</span>${side(d.home, 'home')}
+      ${sit ? `<span style="color:var(--amber)">${escapeHtml(sit)}</span>` : ''}
+      <span class="ls-wp">KALSHI ${d.away} ${pct((ml.away || {}).implied_prob_yes)} / ${d.home} ${pct((ml.home || {}).implied_prob_yes)}${lv.win_prob ? ` &middot; ESPN WP ${pct(lv.win_prob.away)} / ${pct(lv.win_prob.home)}` : ''}</span>
+      ${lv.state === 'in' && lv.last_play ? `<span class="ls-play" title="${escapeHtml(lv.last_play)}">${escapeHtml(lv.last_play)}</span>` : ''}
+    </div>`;
 }
 
 function moneylineColor(side) {
@@ -2366,6 +2466,7 @@ function renderGameDetail(el, g) {
       <span class="mono" style="font-size:10.5px;color:var(--dim);display:flex;align-items:center;gap:4px">SPREAD ${spreadTxt}${gdStar(d.spread)} &middot; TOTAL ${totalTxt}${gdStar(d.total)}</span>
       <span style="margin-left:auto;display:flex;align-self:stretch">${viewTabs.map(v => `<button type="button" class="tab small ${view === v.id ? 'on' : ''}" data-game-view="${v.id}">${v.label}</button>`).join('')}</span>
     </div>
+    ${liveStripHtml(d)}
     <div class="game-grid">
       ${view === 'tend' ? tendencyPanelsHtml(d.tendencies) : (d.matchups || []).map(matchupPanelHtml).join('')}
       <div class="panel gg-side">
@@ -2407,7 +2508,7 @@ function edgeColor(e) {
 const signed = (e, dec = 0) => e === null || e === undefined ? '--' : (e > 0 ? '+' : '') + Number(e).toFixed(dec);
 
 // Last name for compact backup lists, skipping suffixes ("Samuel Jr." not "Jr.").
-const shortName = (n) => { const w = n.split(' '); const last = w[w.length - 1]; return w.length > 2 && /^(jr|sr|ii|iii|iv|v)\.?$/i.test(last) ? w[w.length - 2] : last; };
+const shortName = (n) => { const w = String(n ?? '').split(' '); const last = w[w.length - 1]; return w.length > 2 && /^(jr|sr|ii|iii|iv|v)\.?$/i.test(last) ? w[w.length - 2] : last; };
 
 // One depth-chart slot: starter (clickable, with rank tag) and the backups
 // behind him with their OVRs. `align` mirrors the defense side toward the center.
@@ -4224,6 +4325,8 @@ document.addEventListener('click', (e) => {
     if (!('vlink' in vidT.dataset)) openVideoModal({ id: vidT.dataset.vid, label: vidT.dataset.vlabel, title: vidT.dataset.vtitle, source: vidT.dataset.vsrc, embed: true });
     return;
   }
+  const teamLogoT = e.target.closest('img[data-teamvid]');
+  if (teamLogoT) { e.preventDefault(); openTeamNextGame(teamLogoT); return; }
   const vpGameT = e.target.closest('[data-vpgame]');
   if (vpGameT) { renderVidPop(vpGameT.dataset.vpgame); return; }
   const reelT = e.target.closest('[data-reel]');

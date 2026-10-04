@@ -10,6 +10,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 import depth_matchups as dm
+import live_scores as ls
 import nflverse_data as nd
 import team_tendencies as tt
 from kalshi_markets import MarketIndex
@@ -49,9 +50,23 @@ def build_week_overview(week: int | None = None) -> dict:
             "home": records.get(nd.kalshi_to_nflverse_team(g["home"]), "0-0"),
         }
         g["schedule"] = src["schedule"]
+        g["live"] = ls.game_live(g["away"], g["home"])
     results.sort(key=lambda g: (g["schedule"]["gameday"], g["schedule"]["gametime"]) if g["schedule"] else ("9999", g["kickoff"] or ""))
     return {"week": week, "weeks": weeks, "games": results}
 
+
+def find_team_next_game(team: str) -> dict | None:
+    """The team's earliest open Kalshi game (Kalshi code), ordered by nflverse
+    kickoff the same way build_week_overview buckets weeks, so a bye week
+    falls through to the following one. None when nothing is open."""
+    games = [g for g in MarketIndex().get_week_games() if team in (g["away"], g["home"])]
+    if not games:
+        return None
+    for g in games:
+        g["schedule"] = nd.find_upcoming_game(nd.kalshi_to_nflverse_team(g["away"]), nd.kalshi_to_nflverse_team(g["home"]))
+    g = min(games, key=lambda g: ((g["schedule"]["gameday"], g["schedule"]["gametime"]) if g["schedule"] else ("9999", g["close_time"] or "")))
+    return {"event_ticker": g["event_ticker"], "away": g["away"], "home": g["home"],
+            "week": g["schedule"]["week"] if g["schedule"] else None}
 
 def build_game_detail(event_ticker: str) -> dict:
     idx = MarketIndex()
@@ -79,4 +94,5 @@ def build_game_detail(event_ticker: str) -> dict:
         "combos": combos,
         "matchups": dm.game_matchups(away_nflverse, home_nflverse),
         "tendencies": tendencies,
+        "live": ls.game_live(game["away"], game["home"]),
     }
