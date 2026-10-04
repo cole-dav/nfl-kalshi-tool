@@ -43,6 +43,11 @@ Open http://127.0.0.1:8765 and search a player.
   they're last season's.
 - `weather.py` -- Open-Meteo forecast lookup for the game's stadium.
 - `player_research.py` -- ties it all together into one JSON payload per player.
+- `bdb_tracking.py` + `viz_lab.py` + `static/lab.js` -- Viz Lab (flask icon on
+  the rail): All-22 tracking replays from the public Big Data Bowl sample
+  (one 2017 game, downloaded to `data/bdb/` on first use), Next Gen Stats
+  leaderboards, pre-snap tells and route trees. What's built vs. blocked:
+  `docs/viz-lab.md`.
 - `combo.py` -- combo (parlay) builder backend: leg validation against Kalshi's
   multivariate collections, independent pricing, RFQ quotes.
 - `server.py` + `static/index.html` -- stdlib HTTP server + single-page UI.

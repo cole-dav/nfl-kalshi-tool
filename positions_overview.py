@@ -111,12 +111,15 @@ def _market_quote(market: dict) -> dict:
         v = market.get(key)
         return float(v) if v not in (None, "") else None
 
+    bid, ask = dollars("yes_bid_dollars"), dollars("yes_ask_dollars")
+    # Closed markets have an empty book (bid 0, ask 1): use last trade, not a 50% mid.
+    empty_book = not bid and ask in (None, 1.0)
     return {
-        "yes_bid": dollars("yes_bid_dollars"),
-        "yes_ask": dollars("yes_ask_dollars"),
+        "yes_bid": bid,
+        "yes_ask": ask,
         "implied_prob_yes": (
-            round((dollars("yes_bid_dollars") + dollars("yes_ask_dollars")) / 2, 4)
-            if dollars("yes_bid_dollars") is not None and dollars("yes_ask_dollars") is not None
+            round((bid + ask) / 2, 4)
+            if bid is not None and ask is not None and not empty_book
             else dollars("last_price_dollars")
         ),
         "volume": float(market.get("volume_fp") or 0),
