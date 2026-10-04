@@ -51,6 +51,8 @@ import player_volume as pvol
 import engine_agent as engine
 import scenario_sim as sim
 import video_index as vi
+import bdb_tracking as bdb
+import viz_lab as lab
 
 SESSION_COOKIE = "sid"
 
@@ -362,6 +364,14 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"internal error: {e}"}, status=500)
             return
 
+        if parsed.path == "/static/lab.js":
+            self._send_file(os.path.join(STATIC_DIR, "lab.js"), "text/javascript; charset=utf-8")
+            return
+
+        if parsed.path.startswith("/api/lab/"):
+            self._lab(parsed.path[len("/api/lab/"):], parse_qs(parsed.query))
+            return
+
         if parsed.path == "/api/combo/quotes":
             client = self._require_session_client()
             if client is None:
@@ -416,6 +426,40 @@ class Handler(BaseHTTPRequestHandler):
 
         self.send_response(404)
         self.end_headers()
+
+    def _lab(self, route: str, qs: dict):
+        """Viz Lab (static/lab.js): Big Data Bowl replays + nflverse leaderboards/tells/routes."""
+        arg = lambda k: (qs.get(k) or [""])[0].strip()
+        team = nd.kalshi_to_nflverse_team(arg("team").upper())
+        builds = {
+            "bdb/games": ("lab:bdb:games", lambda: {"games": bdb.games()}),
+            "bdb/plays": (f"lab:bdb:plays:{arg('game')}", lambda: bdb.play_list(int(arg("game")))),
+            "bdb/play": (f"lab:bdb:play:{arg('game')}:{arg('play')}",
+                         lambda: bdb.play_detail(int(arg("game")), int(arg("play")))),
+            "leaders": ("lab:leaders", lab.leaderboards),
+            "tells": (f"lab:tells:{team}", lambda: lab.tells(team)),
+            "routes": (f"lab:routes:{team}", lambda: lab.routes(team)),
+        }
+        if route not in builds:
+            self._send_json({"error": "not found"}, status=404)
+            return
+        if route.startswith("bdb/") and route != "bdb/games" and not arg("game").isdigit():
+            self._send_json({"error": "'game' must be a number"}, status=400)
+            return
+        if route == "bdb/play" and not arg("play").isdigit():
+            self._send_json({"error": "'play' must be a number"}, status=400)
+            return
+        if route in ("tells", "routes") and not team.isalpha():
+            self._send_json({"error": "missing 'team' query param"}, status=400)
+            return
+        key, build = builds[route]
+        try:
+            self._send_json(snap.get(key, build, TTL_STATIC), cache=CACHE_SLOW)
+        except ValueError as e:
+            self._send_json({"error": str(e)}, status=404)
+        except Exception as e:
+            traceback.print_exc()
+            self._send_json({"error": f"lab lookup failed: {e}"}, status=502)
 
     def _read_json(self) -> dict:
         length = int(self.headers.get("Content-Length") or 0)

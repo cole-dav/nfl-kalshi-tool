@@ -11,3 +11,6 @@ server.log
 keys
 .claude/
 *.orig
+
+# Big Data Bowl sample tracking (downloaded on first use by bdb_tracking.py)
+data/bdb/

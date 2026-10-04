@@ -62,7 +62,7 @@ def current_season() -> int:
 GAME_DONE_DELAY = 4 * 3600
 GAME_SETTLED_DELAY = 28 * 3600
 GAME_DATASETS = {"schedules", "pbp", "player_stats", "pfr_pass_adv", "ftn", "pfr_def_week", "snap_counts",
-                 "ff_rankings_week"}
+                 "ff_rankings_week", "ngs_passing", "ngs_rushing", "ngs_receiving"}
 TTL_SECONDS = {"schedules": 6 * 3600, "rosters": 12 * 3600, "injuries": 6 * 3600, "ff_rankings_week": 24 * 3600}
 DEFAULT_TTL = 6 * 3600
 ET = ZoneInfo("America/New_York")
@@ -228,6 +228,15 @@ def load_participation(season: int | None = None) -> pd.DataFrame:
     return _parquet_cache("participation", season, lambda: nfl.load_participation(seasons=[season]).to_pandas())
 
 
+def load_nextgen(stat_type: str, season: int | None = None) -> pd.DataFrame:
+    """NFL Next Gen Stats (passing / rushing / receiving): tracking-derived
+    per-player numbers (CPOE, RYOE, separation, YAC over expected...). Week 0
+    rows are the season-to-date totals."""
+    season = season or current_season()
+    return _parquet_cache("ngs_" + stat_type, season, lambda: nfl.load_nextgen_stats(
+        seasons=[season], stat_type=stat_type).to_pandas())
+
+
 def load_ff_rankings_week(season: int | None = None) -> pd.DataFrame:
     """FantasyPros weekly ECR. Not season-scoped upstream; keyed by the
     current season so it expires alongside the rest of the game data."""
@@ -239,6 +248,9 @@ _LOADERS = {
     "schedules": load_schedules, "rosters": load_rosters, "pbp": load_pbp, "player_stats": load_player_stats,
     "injuries": load_injuries_df, "pfr_pass_adv": load_pfr_pass_advstats, "pfr_def_week": load_pfr_def_week,
     "snap_counts": load_snap_counts, "ftn": load_ftn, "ff_rankings_week": load_ff_rankings_week,
+    "ngs_passing": lambda season=None: load_nextgen("passing", season),
+    "ngs_rushing": lambda season=None: load_nextgen("rushing", season),
+    "ngs_receiving": lambda season=None: load_nextgen("receiving", season),
 }
 
 
