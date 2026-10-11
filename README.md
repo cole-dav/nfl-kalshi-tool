@@ -184,6 +184,43 @@ Cloudflare does not cache JSON by default. To let the edge answer most API traff
 - Set "Eligible for cache".
 - Edge TTL: "Use cache-control header if present".
 
+## Odds history
+
+`odds_history.py` records Kalshi prices over time so the UI can show line
+movement. It adds no Kalshi requests:
+
+- `kalshi_book` calls a listener on every fresh public market-data fetch. It skips cache hits, 404s, `/portfolio` and `/communications`.
+- The listener pulls bid/ask/last/volume/OI for every active market in the payload and queues it.
+- One writer thread stores it in SQLite (`history/odds.sqlite3`, WAL mode). `ODDS_DB_PATH` overrides the location.
+- A tick is written only when bid, ask or last changed, plus a heartbeat every 15 min (`ODDS_HEARTBEAT_SECONDS`).
+- Prices are integer cents. "Mid" uses the same rule as `implied_prob_yes`: the midpoint, or the last trade when the book is empty.
+
+Granularity depends on how often the app itself fetches a market:
+- core game lines: ~30s (slate refresher);
+- props: one slate warmer pass, ~7 min;
+- more often for pages visitors open.
+
+A move between two fetches shows up as one step. "Open" means the first price this server recorded, not Kalshi's listing price.
+
+Size, measured on a Sunday with games live:
+- ~800 ticks/min across ~6,700 markets, at ~26 bytes per tick on disk.
+- Markets cost ~200 bytes each, including the ticker index.
+- Live game windows: ~1.2M ticks/day, ~30 MB/day.
+- Quiet days are mostly heartbeats: ~7k markets × 96/day ≈ 0.7M ticks, ~17 MB/day.
+- Expect roughly 100-150 MB per week. Nothing is pruned yet; delete the file to start over.
+
+| Route | Purpose |
+|---|---|
+| `GET /api/history?ticker=A,B&hours=48` | up to 20 tickers, 1h-14d; points `[ts, mid, bid, ask]`, downsampled to ≤200 |
+| `GET /api/movers?hours=24&kind=all\|game\|prop&limit=50` | largest mid moves among this week's games, with matchup labels and a sparkline |
+
+Both endpoints are snapshot-cached for 60s with public cache headers.
+
+The week, game and player payloads carry `line_moves` (`{ticker: {open, now, chg, chg_24h, since, spark}}`), computed once per build (~4 ms per player page). The UI uses it in these places:
+- sparklines and change-since-open in the prop ladder, the Team/Game and Season tabs, game cards and the game header;
+- a chart popover when any of those is clicked;
+- the MOVERS rail view.
+
 ## Known data limitations
 
 - **No man/zone coverage rate.** nflverse's free FTN charting release does
