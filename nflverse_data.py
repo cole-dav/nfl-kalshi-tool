@@ -561,7 +561,38 @@ def team_injuries(team: str, season: int | None = None, week: int | None = None)
     else:
         rows = rows[rows["week"] == rows["week"].max()]
     return rows[["full_name", "position", "report_status", "report_primary_injury",
-                 "report_secondary_injury", "practice_primary_injury", "practice_status"]]
+                 "report_secondary_injury", "practice_primary_injury", "practice_status", "gsis_id"]]
+
+
+# Roster reserve codes that mean "out with an injury": R01 injured reserve,
+# R48 IR designated to return, R04 physically unable to perform.
+RESERVE_INJURY_CODES = {"R01": ("IR", "Injured reserve"),
+                        "R48": ("IR", "Injured reserve (designated to return)"),
+                        "R04": ("PUP", "Physically unable to perform")}
+
+
+def team_reserve_injuries(team: str, season: int | None = None) -> pd.DataFrame:
+    """Players on IR / PUP from the latest roster, shaped like team_injuries rows."""
+    rosters = load_rosters(season)
+    rows = rosters[(rosters["team"] == team) & (rosters["status"] == "RES")
+                   & rosters["status_description_abbr"].isin(RESERVE_INJURY_CODES)]
+    codes = rows["status_description_abbr"]
+    return pd.DataFrame({
+        "full_name": rows["full_name"], "position": rows["position"],
+        "report_status": codes.map(lambda c: RESERVE_INJURY_CODES[c][0]),
+        "report_primary_injury": None, "report_secondary_injury": None, "practice_primary_injury": None,
+        "practice_status": codes.map(lambda c: RESERVE_INJURY_CODES[c][1]),
+        "gsis_id": rows["gsis_id"],
+    })
+
+
+def team_injury_list(team: str, season: int | None = None) -> pd.DataFrame:
+    """This week's injury report followed by players on IR/PUP (report row wins
+    if a player somehow appears in both)."""
+    report = team_injuries(team, season)
+    reserve = team_reserve_injuries(team, season)
+    reserve = reserve[~reserve["full_name"].isin(report["full_name"])]
+    return pd.concat([report, reserve], ignore_index=True)
 
 
 POSITION_GROUP_ORDER = {"QB": 0, "RB": 1, "WR": 2, "TE": 3, "OL": 4, "T": 4, "G": 4, "C": 4,

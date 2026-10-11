@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import depth_matchups as dm
 import live_scores as ls
+import madden_ratings as mr
 import nflverse_data as nd
 import team_tendencies as tt
 from kalshi_markets import MarketIndex
@@ -68,6 +69,22 @@ def find_team_next_game(team: str) -> dict | None:
     return {"event_ticker": g["event_ticker"], "away": g["away"], "home": g["home"],
             "week": g["schedule"]["week"] if g["schedule"] else None}
 
+def _injuries_by_madden(team: str) -> list[dict]:
+    """Injury report + IR for one team (nflverse code), best players first by
+    Madden OVR. The rating only drives the order; it isn't sent to the client."""
+    rows = nd.team_injury_list(team)
+    rows = rows.astype(object).where(rows.notna(), None).to_dict(orient="records")
+    roster = nd.load_rosters()
+    jerseys = roster[roster["team"] == team].set_index("gsis_id")["jersey_number"].to_dict()
+    for r in rows:
+        r["jersey_number"] = jerseys.get(r.get("gsis_id"))
+    mr.attach_ratings(rows, team)
+    rows.sort(key=lambda r: -(r["madden"]["ovr"] if r["madden"] else 0))
+    for r in rows:
+        r.pop("madden"); r.pop("jersey_number"); r.pop("gsis_id", None)
+    return rows
+
+
 def build_game_detail(event_ticker: str) -> dict:
     idx = MarketIndex()
     games = {g["event_ticker"]: g for g in idx.get_week_games()}
@@ -94,5 +111,6 @@ def build_game_detail(event_ticker: str) -> dict:
         "combos": combos,
         "matchups": dm.game_matchups(away_nflverse, home_nflverse),
         "tendencies": tendencies,
+        "injuries": {"away": _injuries_by_madden(away_nflverse), "home": _injuries_by_madden(home_nflverse)},
         "live": ls.game_live(game["away"], game["home"]),
     }

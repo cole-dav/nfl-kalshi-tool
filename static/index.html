@@ -1518,7 +1518,7 @@ function renderMatchup() {
 // ---------- render: injuries ----------
 const INJ_STYLE = {
   DNP: ['var(--orange)', 'rgba(255,122,69,0.14)'], LP: ['var(--amber)', 'rgba(242,165,65,0.12)'],
-  FP: ['#8FC1FF', 'rgba(90,169,255,0.12)'],
+  FP: ['#8FC1FF', 'rgba(90,169,255,0.12)'], IR: ['#FF5C5C', 'rgba(255,92,92,0.14)'], PUP: ['#FF5C5C', 'rgba(255,92,92,0.14)'],
 };
 function practiceStatus(row) {
   const s = (row.practice_status || '').toLowerCase();
@@ -1560,7 +1560,7 @@ function renderInjuries() {
         <span style="display:flex;justify-content:flex-end"><span class="mono pill" style="color:${style[0]};background:${style[1]}">${st}</span></span>
       </div>`;
     }).join('') : `<div class="empty">None reported.</div>`}
-    <div class="mono" style="margin-top:8px;font-size:9.5px;color:var(--dim)">DNP did not practice · LP limited · FP full · hover for news</div>
+    <div class="mono" style="margin-top:8px;font-size:9.5px;color:var(--dim)">DNP did not practice · LP limited · FP full · IR/PUP reserve · hover for news</div>
   </div>`;
   body.querySelectorAll('[data-injp]').forEach(el => { el._inj = rows[Number(el.dataset.injp)]; });
 }
@@ -2456,7 +2456,7 @@ function renderGameDetail(el, g) {
   const gdm = {};
   coreMkts(d).forEach(m => { gdm[m.ticker] = m; });
   const gdStar = (q) => q && q.ticker && gdm[q.ticker] ? bmStar(gdm[q.ticker]) : '';
-  const viewTabs = [{ id: 'depth', label: 'DEPTH MATCHUPS' }, { id: 'tend', label: 'TENDENCIES & SCRIPT' }];
+  const viewTabs = [{ id: 'depth', label: 'DEPTH MATCHUPS' }, { id: 'tend', label: 'TENDENCIES & SCRIPT' }, { id: 'inj', label: 'INJURIES' }];
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:8px 4px">
@@ -2467,7 +2467,7 @@ function renderGameDetail(el, g) {
     </div>
     ${liveStripHtml(d)}
     <div class="game-grid">
-      ${view === 'tend' ? tendencyPanelsHtml(d.tendencies) : (d.matchups || []).map(matchupPanelHtml).join('')}
+      ${view === 'tend' ? tendencyPanelsHtml(d.tendencies) : view === 'inj' ? injuryPanelHtml(d.away, (d.injuries || {}).away) + injuryPanelHtml(d.home, (d.injuries || {}).home) : (d.matchups || []).map(matchupPanelHtml).join('')}
       <div class="panel gg-side">
         <div class="panel-head"><span class="panel-title">GAME &amp; COMBO MARKETS</span></div>
         <div class="panel-body">${combosHtml(d.combos, d.away, d.home)}</div>
@@ -2605,6 +2605,32 @@ function tendRankColor(rank, better, side) {
 }
 
 const TEND_TAG_COLOR = { SCRIPT: 'var(--amber)', '1H': '#8FC1FF', DRIVES: 'var(--muted)', 'RED ZONE': 'var(--orange)', TARGETS: 'var(--blue)', RUSHING: '#7FD1A8' };
+
+// One team's injury report + IR for the game view. Rows arrive pre-sorted by
+// Madden OVR (best players first); the rating itself isn't shown.
+function injuryPanelHtml(team, rows) {
+  rows = rows || [];
+  const grid = 'display:grid;grid-template-columns:minmax(0,1fr) 34px 84px 46px;gap:6px;align-items:center';
+  return `<div class="panel">
+    <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(team, 16)}${team} INJURIES</span><span class="mono" style="margin-left:auto;padding-right:8px;font-size:9.5px;color:var(--dim)">${rows.length} LISTED</span></div>
+    <div class="panel-body" style="padding:4px 8px">
+      <div class="mono" style="${grid};height:18px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+        <span>PLAYER</span><span>POS</span><span>GAME</span><span class="right">PRACT</span>
+      </div>
+      ${rows.length ? rows.map(r => {
+        const st = practiceStatus(r); const style = INJ_STYLE[st] || [C.muted, 'transparent'];
+        const game = r.report_status && r.report_status !== st ? r.report_status : '';
+        return `<div class="inj-row" data-injp="1" data-inj="${escapeHtml(JSON.stringify(r))}" style="${grid};height:22px;border-bottom:1px solid var(--row-rule)">
+          <span class="roster-player" data-open-player="${escapeHtml(r.full_name)}" style="font-size:12px;color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.full_name)}</span>
+          <span class="mono" style="font-size:10.5px;color:var(--muted)">${escapeHtml(r.position || '')}</span>
+          <span class="mono" style="font-size:10.5px;color:${/out|doubt/i.test(game) ? 'var(--orange)' : 'var(--muted)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(game)}</span>
+          <span style="display:flex;justify-content:flex-end"><span class="mono pill" style="color:${style[0]};background:${style[1]}">${st}</span></span>
+        </div>`;
+      }).join('') : `<div class="empty">None reported.</div>`}
+      <div class="mono" style="margin-top:8px;font-size:9.5px;color:var(--dim)">DNP did not practice · LP limited · FP full · IR/PUP reserve · hover for news</div>
+    </div>
+  </div>`;
+}
 
 function tendencyPanelsHtml(td) {
   if (!td || td.error) return `<div class="panel" style="grid-column:span 2"><div class="empty">${escapeHtml((td && td.error) || 'No tendency data.')}</div></div>`;

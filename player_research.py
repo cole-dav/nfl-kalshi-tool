@@ -285,8 +285,8 @@ def _build_environment_section(next_game: dict) -> dict:
         "spread_line": next_game.get("spread_line"),
         "total_line": next_game.get("total_line"),
         "forecast": forecast,
-        "injuries_home": nd.team_injuries(home_team).to_dict(orient="records"),
-        "injuries_away": nd.team_injuries(away_team).to_dict(orient="records"),
+        "injuries_home": nd.team_injury_list(home_team).to_dict(orient="records"),
+        "injuries_away": nd.team_injury_list(away_team).to_dict(orient="records"),
     }
 
 
