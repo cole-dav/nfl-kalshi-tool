@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import sys
 import threading
 import time
@@ -43,6 +44,7 @@ import player_research as pr
 import positions_overview as po
 import injury_news as inj
 import nflverse_data as nd
+import odds_history as oh
 import sessions
 import snapshots as snap
 import team_tendencies as tt
@@ -68,6 +70,9 @@ TTL_VOLUME = 300       # trailing 4h prop volume
 TTL_NEWS = 30 * 60
 TTL_STATIC = 60 * 60   # player list, game logs, video index
 SLATE_REFRESH_SECONDS = 30
+TTL_HISTORY = 60      # /api/history, /api/movers (recorded prices; see odds_history.py)
+HISTORY_MIN_HOURS, HISTORY_MAX_HOURS, HISTORY_MAX_TICKERS = 1, 24 * 14, 20
+_TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,99}$")
 
 # Player-page warmer: every player with Kalshi props this week is prebuilt, one
 # game at a time so that game's markets are fetched once for all its players
@@ -186,6 +191,18 @@ def _player_warmer():
         elapsed = time.time() - start
         print(f"warmer: rebuilt {built} of {len(pages)} slate pages ({failed} failed) in {elapsed:.0f}s", flush=True)
         time.sleep(max(30.0, WARM_PASS_SECONDS - elapsed))
+
+
+def _movers(hours: float, kind: str, limit: int) -> dict:
+    """Biggest line moves among this week's games, labeled with the matchup."""
+    games = snap.get("week:current", lambda: wo.build_week_overview(None), TTL_LIVE).get("games") or []
+    by_game = {oh.game_key(g["event_ticker"]): g for g in games}
+    data = oh.store().movers(hours, kind, limit, event_suffixes=set(by_game) or None)
+    for m in data["movers"]:
+        g = by_game.get(oh.game_key(m["event_ticker"]))
+        if g:
+            m["away"], m["home"], m["game_event"] = g["away"], g["home"], g["event_ticker"]
+    return data
 
 
 def _sanitize(obj):
@@ -449,6 +466,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"internal error: {e}"}, status=500)
             return
 
+        if parsed.path in ("/api/history", "/api/movers"):
+            self._odds_history(parsed.path, parse_qs(parsed.query))
+            return
+
         if parsed.path == "/static/lab.js":
             self._send_file(os.path.join(STATIC_DIR, "lab.js"), "text/javascript; charset=utf-8")
             return
@@ -545,6 +566,40 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             traceback.print_exc()
             self._send_json({"error": f"lab lookup failed: {e}"}, status=502)
+
+    def _odds_history(self, path: str, qs: dict):
+        """Recorded Kalshi price history (odds_history.py): shared, CDN-cacheable."""
+        arg = lambda k, d="": (qs.get(k) or [d])[0].strip()
+        try:
+            hours = float(arg("hours", "48" if path == "/api/history" else "24"))
+        except ValueError:
+            hours = -1
+        if not HISTORY_MIN_HOURS <= hours <= HISTORY_MAX_HOURS:
+            self._send_json({"error": f"'hours' must be {HISTORY_MIN_HOURS:g}-{HISTORY_MAX_HOURS:g}"}, status=400)
+            return
+        hours = round(hours, 2)
+        if path == "/api/history":
+            tickers = sorted({t for t in arg("ticker").upper().split(",") if t})
+            if not tickers or len(tickers) > HISTORY_MAX_TICKERS or not all(_TICKER_RE.match(t) for t in tickers):
+                self._send_json({"error": f"'ticker' must be 1-{HISTORY_MAX_TICKERS} comma-separated Kalshi tickers"},
+                                status=400)
+                return
+            key, build = f"history:{hours}:{','.join(tickers)}", lambda: oh.store().history(tickers, hours)
+        else:
+            kind = arg("kind", "all").lower()
+            try:
+                limit = int(arg("limit", "50"))
+            except ValueError:
+                limit = 0
+            if kind not in ("all", "game", "prop") or not 1 <= limit <= 200:
+                self._send_json({"error": "'kind' must be all|game|prop and 'limit' 1-200"}, status=400)
+                return
+            key, build = f"movers:{hours}:{kind}:{limit}", lambda: _movers(hours, kind, limit)
+        try:
+            self._send_snapshot(key, build, TTL_HISTORY)
+        except Exception as e:
+            traceback.print_exc()
+            self._send_json({"error": f"history lookup failed: {e}"}, status=500)
 
     def _read_json(self) -> dict:
         length = int(self.headers.get("Content-Length") or 0)
@@ -687,6 +742,7 @@ def main():
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     loaded = snap.enable_persistence(SNAPSHOT_DIR, _sanitize, SNAPSHOT_MAX_AGE)
     print(f"Loaded {loaded} saved snapshots")
+    oh.install()  # record prices from every fresh Kalshi fetch (no extra requests)
     threading.Thread(target=_cache_warmer, daemon=True, name="cache-warmer").start()
     threading.Thread(target=_slate_refresher, daemon=True, name="slate-refresher").start()
     threading.Thread(target=_player_warmer, daemon=True, name="player-warmer").start()

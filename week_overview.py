@@ -14,6 +14,7 @@ import game_defense as gd
 import live_scores as ls
 import madden_ratings as mr
 import nflverse_data as nd
+import odds_history
 import team_tendencies as tt
 from kalshi_markets import MarketIndex
 
@@ -54,7 +55,15 @@ def build_week_overview(week: int | None = None) -> dict:
         g["schedule"] = src["schedule"]
         g["live"] = ls.game_live(g["away"], g["home"])
     results.sort(key=lambda g: (g["schedule"]["gameday"], g["schedule"]["gametime"]) if g["schedule"] else ("9999", g["kickoff"] or ""))
-    return {"week": week, "weeks": weeks, "games": results}
+    return {"week": week, "weeks": weeks, "games": results,
+            "line_moves": odds_history.line_moves(t for g in results for t in _core_tickers(g))}
+
+
+def _core_tickers(core: dict) -> list[str]:
+    """Moneyline, spread, total and team-total tickers of one game's core lines."""
+    quotes = [*core.get("moneyline", {}).values(), core.get("spread"), core.get("total"),
+              *core.get("team_totals", {}).values()]
+    return [q["ticker"] for q in quotes if q and q.get("ticker")]
 
 
 def find_team_next_game(team: str) -> dict | None:
@@ -105,4 +114,5 @@ def build_game_detail(event_ticker: str) -> dict:
         "tendencies": tendencies,
         "injuries": {"away": mr.injuries_by_ovr(away_nflverse), "home": mr.injuries_by_ovr(home_nflverse)},
         "live": ls.game_live(game["away"], game["home"]),
+        "line_moves": odds_history.line_moves(_core_tickers(core)),
     }
