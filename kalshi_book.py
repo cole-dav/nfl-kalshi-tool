@@ -102,10 +102,27 @@ _inflight: dict[str, threading.Lock] = {}
 _inflight_lock = threading.Lock()
 
 
+# A 404 (e.g. a prop series with no event for this game) is cached like any
+# other answer; otherwise every build re-asks Kalshi for markets that don't exist.
+_NOT_FOUND = "__kalshi_404__"
+
+
+def _raise_not_found(path: str) -> None:
+    resp = requests.Response()
+    resp.status_code, resp.url, resp.reason = 404, path, "Not Found (cached)"
+    raise requests.exceptions.HTTPError(f"404 Client Error: Not Found (cached) for url: {path}", response=resp)
+
+
+def _hit(cached: dict, path: str) -> dict:
+    if cached.get(_NOT_FOUND):
+        _raise_not_found(path)
+    return cached
+
+
 def _cached_get(path: str, params: dict | None, fetch) -> dict[str, Any]:
     cached = _cache_read(path, params)
     if cached is not None:
-        return cached
+        return _hit(cached, path)
     if not _cacheable(path):
         return fetch()
     key = _cache_key(path, params)
@@ -114,8 +131,13 @@ def _cached_get(path: str, params: dict | None, fetch) -> dict[str, Any]:
     with lock:
         cached = _cache_read(path, params)
         if cached is not None:
-            return cached
-        data = fetch()
+            return _hit(cached, path)
+        try:
+            data = fetch()
+        except requests.exceptions.HTTPError as e:
+            if e.response is not None and e.response.status_code == 404:
+                _cache_write(path, params, {_NOT_FOUND: True})
+            raise
         _cache_write(path, params, data)
         return data
 

@@ -135,3 +135,45 @@ def test_kalshi_portfolio_get_bypasses_disk_cache(monkeypatch, tmp_path):
     for _ in range(2):
         kb._cached_get("/trade-api/v2/portfolio/positions", None, lambda: {"user": next(n)})
     assert list(tmp_path.iterdir()) == []
+
+
+def test_kalshi_404_is_cached(monkeypatch, tmp_path):
+    import requests
+    monkeypatch.setattr(kb, "CACHE_TTL_SECONDS", 20)
+    monkeypatch.setattr(kb, "_API_CACHE_DIR", str(tmp_path))
+    calls = []
+
+    def fetch():
+        calls.append(1)
+        resp = requests.Response()
+        resp.status_code = 404
+        raise requests.exceptions.HTTPError("404", response=resp)
+
+    for _ in range(3):
+        with pytest.raises(requests.exceptions.HTTPError) as exc:
+            kb._cached_get("/trade-api/v2/events/KXNFLX-NOPE", None, fetch)
+        assert exc.value.response.status_code == 404
+    assert len(calls) == 1
+
+
+def test_persisted_snapshots_reload_as_stale(monkeypatch, tmp_path):
+    import math
+    import os
+    monkeypatch.setattr(snap, "_persist", {"dir": None, "sanitize": None})
+    sanitize = lambda d: {k: (None if isinstance(v, float) and math.isnan(v) else v) for k, v in d.items()}
+    assert snap.enable_persistence(str(tmp_path), sanitize, 3600) == 0
+    snap.get("player:00-1", lambda: {"x": 1, "y": float("nan")}, 30)
+    old = tmp_path / "old.json"
+    old.write_text('{"key": "ancient", "data": 1}')
+    os.utime(old, (0, 0))
+
+    for f in tmp_path.iterdir():  # saved 100s ago: past its 30s TTL
+        if f != old:
+            os.utime(f, (time.time() - 100, time.time() - 100))
+    snap.clear()
+    assert snap.enable_persistence(str(tmp_path), sanitize, 3600) == 1
+    assert not old.exists()  # past max_age: deleted, not loaded
+    started = threading.Event()
+    # Served instantly from disk (NaN already sanitized), with a background rebuild.
+    assert snap.get("player:00-1", lambda: started.set() or {"x": 2}, 30) == {"x": 1, "y": None}
+    assert started.wait(1)
