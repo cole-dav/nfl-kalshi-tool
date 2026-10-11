@@ -427,6 +427,67 @@ def defense_blitz_rate_ftn(season: int | None = None) -> pd.DataFrame:
     return out.rename(columns={"defteam": "team"})
 
 
+@memo_on_data("pbp")
+def team_defense_rates(season: int | None = None) -> pd.DataFrame:
+    """Per-game sacks and takeaways each defense makes, and what each offense
+    gives up (sacks allowed, INTs thrown, giveaways), season-to-date.
+    Scrimmage plays only, so special-teams fumbles don't count."""
+    pbp = load_pbp(season)
+    plays = pbp[pbp["play_type"].isin(["pass", "run"])].dropna(subset=["posteam", "defteam"])
+    plays = plays.assign(
+        sack=plays["sack"].fillna(0), interception=plays["interception"].fillna(0),
+        fumble_lost=plays["fumble_lost"].fillna(0),
+    )
+    plays = plays.assign(takeaway=plays["interception"] + plays["fumble_lost"])
+    d = plays.groupby("defteam").agg(
+        def_games=("game_id", "nunique"), sacks=("sack", "sum"), ints=("interception", "sum"),
+        fumbles_rec=("fumble_lost", "sum"), takeaways=("takeaway", "sum"))
+    o = plays.groupby("posteam").agg(
+        off_games=("game_id", "nunique"), sacks_allowed=("sack", "sum"),
+        ints_thrown=("interception", "sum"), giveaways=("takeaway", "sum"))
+    out = d.join(o, how="outer").fillna(0)
+    for col, games in (("sacks", "def_games"), ("ints", "def_games"), ("takeaways", "def_games"),
+                       ("sacks_allowed", "off_games"), ("ints_thrown", "off_games"), ("giveaways", "off_games")):
+        out[col + "_pg"] = out[col] / out[games].where(out[games] > 0)
+    return out.rename_axis("team").reset_index()
+
+
+def team_defenders(team: str, season: int | None = None) -> list[dict]:
+    """A defense's playmakers, season-to-date: sack leaders first (QB hits
+    break ties), plus its top tackler and any player with an INT."""
+    ps = load_player_stats(season)
+    ps = ps.sort_values("week")
+    latest_team = ps.groupby("player_id")["team"].last()
+    on_team = latest_team[latest_team == team].index
+    rows = ps[ps["player_id"].isin(on_team) & (ps["team"] == team)]
+    agg = rows.groupby("player_id").agg(
+        name=("player_display_name", "last"), position=("position", "last"),
+        headshot_url=("headshot_url", "last"), games=("week", "nunique"),
+        sacks=("def_sacks", "sum"), qb_hits=("def_qb_hits", "sum"),
+        tkl_solo=("def_tackles_solo", "sum"), tkl_ast=("def_tackle_assists", "sum"),
+        tfl=("def_tackles_for_loss", "sum"), ints=("def_interceptions", "sum"),
+        pd_=("def_pass_defended", "sum"), ff=("def_fumbles_forced", "sum"),
+    ).fillna(0)
+    agg["tackles"] = agg["tkl_solo"] + agg["tkl_ast"]
+    agg = agg[(agg["tackles"] + agg["sacks"] + agg["qb_hits"] + agg["ints"]) > 0]
+    if agg.empty:
+        return []
+    picks = list(agg.sort_values(["sacks", "qb_hits"], ascending=False).head(6).index)
+    picks += [i for i in agg.sort_values("tackles", ascending=False).head(2).index if i not in picks]
+    picks += [i for i in agg[agg["ints"] > 0].sort_values("ints", ascending=False).index if i not in picks][:3]
+    out = []
+    for pid in picks:
+        r = agg.loc[pid]
+        out.append({
+            "player_id": pid, "name": r["name"], "position": r["position"],
+            "headshot_url": r["headshot_url"] or None, "games": int(r["games"]),
+            "sacks": float(r["sacks"]), "qb_hits": int(r["qb_hits"]), "tackles": int(r["tackles"]),
+            "tfl": int(r["tfl"]), "ints": int(r["ints"]), "pass_defended": int(r["pd_"]),
+            "forced_fumbles": int(r["ff"]),
+        })
+    return out
+
+
 # -- team/O-line context --------------------------------------------------------
 
 

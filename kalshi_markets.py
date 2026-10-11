@@ -87,6 +87,32 @@ GAME_COMBO_SERIES: dict[str, str] = {
 }
 RACE_SERIES = "KXNFLRACE"
 
+# Defensive series. Team sacks and the safety market are listed every week;
+# individual defender props and game-wide sack/turnover totals only appear on
+# some slates, so they're always asked for and simply come back empty.
+# KXNFLTEAMSACK / KXNFLTEAMTO are keyed by the team *making* the play.
+DEF_PLAYER_PROP_SERIES: dict[str, str] = {
+    "KXNFLSACK": "Sacks",
+    "KXNFLTKL": "Tackles",
+    "KXNFLINT": "Interceptions",
+}
+DEF_TEAM_SERIES: dict[str, str] = {
+    "KXNFLTEAMSACK": "Team Sacks",
+    "KXNFLTEAMTO": "Forced Turnovers",
+}
+DEF_GAME_SERIES: dict[str, str] = {
+    "KXNFLGAMESACK": "Game Sacks",
+    "KXNFLGAMETO": "Game Turnovers",
+    "KXNFLSFTY": "Safety",
+}
+# Season-long defensive markets (leaders/awards), matched to a player by UUID.
+SEASON_DEF_SERIES: dict[str, str] = {
+    "KXLEADERNFLSACKS": "Sacks Leader",
+    "KXLEADERNFLINT": "Interceptions Leader",
+    "KXNFLDPOTY": "Defensive Player of the Year",
+    "KXNFLDROTY": "Defensive Rookie of the Year",
+}
+
 
 def _cache_path(name: str) -> str:
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -287,16 +313,17 @@ class MarketIndex:
         self, game_event_suffix: str, series_map: dict[str, str] = WEEKLY_PLAYER_PROP_SERIES
     ) -> list[PropMarket]:
         """game_event_suffix: the part after the series ticker, e.g. '26SEP27CARCLE'."""
-        out: list[PropMarket] = []
-        for series, label in {**series_map, **TEAM_GAME_SERIES}.items():
-            event_ticker = f"{series}-{game_event_suffix}"
+        def fetch(item):
+            series, label = item
             try:
-                markets = self.get_event_markets(event_ticker)
+                markets = self.get_event_markets(f"{series}-{game_event_suffix}")
             except Exception:
-                continue
-            for m in markets:
-                out.append(self._to_prop_market(m, series, label))
-        return out
+                return []
+            return [self._to_prop_market(m, series, label) for m in markets]
+
+        items = list({**series_map, **TEAM_GAME_SERIES}.items())
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            return [pm for group in pool.map(fetch, items) for pm in group]
 
     def _to_prop_market(self, m: dict, series: str, label: str) -> PropMarket:
         custom = m.get("custom_strike") or {}
@@ -320,9 +347,23 @@ class MarketIndex:
             raw=m,
         )
 
+    def season_player_ids(self) -> list[str]:
+        """Every player UUID with an open season-long market (for players with
+        no weekly props to resolve from, e.g. most defenders)."""
+        def fetch(series):
+            try:
+                return self.get_events(series_ticker=series, status="open")
+            except Exception:
+                return []
+        series = list({**SEASON_PLAYER_PROP_SERIES, **SEASON_DEF_SERIES})
+        with ThreadPoolExecutor(max_workers=len(series)) as pool:
+            events = [ev for evs in pool.map(fetch, series) for ev in evs]
+        return list({(m.get("custom_strike") or {}).get("football_player")
+                     for ev in events for m in ev.get("markets", [])} - {None})
+
     def get_season_prop_markets_for_player(self, player_id: str) -> list[PropMarket]:
         out = []
-        for series, label in SEASON_PLAYER_PROP_SERIES.items():
+        for series, label in {**SEASON_PLAYER_PROP_SERIES, **SEASON_DEF_SERIES}.items():
             events = self.get_events(series_ticker=series, status="open")
             for ev in events:
                 for m in ev.get("markets", []):
@@ -411,6 +452,23 @@ class MarketIndex:
         if race_thresholds:
             combos.append({"series": RACE_SERIES, "label": "Race to N Points", "thresholds": race_thresholds})
         return combos
+
+    def get_game_defense_markets(self, event_ticker: str) -> dict[str, list[PropMarket]]:
+        """Every defensive market for one game, plus the QB passing-INT ladders
+        (an INT thrown is the other defense's takeaway), keyed by series."""
+        suffix = event_ticker.split("-", 1)[1]
+        series = {**DEF_TEAM_SERIES, **DEF_PLAYER_PROP_SERIES, **DEF_GAME_SERIES,
+                  "KXNFLPASSINT": WEEKLY_PLAYER_PROP_SERIES["KXNFLPASSINT"]}
+
+        def fetch(item):
+            s, label = item
+            try:
+                return s, [self._to_prop_market(m, s, label) for m in self.get_event_markets(f"{s}-{suffix}")]
+            except Exception:
+                return s, []
+
+        with ThreadPoolExecutor(max_workers=len(series)) as pool:
+            return dict(pool.map(fetch, series.items()))
 
 
 def _quote(pm: PropMarket) -> dict:

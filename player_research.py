@@ -16,7 +16,10 @@ import nflverse_data as nd
 import video_index as vi
 import weather as wx
 from kalshi_book import KalshiClient, position_from_kalshi
-from kalshi_markets import MarketIndex, WEEKLY_PLAYER_PROP_SERIES, SEASON_PLAYER_PROP_SERIES
+from kalshi_markets import (
+    DEF_GAME_SERIES, DEF_PLAYER_PROP_SERIES, DEF_TEAM_SERIES, MarketIndex,
+    WEEKLY_PLAYER_PROP_SERIES, SEASON_PLAYER_PROP_SERIES,
+)
 
 SKILL_POSITIONS = {"WR", "TE", "RB"}
 
@@ -142,7 +145,8 @@ def _build_markets_section(idx: MarketIndex, game, team_kalshi, sportradar_id, r
                 "teammate_props": [], "team_game_markets": [], "season_props": []}
 
     suffix = game["event_ticker"].split("-", 1)[1]
-    all_props = idx.get_all_prop_markets_for_game(suffix)
+    all_props = idx.get_all_prop_markets_for_game(
+        suffix, {**WEEKLY_PLAYER_PROP_SERIES, **DEF_PLAYER_PROP_SERIES, **DEF_TEAM_SERIES, **DEF_GAME_SERIES})
 
     player_ids = list({p.player_id for p in all_props if p.player_id})
     resolved = idx.resolve_targets(player_ids)
@@ -160,6 +164,12 @@ def _build_markets_section(idx: MarketIndex, game, team_kalshi, sportradar_id, r
         if target_matches_our_player(t):
             own_player_id = pid
             break
+
+    if own_player_id is None:
+        for pid, t in idx.resolve_targets(idx.season_player_ids()).items():
+            if target_matches_our_player(t):
+                own_player_id = pid
+                break
 
     player_props, teammate_props, team_game_markets = [], [], []
     for p in all_props:

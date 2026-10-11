@@ -10,6 +10,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 import depth_matchups as dm
+import game_defense as gd
 import live_scores as ls
 import madden_ratings as mr
 import nflverse_data as nd
@@ -88,9 +89,16 @@ def build_game_detail(event_ticker: str) -> dict:
         traceback.print_exc()
         tendencies = {"error": f"tendencies unavailable: {e}"}
 
+    try:
+        defense = gd.build_game_defense(idx, event_ticker, game["away"], game["home"])
+    except Exception as e:
+        traceback.print_exc()
+        defense = {"error": f"defense markets unavailable: {e}"}
+
     records = nd.team_records()
     return {
         **core,
+        "defense": defense,
         "records": {"away": records.get(away_nflverse, "0-0"), "home": records.get(home_nflverse, "0-0")},
         "combos": combos,
         "matchups": dm.game_matchups(away_nflverse, home_nflverse),
