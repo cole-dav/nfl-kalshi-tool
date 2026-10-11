@@ -445,6 +445,9 @@ const SERIES_META = {
   KXNFLTD:       { short:'ATD',       name:'Anytime TD',           dec:1, col:'right' },
   KXNFLLONGREC:  { short:'Long Rec',  name:'Longest Reception',    dec:1, col:'right', over:true },
   KXNFLLONGRSH:  { short:'Long Rush', name:'Longest Rush',         dec:1, col:'right', over:true },
+  KXNFLSACK:     { short:'Sacks',     name:'Sacks',                dec:1, col:'left' },
+  KXNFLTKL:      { short:'Tackles',   name:'Tackles',              dec:1, col:'left' },
+  KXNFLINT:      { short:'Def INT',   name:'Interceptions',        dec:1, col:'right' },
 };
 
 // Team primary brand colors, keyed by Kalshi team code.
@@ -2457,7 +2460,7 @@ function renderGameDetail(el, g) {
   const gdm = {};
   coreMkts(d).forEach(m => { gdm[m.ticker] = m; });
   const gdStar = (q) => q && q.ticker && gdm[q.ticker] ? bmStar(gdm[q.ticker]) : '';
-  const viewTabs = [{ id: 'depth', label: 'DEPTH MATCHUPS' }, { id: 'tend', label: 'TENDENCIES & SCRIPT' }, { id: 'inj', label: 'INJURIES' }];
+  const viewTabs = [{ id: 'depth', label: 'DEPTH MATCHUPS' }, { id: 'tend', label: 'TENDENCIES & SCRIPT' }, { id: 'inj', label: 'INJURIES' }, { id: 'def', label: 'DEFENSE' }];
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:8px 4px">
@@ -2468,10 +2471,10 @@ function renderGameDetail(el, g) {
     </div>
     ${liveStripHtml(d)}
     <div class="game-grid">
-      ${view === 'tend' ? tendencyPanelsHtml(d.tendencies) : view === 'inj' ? injuryPanelHtml(d.away, (d.injuries || {}).away) + injuryPanelHtml(d.home, (d.injuries || {}).home) : (d.matchups || []).map(matchupPanelHtml).join('')}
+      ${view === 'tend' ? tendencyPanelsHtml(d.tendencies) : view === 'def' ? defensePanelsHtml(d.defense) : view === 'inj' ? injuryPanelHtml(d.away, (d.injuries || {}).away) + injuryPanelHtml(d.home, (d.injuries || {}).home) : (d.matchups || []).map(matchupPanelHtml).join('')}
       <div class="panel gg-side">
         <div class="panel-head"><span class="panel-title">GAME &amp; COMBO MARKETS</span></div>
-        <div class="panel-body">${combosHtml(d.combos, d.away, d.home)}</div>
+        <div class="panel-body">${view === 'def' ? defGameMarketsHtml(d.defense) : ''}${combosHtml(d.combos, d.away, d.home)}</div>
       </div>
     </div>`;
 }
@@ -2584,6 +2587,119 @@ function matchupPanelHtml(mu) {
   }
   html += `<div style="padding:4px 8px 8px;font-size:9.5px;color:var(--faint)">EDGE = offense OVR − defender OVR · typical alignment, not snap charting</div></div></div>`;
   return html;
+}
+
+// Defense view: one panel per defense vs the opposing offense. Season rates
+// with league ranks (1 = best for the defense), then every Kalshi defensive
+// ladder with a simple Poisson model next to the market, then the playmakers.
+const DEF_LADDER_GRID = 'display:grid;grid-template-columns:14px 34px 30px 30px minmax(0,1fr) 40px 44px 44px;gap:0 4px;align-items:center';
+
+function defRankColor(r) {
+  if (!r) return 'var(--dim)';
+  return r.rank <= 8 ? 'var(--blue)' : r.rank >= 25 ? 'var(--orange)' : 'var(--muted)';
+}
+function defStatVal(r, pct) {
+  if (!r) return '<span style="color:var(--faint)">--</span>';
+  const v = pct ? (r.value * 100).toFixed(1) + '%' : r.value.toFixed(2);
+  return `<span style="color:var(--on)">${v}</span> <span style="font-size:9.5px;color:${defRankColor(r)}">#${r.rank}</span>`;
+}
+
+function defLadderRowsHtml(rows, showModel) {
+  return rows.map(r => {
+    const imp = (r.implied_prob_yes ?? 0) * 100;
+    const model = r.model_prob === null || r.model_prob === undefined ? null : r.model_prob * 100;
+    const edge = model === null || r.implied_prob_yes === null || r.implied_prob_yes === undefined ? null : model - imp;
+    const m = normMkt(r);
+    return `<div class="mono" style="${DEF_LADDER_GRID};height:18px;font-size:11px;border-bottom:1px solid var(--row-rule)">
+      ${bmStar(m)}
+      <span style="color:var(--on)">${r.line !== null && r.line !== undefined ? r.line + '+' : 'YES'}</span>
+      <span class="right" style="color:var(--blue)">${cents(r.yes_bid)}</span>
+      <span class="right" style="color:var(--ask)">${cents(r.yes_ask)}</span>
+      <div style="display:flex;align-items:center;gap:6px;padding-left:6px">
+        <div class="bar-track"><div class="bar-fill" style="width:${imp}%"></div><div class="bar-mid"></div></div>
+        <span style="width:30px;text-align:right;color:var(--on)">${imp.toFixed(0)}</span>
+      </div>
+      <span class="right" style="color:var(--muted)">${showModel && model !== null ? model.toFixed(0) : '·'}</span>
+      <span class="right" style="font-weight:600;color:${edge === null || !showModel ? 'var(--dim)' : edge >= 5 ? 'var(--blue)' : edge <= -5 ? 'var(--orange)' : 'var(--muted)'}">${showModel && edge !== null ? signed(edge) : '·'}</span>
+      <span class="right" style="color:${r.volume ? 'var(--muted)' : '#3A434E'}">${r.volume ? Math.round(r.volume).toLocaleString('en-US') : '·'}</span>
+    </div>`;
+  }).join('');
+}
+
+function defLadderHtml(label, rows, note, showModel) {
+  return `<div class="ladder-group"><span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--label)">${escapeHtml(label.toUpperCase())}</span><div style="flex-grow:1"></div>${note ? `<span class="mono" style="font-size:9.5px;color:var(--dim)">${note}</span>` : ''}</div>
+    ${defLadderRowsHtml(rows, showModel)}`;
+}
+
+function defensePanelHtml(s) {
+  const exp = s.expected || {};
+  const ladderHead = `<div class="mono" style="${DEF_LADDER_GRID};height:18px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+    <span></span><span>LINE</span><span class="right">BID</span><span class="right">ASK</span><span style="padding-left:6px">IMPLIED %</span><span class="right" title="Poisson model: this defense's rate × the offense's allowed rate ÷ league avg, shrunk toward league avg">MODEL</span><span class="right" title="Model − implied, percentage points">EDGE</span><span class="right">VOL</span>
+  </div>`;
+  let ladders = '';
+  (s.ladders || []).forEach(l => {
+    const lam = l.series === 'KXNFLTEAMSACK' ? exp.sacks : l.series === 'KXNFLTEAMTO' ? exp.takeaways : l.series === 'KXNFLPASSINT' ? exp.ints : null;
+    ladders += defLadderHtml(l.label, l.rows, lam !== null && lam !== undefined ? `MODEL λ <span style="color:var(--on)">${lam.toFixed(2)}</span>` : '', true);
+  });
+  (s.player_props || []).forEach(p => p.ladders.forEach(l => { ladders += defLadderHtml(`${p.player_name || 'Player'} · ${l.label}`, l.rows, '', false); }));
+  if (!ladders) ladders = `<div class="empty">No Kalshi defensive markets listed for ${s.defense_team} this game.</div>`;
+  const noPlayer = !(s.player_props || []).length
+    ? `<div class="mono" style="padding:4px 4px 0;font-size:9.5px;color:var(--faint)">Kalshi hasn't listed individual sack / tackle / INT props for this game — they'll appear here when it does.</div>` : '';
+
+  const dgrid = 'display:grid;grid-template-columns:minmax(0,1fr) 30px 22px 34px 30px 30px 28px 26px 24px;gap:4px;align-items:center';
+  const defs = (s.defenders || []).map(p => `<div class="mono" style="${dgrid};height:20px;font-size:11px;border-bottom:1px solid var(--row-rule)">
+      <span class="roster-player" data-open-player="${escapeHtml(p.name)}" style="font-family:inherit;color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.name)}</span>
+      <span style="color:var(--muted);font-size:10px">${escapeHtml(p.position || '')}</span>
+      <span class="right" style="color:var(--dim)">${p.games}</span>
+      <span class="right" style="color:${p.sacks ? 'var(--amber)' : 'var(--dim)'};font-weight:600">${p.sacks % 1 ? p.sacks.toFixed(1) : p.sacks}</span>
+      <span class="right" style="color:var(--muted)">${p.qb_hits}</span>
+      <span class="right" style="color:var(--muted)">${p.tackles}</span>
+      <span class="right" style="color:var(--muted)">${p.tfl}</span>
+      <span class="right" style="color:${p.ints ? 'var(--blue)' : 'var(--dim)'}">${p.ints}</span>
+      <span class="right" style="color:var(--muted)">${p.pass_defended}</span>
+    </div>`).join('');
+
+  return `<div class="panel">
+    <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(s.defense_team, 16)}${s.defense_team} DEF <span style="color:var(--dim);font-weight:400">vs</span> ${teamLogo(s.offense_team, 16)}${s.offense_team} OFF</span><span class="mono" style="margin-left:auto;padding-right:8px;font-size:9.5px;color:var(--dim)">EXP SACKS <span style="color:var(--on)">${exp.sacks ?? '--'}</span> · TAKEAWAYS <span style="color:var(--on)">${exp.takeaways ?? '--'}</span></span></div>
+    <div class="panel-body" style="padding:4px 8px 8px">
+      <div class="stat-tiles" style="margin-top:2px;grid-template-columns:repeat(${(s.stats || []).length || 1},minmax(0,1fr))">
+        ${(s.stats || []).map(st => `<div class="stat-tile" title="${s.defense_team} ${st.label} vs ${s.offense_team} ${st.off_label}. Ranks: 1 = most favorable to the defense.">
+          <span class="sl">${st.label}</span>
+          <span class="mono" style="font-size:12px">${defStatVal(st.def, st.pct)}</span>
+          <span class="mono" style="font-size:9.5px;color:var(--dim)">${s.offense_team} ${st.off_label.replace(' / G', '')}: ${defStatVal(st.off, st.pct)}</span>
+        </div>`).join('')}
+      </div>
+      <div style="margin-top:10px">${ladderHead}${ladders}</div>
+      ${noPlayer}
+      <div style="margin-top:12px;padding:0 4px 4px;font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--label)">PLAYMAKERS · SEASON</div>
+      <div class="mono" style="${dgrid};height:18px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+        <span>PLAYER</span><span>POS</span><span class="right">G</span><span class="right">SCK</span><span class="right">QBH</span><span class="right">TKL</span><span class="right">TFL</span><span class="right">INT</span><span class="right">PD</span>
+      </div>
+      ${defs || `<div class="empty">No defensive stats yet.</div>`}
+      <div class="mono" style="margin-top:8px;font-size:9.5px;color:var(--faint)">Model = Poisson count, ${s.defense_team} rate × ${s.offense_team} allowed rate ÷ league avg (shrunk 4 G toward avg). A sanity check, not a fitted model.</div>
+    </div>
+  </div>`;
+}
+
+function defensePanelsHtml(df) {
+  if (!df || df.error) return `<div class="panel" style="grid-column:span 2"><div class="empty">${escapeHtml((df && df.error) || 'No defensive data.')}</div></div>`;
+  return df.sides.map(defensePanelHtml).join('');
+}
+
+// Game-wide defensive markets (safety, total sacks/turnovers) for the side panel.
+function defGameMarketsHtml(df) {
+  if (!df || df.error || !(df.game || []).length) return '';
+  return `<div style="padding:0 0 8px">${df.game.map(g => defLadderHtml(g.label, g.rows, '', false)).join('')}</div>`;
+}
+function defMkts(df) {
+  if (!df || df.error) return [];
+  const rows = [];
+  (df.sides || []).forEach(s => {
+    (s.ladders || []).forEach(l => rows.push(...l.rows));
+    (s.player_props || []).forEach(p => p.ladders.forEach(l => rows.push(...l.rows)));
+  });
+  (df.game || []).forEach(g => rows.push(...g.rows));
+  return rows.map(r => normMkt(r)).filter(Boolean);
 }
 
 // Tendencies view: one panel per offense vs the opposing defense. Script
@@ -3062,7 +3178,7 @@ function gidx() {
   const idx = {};
   const put = (m) => { if (m && m.ticker && !idx[m.ticker]) idx[m.ticker] = m.event_ticker ? m : { ...m, event_ticker: evOfT(m.ticker) }; };
   state.tickets.forEach(t => { if (t.data) { gameMarkets(t.data).forEach(put); (t.data.markets.season_props || []).forEach(put); } });
-  state.games.forEach(g => { if (g.data) { coreMkts(g.data).forEach(put); comboMkts(g.data.combos).forEach(put); } });
+  state.games.forEach(g => { if (g.data) { coreMkts(g.data).forEach(put); comboMkts(g.data.combos).forEach(put); defMkts(g.data.defense).forEach(put); } });
   (state.slate.games || []).forEach(g => coreMkts(g).forEach(put));
   Object.values(bbrt.extra).forEach(put);
   const b = state.builder;
@@ -4373,7 +4489,11 @@ document.addEventListener('click', (e) => {
   if (comboT && t && t.data) { if (!comboT.disabled) handleComboClick(comboT, t); return; }
   if (closeT) { e.stopPropagation(); closeTicket(Number(closeT.dataset.close)); return; }
   if (closeGameTabT) { e.stopPropagation(); closeGameTab(Number(closeGameTabT.dataset.closeGametab)); return; }
-  if (railT) { state.module = railT.dataset.module; render(); return; }
+  if (railT) {
+    // The schedule (slate) button always lands on the all-games list; open games stay in the tab strip.
+    if (railT.dataset.module === 'slate') { state.module = 'slate'; backToSlateList(); return; }
+    state.module = railT.dataset.module; render(); return;
+  }
   if (openT) { state.activeId = Number(openT.dataset.open); state.module = 'research'; render(); return; }
   if (openGameTabT) { state.activeGameId = Number(openGameTabT.dataset.openGametab); state.module = 'slate'; state.slate.view = 'detail'; render(); return; }
   if (mktT && t) { t.ui.mkt = mktT.dataset.mkt; renderMarkets(); return; }
