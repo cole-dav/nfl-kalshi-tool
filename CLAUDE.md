@@ -17,6 +17,25 @@ sleep 4; curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8765/   # exp
 Use `.venv/bin/python` (system python lacks the deps). If it doesn't come back with
 200, check the tail of `server.log` and tell the user.
 
+## Production server (VPS) — once cutover is done
+
+The laptop instructions above stay valid until the site is cut over to the
+Hetzner VPS (`37.27.158.56`, ssh alias `propsterminal`, Ubuntu 26.04). After
+cutover (see `deploy/README.md`, "Cutover"), the live app runs there under
+systemd, and the laptop's port 8765 is just a dev server:
+
+```sh
+deploy/deploy.sh                                   # push master, update, restart, poll /healthz
+deploy/deploy.sh --rollback                        # previous commit if the deploy is bad
+ssh propsterminal systemctl restart propsterminal  # restart without code changes
+ssh propsterminal journalctl -u propsterminal -n 50 --no-pager   # logs
+curl -s https://propsterminal.com/healthz          # expect {"ok": true, ...}
+```
+
+Backend changes reach the public site only via `deploy/deploy.sh`. A non-zero
+exit means it wasn't healthy: show the user the log lines it printed.
+Secrets live in `/opt/propsterminal/app/.env` on the server; never print them.
+
 ## Commit and push after every change — don't ask
 
 When a change is done and verified (server restarted / checks pass), commit it

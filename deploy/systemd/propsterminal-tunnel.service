@@ -1,0 +1,23 @@
+# Cloudflare named tunnel `propsterminal` -> http://localhost:8765.
+# Installed by deploy/bootstrap.sh (which rewrites the binary path if needed).
+# Enabled but not started by bootstrap: see "Cutover" in deploy/README.md.
+[Unit]
+Description=Cloudflare tunnel for propsterminal.com
+After=network-online.target propsterminal.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=cloudflared
+Group=cloudflared
+ExecStart=/usr/bin/cloudflared --no-autoupdate --config /etc/cloudflared/config.yml tunnel run
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

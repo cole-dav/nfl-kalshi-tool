@@ -1,0 +1,15 @@
+# /etc/cloudflared/config.yml on the VPS (installed once by bootstrap.sh;
+# migrate.sh copies the credentials JSON next to it). Same tunnel as the
+# laptop's ~/.cloudflared/config.yml -- only the credentials path differs.
+tunnel: e278a4c1-40d7-45d6-9916-37688134dc98
+credentials-file: /etc/cloudflared/e278a4c1-40d7-45d6-9916-37688134dc98.json
+protocol: http2
+# Local readiness endpoint: curl -s localhost:20241/ready
+metrics: 127.0.0.1:20241
+
+ingress:
+  - hostname: propsterminal.com
+    service: http://localhost:8765
+  - hostname: www.propsterminal.com
+    service: http://localhost:8765
+  - service: http_status:404
