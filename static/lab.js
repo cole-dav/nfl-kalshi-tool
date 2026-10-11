@@ -47,6 +47,14 @@ const css = `
 .rp-filt{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
 .rp-filt input{flex:1 1 100%;margin-top:4px;background:var(--bg);border:1px solid var(--head-rule);color:var(--on);font:inherit;font-size:11.5px;padding:3px 6px;outline:none}
 .rp-plays{overflow:auto;flex-grow:1;min-height:0}
+.rp-game{width:100%;background:var(--bg);border:1px solid var(--head-rule);color:var(--on);font:inherit;font-size:11.5px;padding:3px 4px}
+.dr-table{width:100%;border-collapse:collapse;font-size:11px}
+.dr-table th{position:sticky;top:0;background:var(--panel);text-align:right;font-size:9.5px;letter-spacing:.06em;color:var(--dim);font-weight:500;border-bottom:1px solid var(--head-rule);padding:4px 6px;white-space:nowrap;cursor:pointer}
+.dr-table th.l,.dr-table td.l{text-align:left}
+.dr-table th.on{color:var(--amber)}
+.dr-table td{text-align:right;padding:3px 6px;border-bottom:1px solid var(--row-rule);white-space:nowrap}
+.dr-table tr:hover td{background:var(--amber-soft)}
+.dr-table td.hi{color:var(--blue)}
 .rp-play{display:grid;grid-template-columns:34px 1fr;gap:6px;padding:5px 8px;border-bottom:1px solid var(--row-rule);cursor:pointer;font-size:11px;color:var(--label)}
 .rp-play:hover{background:var(--amber-soft)}
 .rp-play.on{background:#161B22;box-shadow:inset 2px 0 0 var(--amber)}
@@ -120,8 +128,10 @@ document.head.appendChild(styleEl);
 
 const L = {
   tab: 'leaders',
-  replay: { games: null, gameId: null, plays: null, filter: 'all', q: '', playId: null, data: null, loading: false,
-            error: null, t: 0, playing: false, speed: 1, trails: true, routes: false, space: false, pressure: true },
+  replay: { sources: null, src: null, games: null, gameId: null, plays: null, filter: 'all', q: '', playId: null,
+            data: null, loading: false, error: null, t: 0, playing: false, speed: 1, trails: true, routes: false,
+            space: false, pressure: true, chart2: 'catch' },
+  draft: { group: 'receivers', season: 2025, sort: null, desc: true, data: {}, loading: false, error: null },
   leaders: { data: null, loading: false, error: null, dir: 'top' },
   tells: { team: 'KC', data: {}, loading: false, error: null },
   routes: { team: 'KC', data: {}, loading: false, error: null },
@@ -156,10 +166,12 @@ function showTip(html, ev) {
 function hideTip() { if (tip) tip.style.display = 'none'; }
 
 // ---------------------------------------------------------------- shell
-const TABS = [['leaders', 'NGS LEADERS'], ['replay', 'ALL-22 REPLAY'], ['tells', 'PRE-SNAP TELLS'],
+const TABS = [['leaders', 'NGS LEADERS'], ['replay', 'ALL-22 REPLAY'], ['draft', 'DRAFT CLASSES'], ['tells', 'PRE-SNAP TELLS'],
               ['routes', 'ROUTE TREES'], ['status', 'BUILD STATUS']];
+// Only NGS LEADERS (and the this-season half of PRE-SNAP TELLS) is current data; everything else here is history.
 const SRC = {
-  replay: 'NFL Big Data Bowl 2019 sample · 2017 Wk 1 KC @ NE · 10 Hz tracking',
+  get replay() { const s = L.replay.sources && L.replay.sources.find(x => x.id === L.replay.src); return s ? 'HISTORICAL · ' + s.note : 'NFL Big Data Bowl tracking · historical'; },
+  draft: 'HISTORICAL · NFL Big Data Bowl 2027 · 2023-25 draft classes (510 players) · 2023-25 seasons',
   leaders: 'nflverse Next Gen Stats + PFR charting · this season',
   tells: 'nflverse FTN charting (this season) + participation (last season)',
   routes: 'nflverse participation + pbp · last season',
@@ -178,13 +190,13 @@ window.renderLab = function () {
     TABS.map(([k, n]) => `<button type="button" data-lab-tab="${k}" class="${L.tab === k ? 'on' : ''}">${n}</button>`).join('') +
     `<span class="src">${esc(SRC[L.tab])}</span>`;
   if (L.tab !== 'replay') stop();
-  ({ replay: renderReplay, leaders: renderLeaders, tells: renderTells, routes: renderRoutes, status: renderStatus })[L.tab]();
+  ({ replay: renderReplay, leaders: renderLeaders, draft: renderDraft, tells: renderTells, routes: renderRoutes, status: renderStatus })[L.tab]();
 };
 
 function body() { return root().querySelector('.lab-body'); }
 
 function onClick(e) {
-  const t = e.target.closest('[data-lab-tab],[data-lab-play],[data-lab-filter],[data-lab-tog],[data-lab-speed],[data-lab-toggle-play],[data-lab-team],[data-lab-dir]');
+  const t = e.target.closest('[data-lab-tab],[data-lab-play],[data-lab-filter],[data-lab-tog],[data-lab-speed],[data-lab-toggle-play],[data-lab-team],[data-lab-dir],[data-lab-src],[data-lab-c2],[data-lab-group],[data-lab-season],[data-lab-sort]');
   if (!t) return;
   const d = t.dataset;
   if (d.labTab) { L.tab = d.labTab; renderLab(); return; }
@@ -198,11 +210,17 @@ function onClick(e) {
     tab.team = d.labTeam; renderLab(); return;
   }
   if (d.labDir) { L.leaders.dir = d.labDir; renderLeaders(); return; }
+  if (d.labSrc) { if (d.labSrc !== L.replay.src) switchSource(d.labSrc); return; }
+  if (d.labC2) { L.replay.chart2 = d.labC2; drawCharts(); return; }
+  if (d.labGroup) { L.draft.group = d.labGroup; L.draft.sort = null; renderDraft(); return; }
+  if (d.labSeason) { L.draft.season = Number(d.labSeason); renderDraft(); return; }
+  if (d.labSort) { const D = L.draft; D.desc = D.sort === d.labSort ? !D.desc : true; D.sort = d.labSort; renderDraft(); return; }
 }
 
 function onInput(e) {
   if (e.target.matches('[data-lab-q]')) { L.replay.q = e.target.value; renderPlayList(); }
   if (e.target.matches('[data-lab-scrub]')) { stop(); L.replay.t = Number(e.target.value); drawFrame(); }
+  if (e.target.matches('[data-lab-game]')) switchGame(Number(e.target.value));
 }
 
 document.addEventListener('keydown', e => {
@@ -220,23 +238,23 @@ document.addEventListener('keydown', e => {
 async function renderReplay() {
   const R = L.replay;
   const b = body();
-  if (!R.games) {
-    b.innerHTML = `<div class="empty">Loading tracking sample… (first open downloads ~35 MB from the NFL's Big Data Bowl repo)</div>`;
+  if (!R.plays) {
+    b.innerHTML = `<div class="empty">Loading tracking…</div>`;
     try {
-      R.games = (await getJSON('/api/lab/bdb/games')).games;
-      R.gameId = R.games[0] && R.games[0].gameId;
-      R.plays = (await getJSON('/api/lab/bdb/plays?game=' + R.gameId)).plays;
+      if (!R.sources) { R.sources = (await getJSON('/api/lab/bdb/sources')).sources; R.src = R.sources[0].id; }
+      await loadGames();
     } catch (e) { b.innerHTML = `<div class="empty" style="color:var(--orange)">${esc(e.message)}</div>`; return; }
     if (L.tab !== 'replay') return;
-    // Open on Tyreek Hill's 75-yd TD -- the 2019 tutorial's animated play.
-    const hill = R.plays.find(p => /T\.Hill for 75 yards/.test(p.desc));
-    R.playId = (hill || R.plays.find(p => p.kind === 'pass')).playId;
+    renderLab();
+    return;
   }
-  const g = R.games.find(x => x.gameId === R.gameId);
+  const weeks = [...new Set(R.games.map(x => x.week))];
+  const gameLabel = x => `Wk ${x.week} · ${x.away}${x.awayScore != null ? ' ' + x.awayScore : ''} @ ${x.home}${x.homeScore != null ? ' ' + x.homeScore : ''}`;
   b.innerHTML = `<div class="rp">
     <div class="panel rp-list">
-      <div class="panel-head"><span class="panel-title">${esc(g.away)} ${g.awayScore} @ ${esc(g.home)} ${g.homeScore} · ${esc(g.date)}</span></div>
-      <div class="rp-filt">${['all', 'pass', 'run', 'st'].map(k => `<button type="button" class="lab-chip" data-lab-filter="${k}">${{ all: 'ALL', pass: 'PASS', run: 'RUN', st: 'SPECIAL' }[k]}</button>`).join('')}
+      <div class="panel-head">${R.sources.map(x => `<button type="button" class="tab small ${x.id === R.src ? 'on' : ''}" data-lab-src="${x.id}" title="${esc(x.note)}">${esc(x.label)}</button>`).join('')}</div>
+      <div style="padding:6px 8px 0"><select data-lab-game aria-label="Game" class="rp-game">${weeks.map(w => `<optgroup label="Week ${w}">${R.games.filter(x => x.week === w).map(x => `<option value="${x.gameId}" ${x.gameId === R.gameId ? 'selected' : ''}>${esc(gameLabel(x))}</option>`).join('')}</optgroup>`).join('')}</select></div>
+      <div class="rp-filt">${(R.src === '2021' ? ['all'] : ['all', 'pass', 'run', 'st']).map(k => `<button type="button" class="lab-chip" data-lab-filter="${k}">${{ all: 'ALL', pass: 'PASS', run: 'RUN', st: 'SPECIAL' }[k]}</button>`).join('')}
         <input data-lab-q placeholder="Filter plays: player, TOUCHDOWN, sacked…" value="${esc(R.q)}"></div>
       <div class="rp-plays"></div>
     </div>
@@ -244,11 +262,11 @@ async function renderReplay() {
       <div class="panel"><div class="rp-head" id="rpHead"></div>
         <div class="rp-field"><canvas id="rpCanvas"></canvas></div>
         <div class="rp-ctl" id="rpCtl"></div>
-        <div class="rp-key"><span><i style="background:${OFF}"></i>Offense</span><span><i style="background:${DEF}"></i>Defense</span><span><i style="background:${BALL}"></i>Ball</span><span><i style="background:none;border:2px solid var(--amber)"></i>Target / ball carrier</span><span style="color:var(--dim)">— line of scrimmage &nbsp;<span style="color:var(--amber)">—</span> first down · space/←/→ to play &amp; step</span></div>
+        <div class="rp-key"><span><i style="background:${OFF}"></i>Offense</span><span><i style="background:${DEF}"></i>Defense</span><span><i style="background:${BALL}"></i>Ball</span><span><i style="background:none;border:2px solid var(--amber)"></i>Target / ball carrier</span><span id="rpKeyPff" style="display:none"><i style="background:none;border:2px dashed #fff"></i>PFF hit / hurry / sack</span><span style="color:var(--dim)">— line of scrimmage &nbsp;<span style="color:var(--amber)">—</span> first down · space/←/→ to play &amp; step</span></div>
       </div>
       <div class="rp-charts">
         <div class="panel rp-chart"><div class="panel-head"><span class="panel-title" id="rpC1t">POCKET PRESSURE INDEX</span></div><svg id="rpC1"></svg><div class="lab-note" id="rpC1n" style="padding:0 10px 8px"></div></div>
-        <div class="panel rp-chart"><div class="panel-head"><span class="panel-title">RECEIVER SEPARATION · YD TO NEAREST DEFENDER</span></div><svg id="rpC2"></svg><div class="rp-legend" id="rpC2l"></div></div>
+        <div class="panel rp-chart"><div class="panel-head" id="rpC2h"></div><svg id="rpC2"></svg><div class="rp-legend" id="rpC2l"></div><div class="lab-note" id="rpC2n" style="padding:0 10px 8px"></div></div>
       </div>
     </div></div>`;
   renderPlayList();
@@ -264,6 +282,39 @@ async function renderReplay() {
   else openPlay(R.playId);
 }
 let fieldObserver = null;
+
+async function loadGames() {
+  const R = L.replay;
+  R.games = (await getJSON(`/api/lab/bdb/games?src=${R.src}`)).games;
+  // 2017: open on the 2019 tutorial's game; 2021: the season opener.
+  R.gameId = (R.games.find(x => x.gameId === 2017090700) || R.games[0]).gameId;
+  await loadPlays();
+}
+
+async function loadPlays() {
+  const R = L.replay;
+  R.plays = (await getJSON(`/api/lab/bdb/plays?src=${R.src}&game=${R.gameId}`)).plays;
+  // Default play: Tyreek Hill's 75-yd TD (2017 opener), else the game's longest completion.
+  const hill = R.plays.find(p => /T\.Hill for 75 yards/.test(p.desc));
+  const best = R.plays.filter(p => p.passResult === 'C').sort((a, b) => (b.yards || 0) - (a.yards || 0))[0];
+  R.playId = (hill || best || R.plays[0]).playId;
+  R.data = null; R.q = ''; R.filter = 'all';
+}
+
+async function switchSource(src) {
+  const R = L.replay;
+  stop(); R.src = src; R.plays = null;
+  renderLab();
+}
+
+async function switchGame(gameId) {
+  const R = L.replay;
+  stop(); R.gameId = gameId;
+  const box = root().querySelector('.rp-plays');
+  if (box) box.innerHTML = `<div class="empty">Loading game${R.src === '2017' ? ' (first open fetches ~30 MB of tracking)' : ''}…</div>`;
+  try { await loadPlays(); } catch (e) { if (box) box.innerHTML = `<div class="empty" style="color:var(--orange)">${esc(e.message)}</div>`; return; }
+  renderLab();
+}
 
 const KIND = { pass: ['PASS', OFF], run: ['RUN', '#24A084'], st: ['ST', '#A070C8'] };
 
@@ -291,7 +342,7 @@ async function openPlay(playId) {
   const sel = root().querySelector('.rp-play.on');
   if (sel) sel.scrollIntoView({ block: 'nearest' });
   try {
-    const d = await getJSON(`/api/lab/bdb/play?game=${R.gameId}&play=${playId}`);
+    const d = await getJSON(`/api/lab/bdb/play?src=${R.src}&game=${R.gameId}&play=${playId}`);
     if (R.playId !== playId) return;
     prepPlay(d);
     R.data = d;
@@ -309,21 +360,25 @@ function prepPlay(d) {
     p.vx = p.x.map((v, i) => (v == null || p.x[i - 1] == null) ? 0 : (v - p.x[i - 1]) * FPS);
     p.vy = p.y.map((v, i) => (v == null || p.y[i - 1] == null) ? 0 : (v - p.y[i - 1]) * FPS);
   }
-  const ids = Object.keys(d.separation || {});
+  const ids = Object.keys(d.separation || {}).length ? Object.keys(d.separation) : Object.keys(d.catchProb || {});
   const byId = Object.fromEntries(d.players.filter(p => p.id != null).map(p => [String(p.id), p]));
   ids.sort((a, b) => (a == d.focusId ? -1 : b == d.focusId ? 1 : 0) || (byId[a].jersey || 0) - (byId[b].jersey || 0));
   d.recv = ids.map((id, i) => ({ id, p: byId[id], color: i < RECV.length ? RECV[i] : OTHER, focus: String(d.focusId) === id }));
   d.evName = Object.fromEntries(d.events.map(e => [e.f, e.name]));
   d.throwF = (d.events.find(e => e.name === 'pass_forward' || e.name === 'pass_shovel') || {}).f;
   d.endF = (d.events.find(e => ['pass_forward', 'pass_shovel', 'qb_sack', 'handoff', 'run'].includes(e.name)) || {}).f;
+  d.pffIds = new Set((d.pff || []).filter(x => x.events.length).map(x => x.id));
 }
 
 function renderPlayMeta() {
   const d = L.replay.data;
   const off = d.offense, def = d.offense === d.home ? d.away : d.home;
   const dd = d.down ? `${['', '1st', '2nd', '3rd', '4th'][d.down]} & ${d.togo}` : 'Special teams';
-  const bits = [d.formation, d.personnelO && 'O: ' + d.personnelO, d.personnelD && 'D: ' + d.personnelD,
-                d.box != null && d.box + ' in box', d.rushers != null && d.rushers + ' rushers'].filter(Boolean);
+  const bits = [d.season + ' Wk ' + d.week, d.formation, d.personnelO && 'O: ' + d.personnelO, d.personnelD && 'D: ' + d.personnelD,
+                d.box != null && d.box + ' in box', d.rushers != null && d.rushers + ' rushers', d.coverage && 'PFF: ' + d.coverage,
+                d.endsAtThrow && 'tracking ends at the throw / sack'].filter(Boolean);
+  const keyPff = document.getElementById('rpKeyPff');
+  if (keyPff) keyPff.style.display = d.source === '2021' ? '' : 'none';
   document.getElementById('rpHead').innerHTML = `
     <div><div class="dd">${esc(off)} <span style="color:var(--dim);font-weight:400">vs</span> ${esc(def)}</div>
       <div class="meta mono">Q${d.qtr} ${esc(d.clock)} · ${dd}</div></div>
@@ -508,6 +563,7 @@ function drawField() {
     c.fillStyle = col; c.strokeStyle = '#0C1610'; c.lineWidth = 2;
     c.beginPath(); c.arc(X(px), Y(py), r, 0, 2 * Math.PI); c.fill(); c.stroke();
     if (p.id === d.focusId) { c.strokeStyle = '#F2A541'; c.lineWidth = 2; c.beginPath(); c.arc(X(px), Y(py), r + 3, 0, 2 * Math.PI); c.stroke(); }
+    if (d.pffIds.has(p.id)) { c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.setLineDash([2, 2]); c.beginPath(); c.arc(X(px), Y(py), r + 3, 0, 2 * Math.PI); c.stroke(); c.setLineDash([]); }
     c.fillStyle = '#fff'; c.fillText(p.jersey != null ? String(p.jersey) : '', X(px), Y(py) + 0.5);
     geo.hits.push({ p, x: X(px), y: Y(py), r: r + 4 });
   }
@@ -554,7 +610,9 @@ function canvasHover(ev) {
   if (!h) { hideTip(); return; }
   const p = h.p, d = L.replay.data, i = Math.round(L.replay.t);
   const sep = d.separation[String(p.id)];
-  showTip(`<div style="font-weight:600">${esc(p.name)}</div><div class="k">${esc(p.pos || '')} #${esc(p.jersey)} · ${p.side === d.offenseSide ? 'offense' : 'defense'}</div>
+  const credit = (d.pff || []).find(x => x.id === p.id);
+  showTip(`<div style="font-weight:600">${esc(p.name)}</div><div class="k">${esc(p.pos || '')} #${esc(p.jersey)} · ${p.side === d.offenseSide ? 'offense' : 'defense'}${p.role ? ' · PFF: ' + esc(p.role) : ''}</div>
+    ${credit ? `<div class="r"><span class="k">PFF</span><span>${esc([...credit.events, ...credit.allowed.map(a => a + ' allowed')].join(', '))}</span></div>` : ''}
     <div class="r"><span class="k">SPEED</span><span class="mono">${fmt(p.s[i] != null ? p.s[i] * 2.045 : null)} mph</span></div>
     ${sep && sep[i] != null ? `<div class="r"><span class="k">SEPARATION</span><span class="mono">${fmt(sep[i])} yd</span></div>` : ''}`, ev);
 }
@@ -605,7 +663,11 @@ function drawCharts() {
   if (d.pressure) {
     // Pressure only means something until the ball is out (or the sack).
     series1 = d.pressure.map((v, i) => d.endF && i > d.endF + 4 ? null : v); title = 'POCKET PRESSURE INDEX'; unit = '';
-    note = 'Each defender within 7 yd of the QB adds 1 − d/7, up to doubled by closing speed. A CPP-style read after the 2023 winners (no trained model).';
+    note = (d.source === '2021' ? 'Each PFF-charted rusher' : 'Each defender') + ' within 7 yd of the QB adds 1 − d/7, up to doubled by closing speed. A CPP-style read after the 2023 winners (no trained model).';
+    const pc = d.pressureCheck;
+    if (pc) note += ` Checked against PFF across ${pc.dropbacks.toLocaleString()} 2021 dropbacks: AUC ${pc.auc.toFixed(2)}; plays in the top fifth of peaks drew charted pressure ${pct(pc.quintiles[4].pressure_rate)} of the time vs ${pct(pc.quintiles[0].pressure_rate)} in the bottom fifth.`;
+    const cred = (d.pff || []).filter(x => x.events.length);
+    if (d.source === '2021') note += cred.length ? ' This play — PFF credits: ' + cred.map(x => `${x.name} (${x.events.join('/')})`).join(', ') + '.' : ' This play — PFF charted no pressure.';
   } else if (focus) {
     series1 = focus.s.map((v, i) => i < d.snapFrame - 1 || v == null ? null : v * 2.045); title = `${focus.name.toUpperCase()} · SPEED (MPH)`; unit = '';
     note = 'Ball-carrier speed from the tracking feed.';
@@ -623,16 +685,25 @@ function drawCharts() {
       `<path d="${path(series1, sc, d.snapFrame - 1)}" fill="none" stroke="${c1._series[0].color}" stroke-width="2" stroke-linejoin="round"/>` +
       `<line class="ph" x1="0" x2="0" y1="${CH.t}" y2="${sc.H - CH.b}" stroke="#F2A541" stroke-width="1"/><g class="hv"></g>`;
   } else { c1.innerHTML = ''; c1._sc = null; }
-  // Chart 2: separation per eligible receiver.
+  // Chart 2: per eligible receiver -- "if thrown now" catch probability, or separation.
   const recv = d.recv;
+  const hasCatch = Object.keys(d.catchProb || {}).length > 0;
+  const mode = hasCatch && L.replay.chart2 === 'catch' ? 'catch' : 'sep';
+  document.getElementById('rpC2h').innerHTML = (hasCatch ? `<button type="button" class="tab small ${mode === 'catch' ? 'on' : ''}" data-lab-c2="catch">CATCH PROB · IF THROWN NOW</button>` : '') +
+    `<button type="button" class="tab small ${mode === 'sep' ? 'on' : ''}" data-lab-c2="sep">SEPARATION · YD TO NEAREST COVER DEFENDER</button>`;
+  const mc = d.model;
+  document.getElementById('rpC2n').textContent = mode === 'catch' && mc
+    ? `Logistic model trained on ${mc.source.replace('NFL Big Data Bowl 2026 Analytics (Kaggle), ', 'BDB 2026: ')}; holdout ${mc.holdout_weeks} AUC ${mc.auc.toFixed(2)}, log loss ${mc.log_loss.toFixed(3)} vs ${mc.baseline_log_loss.toFixed(3)} baseline. Learned only from passes actually thrown to that receiver, so it reads "if he'd been the target here", not who the QB should pick.`
+    : 'Distance from each receiver to the nearest coverage defender (pass rushers excluded).';
+  const seriesOf = id => mode === 'catch' ? (d.catchProb[id] || []).map(v => v == null ? null : 100 * v) : d.separation[id] || [];
   if (recv.length) {
-    const all = recv.flatMap(r => d.separation[r.id].filter(v => v != null));
-    const ymax = Math.min(20, Math.ceil(Math.max(5, ...all) / 5) * 5);
+    const all = recv.flatMap(r => seriesOf(r.id).filter(v => v != null));
+    const ymax = mode === 'catch' ? 100 : Math.min(20, Math.ceil(Math.max(5, ...all) / 5) * 5);
     const sc = chartScale(c2, d, ymax);
-    c2._sc = sc; c2._series = recv.map(r => ({ arr: d.separation[r.id], name: r.p.name, color: r.color, dec: 1 }));
+    c2._sc = sc; c2._series = recv.map(r => ({ arr: seriesOf(r.id), name: r.p.name, color: r.color, dec: mode === 'catch' ? 0 : 1 }));
     c2.setAttribute('viewBox', `0 0 ${sc.W} ${sc.H}`);
-    c2.innerHTML = axes(sc, d, [0, ymax / 2, ymax], '') +
-      recv.slice().reverse().map(r => `<path d="${path(d.separation[r.id], sc, d.snapFrame - 1)}" fill="none" stroke="${r.color}" stroke-width="${r.focus ? 2.5 : 1.5}" opacity="${r.focus || !d.focusId ? 1 : 0.75}" stroke-linejoin="round"/>`).join('') +
+    c2.innerHTML = axes(sc, d, mode === 'catch' ? [0, 50, 100] : [0, ymax / 2, ymax], mode === 'catch' ? '%' : '') +
+      recv.slice().reverse().map(r => `<path d="${path(seriesOf(r.id), sc, d.snapFrame - 1)}" fill="none" stroke="${r.color}" stroke-width="${r.focus ? 2.5 : 1.5}" opacity="${r.focus || !d.focusId ? 1 : 0.75}" stroke-linejoin="round"/>`).join('') +
       `<line class="ph" x1="0" x2="0" y1="${CH.t}" y2="${sc.H - CH.b}" stroke="#F2A541" stroke-width="1"/><g class="hv"></g>`;
     document.getElementById('rpC2l').innerHTML = recv.map(r => `<span><i style="background:${r.color};height:${r.focus ? 3 : 2}px"></i>${esc(r.p.name)} <span style="color:var(--dim)">${esc(r.p.pos)} #${esc(r.p.jersey)}</span>${r.focus ? ' <b style="color:var(--amber);font-size:9.5px">TARGET</b>' : ''}</span>`).join('');
   } else { c2.innerHTML = ''; c2._sc = null; document.getElementById('rpC2l').innerHTML = '<span style="color:var(--dim)">No eligible receivers tracked.</span>'; }
@@ -661,7 +732,7 @@ function chartHover(ev) {
   svg.querySelector('.hv').innerHTML = `<line x1="${sc.x(f)}" x2="${sc.x(f)}" y1="${CH.t}" y2="${sc.H - CH.b}" stroke="#9AA4AF" stroke-width="1"/>` +
     rows.map(s => `<circle cx="${sc.x(f)}" cy="${sc.y(s.arr[f])}" r="4" fill="${s.color}" stroke="#101318" stroke-width="2"/>`).join('');
   showTip(`<div class="k">+${((f - sc.f0) / FPS).toFixed(1)}s AFTER SNAP · CLICK TO SEEK</div>` +
-    rows.map(s => `<div class="r"><span><i style="display:inline-block;width:8px;height:2px;background:${s.color};vertical-align:middle;margin-right:5px"></i>${esc(s.name)}</span><span class="mono">${s.arr[f].toFixed(s.dec)}</span></div>`).join(''), ev);
+    rows.map(s => `<div class="r"><span><i style="display:inline-block;width:8px;height:2px;background:${s.color};vertical-align:middle;margin-right:5px"></i>${esc(s.name)}</span><span class="mono">${s.arr[f].toFixed(s.dec)}${svg.id === 'rpC2' && L.replay.chart2 === 'catch' && Object.keys(L.replay.data.catchProb || {}).length ? '%' : ''}</span></div>`).join(''), ev);
 }
 
 function drawPlayheads() {
@@ -720,7 +791,7 @@ function board(bd) {
       const col = better == null ? '#5A6470' : better ? PAL[0] : PAL[1];
       const a = pos(bd.avg), v = pos(r.value);
       const left = Math.min(a, v), width = Math.max(1.5, Math.abs(v - a));
-      const extras = Object.entries(r).filter(([k]) => !['name', 'team', 'value', 'vol'].includes(k));
+      const extras = Object.entries(r).filter(([k]) => !['name', 'team', 'value', 'vol', 'id'].includes(k));
       const tipHtml = `<div style="font-weight:600">${esc(r.name)} · ${esc(r.team)}</div><div class="r"><span class="k">${esc(bd.title.toUpperCase())}</span><span class="mono">${fmt(r.value, bd.dec)}${unit}</span></div><div class="r"><span class="k">LEAGUE AVG</span><span class="mono">${fmt(bd.avg, bd.dec)}${unit}</span></div><div class="r"><span class="k">${esc(bd.volLabel)}</span><span class="mono">${r.vol}</span></div>` +
         extras.map(([k, v]) => `<div class="r"><span class="k">${esc({ cmp: 'CMP %', xcmp: 'EXP CMP %', ypc: 'YPC', box8: '8+ BOX %', cushion: 'CUSHION YD', yac: 'YAC', xyac: 'EXP YAC', sacks: 'SACKS' }[k] || k.toUpperCase())}</span><span class="mono">${fmt(v)}</span></div>`).join('');
       return `<div class="ld-row" data-tip="${esc(tipHtml)}"><span class="rk mono">${rank}</span>
@@ -807,22 +878,71 @@ function renderRoutes() {
     }).join('') || '<div class="empty">No receivers with 15+ charted targets.</div>'}</div>`;
 }
 
+// ---------------------------------------------------------------- DRAFT CLASSES (historical)
+async function renderDraft() {
+  const D = L.draft, b = body();
+  const key = D.group + ':' + D.season;
+  const d = D.data[key];
+  if (!d) {
+    b.innerHTML = `<div class="empty" ${D.error ? 'style="color:var(--orange)"' : ''}>${D.error ? esc(D.error) : 'Loading draft-class tracking…'}</div>`;
+    if (!D.loading) {
+      D.loading = true; D.error = null;
+      try { D.data[key] = await getJSON(`/api/lab/draft?group=${D.group}&season=${D.season}`); } catch (e) { D.error = e.message; }
+      D.loading = false;
+      if (L.tab === 'draft') renderDraft();
+    }
+    return;
+  }
+  const cols = d.columns;
+  const sortKey = D.sort || d.minimum.col;
+  const rows = d.rows.slice().sort((a, b) => {
+    const va = a[sortKey], vb = b[sortKey];
+    if (va == null) return 1; if (vb == null) return -1;
+    if (typeof va === 'string') return D.desc ? vb.localeCompare(va) : va.localeCompare(vb);
+    return D.desc ? vb - va : va - vb;
+  });
+  // Best-10% marker per metric column, respecting which end is better.
+  const cut = {};
+  for (const c of cols) {
+    if (!c.better) continue;
+    const v = d.rows.map(r => r[c.key]).filter(x => x != null).sort((a, b) => c.better === 'hi' ? b - a : a - b);
+    cut[c.key] = v[Math.floor(v.length * 0.1)];
+  }
+  const best = (c, v) => c.better && v != null && cut[c.key] != null && (c.better === 'hi' ? v >= cut[c.key] : v <= cut[c.key]);
+  const th = (k, l, cls = '') => `<th class="${cls} ${sortKey === k ? 'on' : ''}" data-lab-sort="${k}">${l}${sortKey === k ? (D.desc ? ' ▼' : ' ▲') : ''}</th>`;
+  b.innerHTML = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+      ${Object.entries(d.groups).map(([k, l]) => `<button type="button" class="lab-chip ${k === D.group ? 'on' : ''}" data-lab-group="${k}">${esc(l.toUpperCase())}</button>`).join('')}
+      <span style="width:12px"></span>
+      ${d.seasons.map(y => `<button type="button" class="lab-chip ${y === D.season ? 'on' : ''}" data-lab-season="${y}">${y}</button>`).join('')}
+    </div>
+    <div class="lab-note" style="margin-bottom:8px"><b>Historical, Viz Lab only.</b> Per-player tracking + charting from the 2027 Big Data Bowl, which covers only the 2023-25 draft classes (510 players, no QBs or RBs; many first-rounders are absent).
+      ${d.rows.length} players with ${d.minimum.n}+ ${esc(d.minimum.col.replace('_', ' '))} in ${d.season} (regular season + playoffs). Click a column to sort; <span class="pos">blue</span> = best 10% of the group in that column (lower is better for get-off, time to pressure and pressure allowed).</div>
+    <div class="panel"><div class="panel-body"><table class="dr-table"><thead><tr>
+      ${th('name', 'PLAYER', 'l')}<th class="l">POS</th><th class="l">TEAM</th>${th('draft', 'CLASS')}${th('pick', 'PICK')}${th('forty', '40')}${th('ath', 'NGS ATH')}
+      ${cols.map(c => th(c.key, esc(c.label))).join('')}</tr></thead><tbody>
+      ${rows.map(r => `<tr><td class="l" style="color:var(--on)">${esc(r.name)}</td><td class="l" style="color:var(--muted)">${esc(r.pos)}</td>
+        <td class="l"><span class="tm" style="border-left:3px solid ${teamColor(kalshiCode(r.team))};padding-left:4px;color:var(--muted)">${esc(r.team || '')}</span></td>
+        <td class="mono">${r.draft}</td><td class="mono">${r.pick ?? 'UDFA'}</td><td class="mono">${fmt(r.forty, 2)}</td><td class="mono">${fmt(r.ath, 0)}</td>
+        ${cols.map(c => `<td class="mono ${best(c, r[c.key]) ? 'hi' : ''}">${fmt(r[c.key], c.dec)}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div></div>`;
+}
+
 // ---------------------------------------------------------------- STATUS
 // Mirrors docs/viz-lab.md -- keep the two in sync.
 const STATUS = [
-  ['All-22 play animator', 'built-sample', 'ALL-22 REPLAY tab: every player + ball at 10 Hz, interpolated, trails, full routes, scrub with event ticks, hover readouts.', 'Only the one public tracking game (2017 KC @ NE). Drop more 2019-format tracking CSVs in data/bdb/ to add games. Live weeks need an NGS data deal.'],
-  ['Pocket pressure heat map', 'approx-sample', 'Pressure ring + spokes on the field, synced pressure-index chart per pass play.', 'Distance + closing-speed heuristic, not the 2023 winners\' trained CPP model; no OL/DL leaderboards (one game is too small a sample).'],
-  ['Contested space / field control', 'approx-sample', '"Space control" toggle: 1-yd cells owned by the nearest player projected 0.5 s ahead.', 'Velocity-projected Voronoi, not the physics time-to-reach model or tackle-probability fields.'],
-  ['Receiver separation', 'built-sample', 'Per-receiver separation timeline, target highlighted from the play text, click to seek.', 'Sample game only. Season separation for current players is in NGS LEADERS.'],
-  ['Leaderboards from computed metrics', 'built', 'NGS LEADERS: CPOE, time to throw, aggressiveness, RYOE, 8+ box rate, separation, YAC over expected, air-yard share, missed-tackle rate, pressures, yards/target allowed. Names open the research ticket.', 'Uses the NFL\'s published tracking metrics instead of SLIME / RYAE / tackle conversion / OPLE, which need raw tracking for every play.'],
-  ['Pre-snap tell explorer', 'built', 'PRE-SNAP TELLS: QB alignment / backfield / motion / tempo → pass rate (this season), personnel → pass rate, box count → blitz and man rate, coverage mix with EPA (last season).', 'Charting-based. The tracking version (safety rotation, disguise, TEndencIQ-style block/route probabilities) needs pre-snap frames.'],
-  ['Route-combination chart', 'approx', 'ROUTE TREES: targeted route share, catch %, yd/tgt, EPA, aDOT, man vs zone per receiver.', 'Last season only (participation is published after the season), targeted routes only, not full route combinations for every receiver.'],
-  ['Completion-probability ticker', 'blocked', '—', 'Needs a model trained on thousands of tracked passes (Palepu used GAT + BiLSTM on the 2026 BDB set). One game is not enough. Unlock: Kaggle BDB 2026 data + offline training, then serve a JSON time series per play.'],
-  ['Optimal-path overlay', 'blocked', '—', 'Feasible on the sample next (A* over the space-control grid for the ball carrier). Not built yet; needs a speed/acceleration movement model to be honest.'],
-  ['Tackle-probability timeline', 'blocked', '—', 'Needs a tackle model trained on the 2024 BDB set (Weeks 1-9 2022, Kaggle login). Unlock: download + train offline.'],
-  ['Ghost-defender map (SLIME)', 'blocked', '—', 'Needs conditional-density models trained on 2026 BDB post-throw tracking. High effort; Kaggle data.'],
-  ['Block-or-route dials (TEndencIQ)', 'blocked', '—', 'Needs pre-snap tracking frames + a trained classifier (2025 BDB data).'],
-  ['Any of the above for this week\'s games', 'blocked', '—', 'Raw tracking is not public in-season. Only NGS aggregates (used in NGS LEADERS) are. Needs a licensed NGS feed.'],
+  ['All-22 play animator', 'built', 'ALL-22 REPLAY: 2021 Weeks 1-8 (122 games, every dropback, snap to throw/sack) and 2017 Weeks 1-6 (91 games, every play). Trails, full routes, scrub with event ticks, hover readouts.', 'Historical only. 2021 tracking stops at the release (the 2023 contest was about the pass rush), so catches aren\'t shown there; 2017 has whole plays. Raw tracking for this season isn\'t public.'],
+  ['Completion-probability ticker', 'built', 'Replay chart: per-receiver "if thrown now" catch probability on every frame from snap to throw. Logistic model on 14k 2023 passes (BDB 2026); holdout AUC 0.73, well calibrated.', 'Learned from passes actually thrown to that receiver (selection bias); 2026 data tracks only coverage defenders, so rushers are excluded. Not the GAT+BiLSTM from the finalist.'],
+  ['Pocket pressure heat map', 'built', 'Pressure ring + spokes on the field, synced index chart, PFF hit/hurry/sack credits on 2021 plays. Validated on 8,556 dropbacks: AUC 0.71 vs PFF pressure.', 'Distance + closing-speed rule, not the 2023 winners\' trained CPP model.'],
+  ['Leaderboards from computed metrics', 'built', 'NGS LEADERS (this season) + the NGS tab on every research ticket. CPOE, time to throw, RYOE, separation, YAC over expected, missed tackles, pressures…', 'Uses the NFL\'s published tracking metrics instead of SLIME / RYAE / OPLE, which need raw tracking.'],
+  ['Draft-class tracking profiles (new)', 'built', 'DRAFT CLASSES: routes, separation at the throw, yards per route; pressure allowed; get-off and time to pressure; coverage snaps and man rate for the 2023-25 classes.', 'Historical (2023-25), Lab only. BDB 2027 covers 510 players; no QBs or RBs and many first-rounders missing.'],
+  ['Contested space / field control', 'approx', '"Space control" toggle: 1-yd cells owned by the nearest player projected 0.5 s ahead.', 'Velocity-projected Voronoi, not the physics time-to-reach model.'],
+  ['Pre-snap tell explorer', 'built', 'PRE-SNAP TELLS: QB alignment / backfield / motion / tempo → pass rate and box → blitz rate (this season); personnel, man rate, coverage mix (last season).', 'Charting-based; the tracking version (disguise, safety rotation) needs pre-snap frames.'],
+  ['Route-combination chart', 'approx', 'ROUTE TREES: targeted route share, catch %, yd/tgt, EPA per receiver, man vs zone.', 'Last season only; targeted routes, not full combinations.'],
+  ['Optimal-path overlay', 'blocked', '—', 'Deferred. Buildable on the 2017 games (whole plays) with a speed/acceleration movement model.'],
+  ['Ghost-defender map (SLIME)', 'blocked', '—', 'BDB 2026 has the post-throw data but tracks only ~3 players in flight; needs conditional-density modeling. High effort.'],
+  ['Tackle-probability timeline', 'blocked', '—', 'Needs the 2024 contest data (all plays, 2022), which Kaggle removed at the host\'s request.'],
+  ['Block-or-route dials (TEndencIQ)', 'blocked', '—', 'Needs the 2025 contest\'s pre-snap data, also removed by the host.'],
+  ['Any tracking view for this week\'s games', 'blocked', '—', 'Raw tracking isn\'t public in-season. Betting pages use only this season\'s published NGS / charting aggregates.'],
 ];
 const BADGE = {
   built: ['BUILT', '#3D8DE0'], 'built-sample': ['BUILT · SAMPLE DATA', '#24A084'], approx: ['APPROXIMATION', '#A08A10'],
@@ -830,8 +950,8 @@ const BADGE = {
 };
 function renderStatus() {
   body().innerHTML = `<div class="panel"><div class="panel-head"><span class="panel-title">BIG DATA BOWL REPORT → WHAT'S IN THE LAB</span></div>
-    <div class="lab-note" style="padding:8px 10px">The constraint behind every "not yet": player tracking is public only as Big Data Bowl sample seasons.
-    The ungated sample (no Kaggle login) is one 2017 game, so tracking views run on that game; current-season views use the aggregates the NFL publishes through Next Gen Stats and nflverse charting. Full write-up: <span class="mono">docs/viz-lab.md</span>.</div>
+    <div class="lab-note" style="padding:8px 10px">Rule: <b>betting pages only use this season's data</b> (NGS + charting aggregates). Everything built from Big Data Bowl tracking is a past season and lives only in this tab.
+    Tracking sources: BDB 2019 (2017, public), BDB 2023 (2021), BDB 2026 (2023), BDB 2027 (2023-25 draft classes). Full write-up: <span class="mono">docs/viz-lab.md</span>.</div>
     <table class="st-table"><thead><tr><th>REPORT IDEA</th><th>STATUS</th><th>WHAT'S BUILT</th><th>LIMITS / WHAT UNLOCKS IT</th></tr></thead><tbody>
     ${STATUS.map(([n, s, what, lim]) => `<tr><td>${esc(n)}</td><td><span class="st-badge" style="color:${BADGE[s][1]};border-color:${BADGE[s][1]}">${BADGE[s][0]}</span></td><td>${esc(what)}</td><td>${esc(lim)}</td></tr>`).join('')}
     </tbody></table></div>`;

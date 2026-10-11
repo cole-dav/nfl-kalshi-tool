@@ -21,6 +21,9 @@ Team codes in and out are nflverse codes.
 
 from __future__ import annotations
 
+import os
+from functools import lru_cache
+
 import numpy as np
 import pandas as pd
 
@@ -33,7 +36,7 @@ def _rows(df: pd.DataFrame, value: str, vol: str, extra: dict[str, str] | None =
     out = []
     for r in df.itertuples(index=False):
         row = {"name": getattr(r, "name"), "team": getattr(r, "team"), "value": float(getattr(r, value)),
-               "vol": int(getattr(r, vol))}
+               "vol": int(getattr(r, vol)), "id": getattr(r, "player_gsis_id", None)}
         for k, col in (extra or {}).items():
             v = getattr(r, col)
             row[k] = None if pd.isna(v) else round(float(v), 2)
@@ -248,3 +251,121 @@ def routes(team: str, season: int | None = None, min_targets: int = 15) -> dict:
                     "vs": mz})
     out.sort(key=lambda r: -r["tgt"])
     return {"team": team, "season": season, "receivers": out}
+
+
+# -- research-ticket panel: one player's ranks, THIS season only -----------------
+
+
+def _name_key(s: str) -> str:
+    return "".join(ch for ch in str(s).lower() if ch.isalnum())
+
+
+def player_ngs(gsis_id: str | None, name: str) -> dict:
+    """The player's rank on every current-season board he qualifies for.
+    Betting-facing, so it only ever reads the current season."""
+    season = nd.current_season()
+    data = leaderboards(season)
+    key = _name_key(name)
+    out = []
+    for b in data["boards"]:
+        rows = b["rows"]
+        i = next((i for i, r in enumerate(rows) if (gsis_id and r.get("id") == gsis_id)), None)
+        if i is None:
+            i = next((i for i, r in enumerate(rows) if _name_key(r["name"]) == key), None)
+        if i is None:
+            continue
+        r = rows[i]
+        out.append({"key": b["key"], "title": b["title"], "unit": b["unit"], "dec": b["dec"], "value": r["value"],
+                    "rank": i + 1, "out_of": len(rows), "avg": b["avg"], "higherBetter": b["higherBetter"],
+                    "neutral": b["neutral"], "vol": r["vol"], "volLabel": b["volLabel"]})
+    return {"season": season, "throughWeek": data["throughWeek"], "name": name, "metrics": out}
+
+
+# -- Viz Lab: draft classes 2023-25 (BDB 2027) -- historical, Lab only -----------
+
+BDB27 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "bdb", "2027", "nfl-big-data-bowl-2027")
+GROUPS = {
+    "receivers": {"label": "Receivers", "positions": {"WR", "TE"}, "min": ("routes", 100)},
+    "blockers": {"label": "Pass protection", "positions": {"T", "G", "C"}, "min": ("pass_blocks", 100)},
+    "rushers": {"label": "Pass rush", "positions": {"DE", "OLB", "DT", "NT", "ILB", "MLB"}, "min": ("rushes", 100)},
+    "coverage": {"label": "Coverage", "positions": {"CB", "SS", "FS", "ILB", "MLB", "OLB"}, "min": ("cov_snaps", 100)},
+}
+# (key, label, decimals, which end is better: "hi" / "lo" / None for volume or descriptive columns)
+COLUMNS = {
+    "receivers": [("routes", "ROUTES", 0, None), ("targets", "TGT", 0, None), ("tprr", "TGT/ROUTE", 2, "hi"),
+                  ("sep", "SEP @ THROW", 2, "hi"), ("cushion", "CUSHION", 1, None), ("yprr", "YDS/ROUTE", 2, "hi"),
+                  ("yacoe", "YAC OVER EXP", 2, "hi")],
+    "blockers": [("pass_blocks", "PASS BLOCKS", 0, None), ("press_rate", "PRESSURE %", 1, "lo"),
+                 ("sacks", "SACKS ALLOWED", 1, "lo"), ("peak_pp", "AVG PEAK P(PRESSURE)", 3, "lo")],
+    "rushers": [("rushes", "RUSHES", 0, None), ("get_off", "GET-OFF (S)", 3, "lo"), ("press_rate", "PRESSURE %", 1, "hi"),
+                ("ttp", "TIME TO PRESSURE", 2, "lo"), ("sacks", "SACKS", 1, "hi"), ("quick", "QUICK PRESSURES", 0, "hi")],
+    "coverage": [("cov_snaps", "COVERAGE SNAPS", 0, None), ("man_share", "MAN %", 1, None), ("tackles", "TACKLES", 0, "hi"),
+                 ("tfl", "TFL", 0, "hi"), ("ff", "FORCED FUMBLES", 0, "hi")],
+}
+
+
+@lru_cache(maxsize=1)
+def _bdb27() -> tuple[pd.DataFrame, pd.DataFrame]:
+    import polars as pl
+    if not os.path.exists(os.path.join(BDB27, "player_play.csv")):
+        raise ValueError("BDB 2027 data not found under data/bdb/2027/")
+    pp = pl.read_csv(os.path.join(BDB27, "player_play.csv"), null_values="NA", infer_schema_length=100000)
+    games = pl.read_csv(os.path.join(BDB27, "games.csv")).filter(pl.col("season_type") != "PRE")
+    pp = pp.join(games.select("game_id", "season"), on="game_id")
+    players = pd.read_csv(os.path.join(BDB27, "players.csv"))
+    combine = pd.read_csv(os.path.join(BDB27, "combine_results.csv"), na_values="NA")
+    players = players.merge(combine[["nfl_id", "forty", "ngs_athleticism_score"]], on="nfl_id", how="left")
+    return pp.to_pandas(), players
+
+
+def draft_classes(group: str, season: int) -> dict:
+    if group not in GROUPS:
+        raise ValueError(f"unknown group {group!r}")
+    pp, players = _bdb27()
+    cfg = GROUPS[group]
+    ids = set(players.loc[players["nfl_position"].isin(cfg["positions"]), "nfl_id"])
+    d = pp[(pp["season"] == season) & pp["nfl_id"].isin(ids)]
+    g = d.groupby("nfl_id")
+    if group == "receivers":
+        t = pd.DataFrame({
+            "routes": g["route_ran"].count(), "targets": g["target"].sum(),
+            "sep": g["separation_at_pass_forward"].mean(), "cushion": g["cushion"].mean(),
+            "rec_yards": g["rec_yards"].sum(),
+            "yacoe": (d["yards_after_catch"] - d["expected_yards_after_catch"]).groupby(d["nfl_id"]).mean(),
+        })
+        t["tprr"] = t["targets"] / t["routes"]
+        t["yprr"] = t["rec_yards"] / t["routes"]
+    elif group == "blockers":
+        t = pd.DataFrame({"pass_blocks": g["pressure_allowed"].count(),
+                          "press_rate": 100 * g["pressure_allowed"].mean(), "sacks": g["sack_allowed"].sum(),
+                          "peak_pp": g["peak_pressure_probability_allowed"].mean()})
+    elif group == "rushers":
+        rushes = g["player_get_off"].count()
+        t = pd.DataFrame({"rushes": rushes, "get_off": g["player_get_off"].mean(),
+                          "press_rate": 100 * g["time_to_pressure"].count() / rushes.where(rushes > 0),
+                          "ttp": g["time_to_pressure"].mean(), "sacks": g["sack"].sum(),
+                          "quick": g["quick_pressure"].sum()})
+    else:
+        cov = d[d["coverage_assignment"].notna() & (d["coverage_assignment"] != "NO_ASSIGNMENT")]
+        cg = cov.groupby("nfl_id")
+        t = pd.DataFrame({"cov_snaps": cg.size(), "man_share": 100 * (cov["coverage_assignment"] == "MAN")
+                          .groupby(cov["nfl_id"]).mean(),
+                          "tackles": g["tackle"].sum(), "tfl": g["tackle_for_loss"].sum(),
+                          "ff": g["caused_forced_fumble"].sum()})
+    col, minimum = cfg["min"]
+    t = t[t[col].fillna(0) >= minimum].join(players.set_index("nfl_id"), how="left")
+    team = d.groupby("nfl_id")["team_abbr"].agg(lambda s: s.mode().iat[0] if len(s.mode()) else None)
+    rows = []
+    for nid, r in t.iterrows():
+        row = {"id": int(nid), "name": r["display_name"], "pos": r["nfl_position"], "team": team.get(nid),
+               "draft": int(r["draft_year"]), "pick": None if pd.isna(r["draft_overall_pick"]) else int(r["draft_overall_pick"]),
+               "forty": None if pd.isna(r["forty"]) else float(r["forty"]),
+               "ath": None if pd.isna(r["ngs_athleticism_score"]) else float(r["ngs_athleticism_score"])}
+        for k, _, _, _ in COLUMNS[group]:
+            v = r[k]
+            row[k] = None if pd.isna(v) else float(v)
+        rows.append(row)
+    rows.sort(key=lambda x: -(x[col] or 0))
+    return {"group": group, "label": cfg["label"], "season": season, "seasons": [2023, 2024, 2025],
+            "minimum": {"col": col, "n": minimum}, "columns": [{"key": k, "label": l, "dec": dc, "better": bt} for k, l, dc, bt in COLUMNS[group]],
+            "groups": {k: v["label"] for k, v in GROUPS.items()}, "rows": rows}

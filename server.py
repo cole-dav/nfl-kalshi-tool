@@ -453,6 +453,22 @@ class Handler(BaseHTTPRequestHandler):
             self._send_file(os.path.join(STATIC_DIR, "lab.js"), "text/javascript; charset=utf-8")
             return
 
+        if parsed.path == "/api/player_ngs":
+            # Research-ticket NGS panel: current season only (betting-facing).
+            qs = parse_qs(parsed.query)
+            name = (qs.get("name") or [""])[0].strip()
+            gsis = (qs.get("gsis") or [""])[0].strip()
+            if not name:
+                self._send_json({"error": "missing 'name' query param"}, status=400)
+                return
+            try:
+                self._send_json(snap.get(f"ngs:{gsis}:{name.lower()}", lambda: lab.player_ngs(gsis or None, name),
+                                         TTL_STATIC), cache=CACHE_SLOW)
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"ngs lookup failed: {e}"}, status=502)
+            return
+
         if parsed.path.startswith("/api/lab/"):
             self._lab(parsed.path[len("/api/lab/"):], parse_qs(parsed.query))
             return
@@ -513,29 +529,40 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _lab(self, route: str, qs: dict):
-        """Viz Lab (static/lab.js): Big Data Bowl replays + nflverse leaderboards/tells/routes."""
+        """Viz Lab (static/lab.js): Big Data Bowl replays + nflverse leaderboards/tells/routes + draft classes.
+        Historical seasons live only here; betting pages only read the current season."""
         arg = lambda k: (qs.get(k) or [""])[0].strip()
         team = nd.kalshi_to_nflverse_team(arg("team").upper())
+        src = arg("src") or "2017"
+        game, play = arg("game"), arg("play")
         builds = {
-            "bdb/games": ("lab:bdb:games", lambda: {"games": bdb.games()}),
-            "bdb/plays": (f"lab:bdb:plays:{arg('game')}", lambda: bdb.play_list(int(arg("game")))),
-            "bdb/play": (f"lab:bdb:play:{arg('game')}:{arg('play')}",
-                         lambda: bdb.play_detail(int(arg("game")), int(arg("play")))),
+            "bdb/sources": ("lab:bdb:sources", lambda: {"sources": bdb.sources()}),
+            "bdb/games": (f"lab:bdb:games:{src}", lambda: {"source": src, "games": bdb.games(src)}),
+            "bdb/plays": (f"lab:bdb:plays:{src}:{game}", lambda: bdb.play_list(src, int(game))),
+            "bdb/play": (f"lab:bdb:play:{src}:{game}:{play}", lambda: bdb.play_detail(src, int(game), int(play))),
             "leaders": ("lab:leaders", lab.leaderboards),
             "tells": (f"lab:tells:{team}", lambda: lab.tells(team)),
             "routes": (f"lab:routes:{team}", lambda: lab.routes(team)),
+            "draft": (f"lab:draft:{arg('group')}:{arg('season')}",
+                      lambda: lab.draft_classes(arg("group"), int(arg("season")))),
         }
         if route not in builds:
             self._send_json({"error": "not found"}, status=404)
             return
-        if route.startswith("bdb/") and route != "bdb/games" and not arg("game").isdigit():
+        if route.startswith("bdb/") and src not in ("2017", "2021"):
+            self._send_json({"error": "'src' must be 2017 or 2021"}, status=400)
+            return
+        if route in ("bdb/plays", "bdb/play") and not game.isdigit():
             self._send_json({"error": "'game' must be a number"}, status=400)
             return
-        if route == "bdb/play" and not arg("play").isdigit():
+        if route == "bdb/play" and not play.isdigit():
             self._send_json({"error": "'play' must be a number"}, status=400)
             return
         if route in ("tells", "routes") and not team.isalpha():
             self._send_json({"error": "missing 'team' query param"}, status=400)
+            return
+        if route == "draft" and not arg("season").isdigit():
+            self._send_json({"error": "'season' must be a number"}, status=400)
             return
         key, build = builds[route]
         try:

@@ -1476,11 +1476,35 @@ function renderMatchup() {
   const d = t.data;
   const oppKalshi = nflverseToKalshi(d.opponent);
   const ownKalshi = d.player.team_kalshi;
-  const tabs = [{ id: 'def', label: `${oppKalshi} Def` }, { id: 'off', label: `${ownKalshi} Off` }, { id: 'env', label: 'Game' }];
+  const tabs = [{ id: 'def', label: `${oppKalshi} Def` }, { id: 'off', label: `${ownKalshi} Off` }, { id: 'env', label: 'Game' },
+                { id: 'ngs', label: 'NGS' }];
   head.innerHTML = tabs.map(tb => `<button type="button" class="tab small ${t.ui.match === tb.id ? 'on' : ''}" data-match="${tb.id}">${tb.label}</button>`).join('');
 
-  let rows = [], note = '';
-  if (t.ui.match === 'def') {
+  let rows = [], note = '', outLabel = '/32';
+  if (t.ui.match === 'ngs') {
+    // Next Gen Stats ranks, current season only (betting-facing: no past seasons here).
+    if (!t.ngs) {
+      t.ngs = { loading: true };
+      fetch('/api/player_ngs?name=' + encodeURIComponent(d.player.name) + '&gsis=' + encodeURIComponent(d.player.gsis_id || ''))
+        .then(r => r.json()).then(j => { t.ngs = j; }).catch(e => { t.ngs = { error: String(e) }; })
+        .finally(() => { if (activeTicket() === t && t.ui.match === 'ngs') renderMatchup(); });
+    }
+    outLabel = 'OF';
+    if (t.ngs.loading) note = 'Loading Next Gen Stats…';
+    else if (t.ngs.error) note = t.ngs.error;
+    else {
+      rows = t.ngs.metrics.map(m => {
+        const unit = m.unit === '%' ? '%' : m.unit ? ' ' + m.unit : '';
+        const r = rankRow(m.title, m.value.toFixed(m.dec) + unit, m.neutral ? null : { rank: m.rank, out_of: m.out_of }, 'own');
+        if (m.neutral) r.rank = '#' + m.rank;
+        r.out = m.out_of;
+        return r;
+      });
+      note = rows.length
+        ? `${t.ngs.season} season through Week ${t.ngs.throughWeek}, ranked among qualified players (league avg in the Viz Lab's NGS LEADERS). This season only.`
+        : `No qualifying ${t.ngs.season} Next Gen Stats / PFR charting yet for ${d.player.name}.`;
+    }
+  } else if (t.ui.match === 'def') {
     const o = d.opponent_defense;
     if (o) {
       rows = [
@@ -1523,14 +1547,14 @@ function renderMatchup() {
   }
 
   body.innerHTML = `<div style="padding:4px 8px;display:flex;flex-direction:column">
-    <div class="mono" style="height:18px;display:grid;grid-template-columns:minmax(0,1fr) 70px 50px 34px;gap:6px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-      <span>METRIC</span><span class="right">VALUE</span><span>RANK</span><span class="right">/32</span>
+    <div class="mono" style="height:18px;display:grid;grid-template-columns:minmax(0,1fr) 70px 50px 52px;gap:6px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+      <span>METRIC</span><span class="right">VALUE</span><span>RANK</span><span class="right">${outLabel}</span>
     </div>
-    ${rows.map(m => `<div style="height:24px;display:grid;grid-template-columns:minmax(0,1fr) 70px 50px 34px;gap:6px;align-items:center;border-bottom:1px solid var(--row-rule)">
+    ${rows.map(m => `<div style="height:24px;display:grid;grid-template-columns:minmax(0,1fr) 70px 50px 52px;gap:6px;align-items:center;border-bottom:1px solid var(--row-rule)">
       <span style="font-size:12px;color:var(--label);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(m.label)}</span>
       <span class="mono right" style="font-size:11px;color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(m.val)}">${escapeHtml(m.val)}</span>
       <div class="rankbar"><div class="rankbar-fill" style="width:${m.w}%;background:${m.fill}"></div></div>
-      <span class="mono right" style="font-size:11px;color:${m.rankFg}">${m.rank}</span>
+      <span class="mono right" style="font-size:11px;color:${m.rankFg}">${m.rank}${m.out ? `<span style="color:var(--dim)">/${m.out}</span>` : ''}</span>
     </div>`).join('')}
     <div style="margin-top:8px;font-size:11px;line-height:1.4;color:var(--muted)">${escapeHtml(note)}</div>
     <div class="mono" style="margin-top:8px;display:flex;gap:12px;font-size:9.5px;color:var(--dim)">

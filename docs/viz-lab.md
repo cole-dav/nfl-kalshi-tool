@@ -1,56 +1,75 @@
 # Viz Lab: Big Data Bowl ideas, built and not built
 
 Source: *NFL Big Data Bowl: Viz Ideas Worth Stealing* (developer report, Oct 2026).
-The Lab is the flask icon on the rail. It has five tabs. `BUILD STATUS` in the app mirrors this file.
+The Lab is the flask icon on the rail. `BUILD STATUS` in the app mirrors this file.
 
-## The constraint behind every "not yet"
+## The rule: betting pages only see this season
 
-Player tracking (x, y per player at 10 Hz) is **not public week to week**. It
-only reaches the public as Big Data Bowl sample seasons. Those sit behind a
-Kaggle login, except one: the 2019 contest's sample in the NFL's own GitHub
-repo (`nfl-football-ops/Big-Data-Bowl`). That sample has games, plays, and
-players for 2017 Weeks 1–6, but tracking for **one game**: 2017090700,
-KC @ NE, all 177 plays. So:
+Anything tied to betting (research tickets, the slate, the builder) reads **only the
+current season**. That means Next Gen Stats and nflverse/PFR/FTN charting aggregates.
+Everything built from Big Data Bowl tracking is a past season and lives **only in
+the Viz Lab**.
 
-- **Tracking views** run on that historical game.
-- **Current-season views** use what the NFL publishes from tracking: Next Gen
-  Stats aggregates. They also use nflverse charting (FTN, participation, PFR).
+- The research ticket's **NGS** tab (`/api/player_ngs`, `viz_lab.player_ngs`) always uses `nd.current_season()`.
+- Historical tabs are labelled `HISTORICAL` in the Lab header.
+
+## Data sources
+
+| Contest | Season(s) | Who's tracked | Where | Used for |
+|---|---|---|---|---|
+| BDB 2019 (public GitHub) | 2017 Wk 1–6 | All 22 + ball, whole play | `data/bdb/` (one game on master, the other 90 fetched from repo history on first open) | ALL-22 REPLAY |
+| BDB 2023 (Kaggle) | 2021 Wk 1–8, every dropback | All 22 + ball, **snap to throw/sack** + PFF scouting (rush/block roles, hits/hurries/sacks) | `data/bdb/2023/` | ALL-22 REPLAY, pressure validation |
+| BDB 2026 Analytics (Kaggle) | 2023 Wk 1–18 pass plays | QB, route runners, coverage defenders before the throw; ~3 players in flight | `data/bdb/2026/` | Completion model training |
+| BDB 2027 (Kaggle) | 2023–25 | 510 players from the 2023–25 draft classes (no QBs/RBs, many first-rounders missing), ~4 per play, no ball | `data/bdb/2027/` | DRAFT CLASSES |
+
+The 2024 and 2025 contest datasets were removed from Kaggle at the host's request.
+
+All of `data/bdb/` and `cache/` is gitignored. The trained model
+`data/models/completion_v1.json` (coefficients only) is committed.
+
+### Setting up on a new machine
+
+```sh
+# Kaggle token at ~/.kaggle/access_token (chmod 600); rules accepted for each contest
+.venv/bin/pip install kaggle
+.venv/bin/kaggle competitions download nfl-big-data-bowl-2023 -p data/bdb/2023 && (cd data/bdb/2023 && unzip -q *.zip && rm *.zip)
+.venv/bin/kaggle competitions download nfl-big-data-bowl-2026-analytics -p data/bdb/2026 && (cd data/bdb/2026 && unzip -q *.zip && rm *.zip)
+.venv/bin/kaggle competitions download nfl-big-data-bowl-2027 -p data/bdb/2027 && (cd data/bdb/2027 && unzip -q *.zip && rm *.zip)
+.venv/bin/python tools/bdb_precompute.py      # 2021 per-game cache + pressure validation (~2 min)
+.venv/bin/python tools/train_completion.py    # retrain the completion model (~15 s)
+```
+
+Without the Kaggle data, the Lab still works on the 2017 games. The 2021 source and
+DRAFT CLASSES just don't appear, or show "data not found".
 
 ## What's built
 
 | Report idea | Status | Where | Notes |
 |---|---|---|---|
-| All-22 play animator (#1) | Built, sample data | ALL-22 REPLAY | Every player and the ball, interpolated between frames. Includes trails, full routes, scrubbing with event ticks, 0.5/1/2× speed, space/←/→ keys, and hover readouts (speed, separation). The target or ball carrier comes from the play text. |
-| Pocket pressure heat map (#2) | Approximation, sample data | ALL-22 REPLAY → "Pocket pressure" + chart | Each defender within 7 yd of the QB adds `1 − d/7`, up to doubled by closing speed. It's a heuristic in the spirit of the 2023 winners' CPP, **not** their trained model. There are no OL/DL leaderboards: one game is too small a sample. |
-| Contested space / field control (#7) | Approximation, sample data | ALL-22 REPLAY → "Space control" | Each 1-yd cell goes to the player whose position, projected 0.5 s ahead, is nearest. That's a velocity-projected Voronoi diagram, not the physics time-to-reach model. |
-| Receiver separation | Built, sample data | ALL-22 REPLAY chart 2 | Per-receiver distance to the nearest defender. Click the chart to seek. |
-| Leaderboards from computed metrics (#10) | Built (current season) | NGS LEADERS | CPOE, time to throw, aggressiveness, RYOE/att, 8+ box rate, separation, YAC over expected, air-yard share, missed-tackle rate, pressures, and yards per target allowed. Bars are drawn relative to the volume-weighted league average. Clicking a name opens the research ticket. These replace SLIME / RYAE / tackle conversion / OPLE, which need raw tracking. |
-| Pre-snap tell explorer (#8) | Built (charting version) | PRE-SNAP TELLS | This season (FTN): QB alignment, backfield count, motion, and tempo → pass rate; box count → blitz rate. Last season (participation): personnel → pass rate; box count → man rate; coverage mix with EPA allowed. Each panel calls out its biggest gap from league average. |
-| Route-combination chart | Approximation | ROUTE TREES | Targeted-route share, catch %, yards/target, EPA, and aDOT per receiver, plus a man vs zone split. It covers last season only, because nflverse publishes participation after the season ends. It shows the targeted receiver's route, not full combinations. |
+| All-22 play animator (#1) | Built | ALL-22 REPLAY | 2021 (122 games, every dropback) and 2017 (91 games, every play), with source and game pickers. Trails, full routes, scrub with event ticks, 0.5/1/2× speed, space/←/→, hover readouts. 2021 tracking stops at the release. |
+| Completion-probability ticker (#3) | Built | Replay chart 2, "CATCH PROB · IF THROWN NOW" | Logistic regression (`completion_model.py`) on 14,105 thrown passes from BDB 2026, built on 12 geometry features at the release frame. Holdout (2023 Wk 15–18): **AUC 0.73**, log loss 0.548 vs 0.621 baseline, calibrated within a few points from 30–100%. It's applied per receiver per frame from snap to throw. Caveats: it learned only from passes actually thrown to that receiver (selection bias), and BDB 2026 tracks only coverage defenders, so pass rushers are excluded at inference. |
+| Pocket pressure (#2) | Built, validated | Replay "Pocket pressure" + chart 1 | Each rusher within 7 yd of the QB adds `1 − d/7`, up to doubled by closing speed. On 2021 plays it uses PFF's charted rushers and shows PFF's hit/hurry/sack credits (dashed white ring). Validated across **8,556 dropbacks: AUC 0.71**. The top fifth of peaks drew PFF pressure 70% of the time, vs 19% for the bottom fifth. |
+| Leaderboards (#10) | Built (this season) | NGS LEADERS + research-ticket **NGS** tab | Current-season NGS + PFR boards; the ticket tab shows the player's rank on each board he qualifies for. |
+| Draft-class profiles (new, from BDB 2027) | Built (historical) | DRAFT CLASSES | Receivers, pass protection, pass rush and coverage per season (2023/24/25, regular season + playoffs, 100+ snap minimum). Sortable; the best 10% per metric is highlighted, respecting each metric's direction. |
+| Contested space (#7) | Approximation | Replay "Space control" | Velocity-projected Voronoi diagram. |
+| Pre-snap tells (#8) | Built (charting) | PRE-SNAP TELLS | This season (FTN) plus last season (participation). |
+| Route trees | Approximation | ROUTE TREES | Last season's targeted routes. |
 
-## What can't be built yet, and what would unlock it
+## Not built, and why
 
-| Report idea | Why not | Unlock |
-|---|---|---|
-| Completion-probability ticker (#3) | Needs a model trained on thousands of tracked passes (Palepu: GAT + BiLSTM). One game isn't enough to train it, and a heuristic would misrepresent the idea. | Download the BDB 2026 data from Kaggle, train offline, and serve a per-play JSON time series. The chart slot already exists. |
-| Optimal-path overlay (#4) | Not blocked on data. Running A* over the space-control grid is feasible on the sample. It wasn't built because doing it honestly needs a movement model (speed/accel limits). | Next candidate on the sample game. |
-| Tackle-probability timeline (#5) | Needs a tackle model trained on the 2024 BDB set (2022 Weeks 1–9, Kaggle). | Kaggle data + offline training. |
-| Ghost-defender map / SLIME (#6) | Needs conditional-density models trained on 2026 BDB post-throw tracking. | Kaggle data + high-effort modeling. |
-| Block-or-route dials, TEndencIQ (#9) | Needs pre-snap tracking frames and a trained classifier (2025 BDB). | Kaggle data + training. |
-| Any tracking view for **this week's** games | Raw tracking isn't public in-season. | A licensed NGS feed. Only the NGS aggregates (used in NGS LEADERS) are free. |
+| Idea | Why |
+|---|---|
+| Optimal-path overlay (#4) | Deferred. Buildable on the 2017 whole-play games with a speed/acceleration movement model. |
+| Ghost defenders / SLIME (#6) | BDB 2026 has post-throw data but only ~3 players in flight; needs conditional-density modeling. High effort. |
+| Tackle-probability timeline (#5) | Needs the BDB 2024 data, which was removed from Kaggle. |
+| Block-or-route dials (#9) | Needs the BDB 2025 data, also removed. |
+| Any tracking view for this week's games | Raw tracking isn't public in-season. Betting pages use only published current-season aggregates. |
 
 ## Files
 
-- `bdb_tracking.py` — downloads the sample into `data/bdb/` (gitignored, ~35 MB) on first use. Serves the game and play lists and per-play payloads: positions, events, LOS/first-down line, target, pressure, and separation.
-- `viz_lab.py` — `leaderboards()`, `tells(team)`, `routes(team)` from nflverse.
-- `nflverse_data.load_nextgen(stat_type)` — NGS passing/rushing/receiving, cached like the other game datasets.
-- `server.py` — `GET /api/lab/{bdb/games, bdb/plays?game=, bdb/play?game=&play=, leaders, tells?team=, routes?team=}` (snapshot-cached) and `/static/lab.js`.
-- `static/lab.js` — the Lab module. It's self-contained and uses `index.html` globals (`state`, `escapeHtml`, `TEAM_COLORS`).
-
-## Adding more tracking games
-
-Drop more 2019-format `tracking_gameId_<gameId>.csv` files into `data/bdb/`. The original
-contest shipped 91 games on Kaggle, and `games.csv` / `plays.csv` already cover all of
-them. Only the first game is listed in the UI today; a game picker is the obvious next step.
-Later contests (2021+) use different file layouts (`week*.csv`, `playDirection`,
-`club`), and the loader would need a column normalizer for them.
+- `bdb_tracking.py` — sources, per-game normalized parquet cache (`cache/bdb/<source>/`), play lists, per-play payloads (positions, events, PFF credits, pressure, separation, catch probability).
+- `completion_model.py` — feature builder, Newton logistic fit, prediction, model loader.
+- `tools/train_completion.py`, `tools/bdb_precompute.py` — offline training and prep.
+- `viz_lab.py` — `leaderboards()`, `player_ngs()` (current season), `tells()`, `routes()`, `draft_classes()`.
+- `server.py` — `GET /api/lab/{bdb/sources, bdb/games?src=, bdb/plays?src=&game=, bdb/play?src=&game=&play=, leaders, tells?team=, routes?team=, draft?group=&season=}` and `GET /api/player_ngs?name=&gsis=`.
+- `static/lab.js` — the Lab UI. The NGS ticket tab lives in `static/index.html` (`renderMatchup`).
