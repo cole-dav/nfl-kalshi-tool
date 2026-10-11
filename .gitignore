@@ -14,3 +14,6 @@ keys
 
 # Big Data Bowl sample tracking (downloaded on first use by bdb_tracking.py)
 data/bdb/
+
+# Recorded Kalshi price history (odds_history.py)
+history/
