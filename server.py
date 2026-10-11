@@ -4,6 +4,9 @@ Local web server for the NFL player research tool.
 Run:
   python3 server.py [port]
 
+  Port defaults to $PORT, then 8765; binds $HOST, default 127.0.0.1. GET
+  /healthz is a cheap liveness check (see deploy/README.md).
+
 Odds/matchups/injuries browsing needs no Kalshi credentials at all -- market
 data reads go through Kalshi's public endpoints. Viewing your own positions
 or using the combo/parlay builder requires logging in (POST /api/login with
@@ -96,6 +99,10 @@ CHAT_DAILY_LIMIT = int(os.environ.get("ENGINE_CHAT_DAILY_LIMIT", "20"))
 _chat_counts: dict[tuple[str, str], int] = {}
 _chat_lock = threading.Lock()
 
+# /healthz: process start, and when the slate refresher last finished a pass.
+_STARTED_AT = time.time()
+_slate_pass_at: float | None = None
+
 
 def _cache_warmer():
     """Keep nflverse data, rankings and Madden ratings loaded in memory and
@@ -114,6 +121,7 @@ def _slate_refresher():
     ranking) before they go stale, so even the first request after a TTL is
     instant. Per-game and per-player pages refresh on demand (stale entries
     are served while one background rebuild runs)."""
+    global _slate_pass_at
     while True:
         for key, build, ttl in (
             ("week:current", lambda: wo.build_week_overview(None), TTL_LIVE),
@@ -123,7 +131,23 @@ def _slate_refresher():
                 snap.refresh(key, build, ttl)
             except Exception:
                 traceback.print_exc()
+        _slate_pass_at = time.time()
         time.sleep(SLATE_REFRESH_SECONDS)
+
+
+def _health() -> dict:
+    """Liveness for uptime monitors and deploy.sh. In-memory numbers only -- no
+    upstream calls. slate_age_s is the age of the current-week payload, which
+    the refresher keeps under about TTL_LIVE + SLATE_REFRESH_SECONDS."""
+    now = time.time()
+    slate_age = snap.age("week:current")
+    return {
+        "ok": True,
+        "uptime_s": int(now - _STARTED_AT),
+        "snapshots": snap.count(),
+        "slate_age_s": None if slate_age is None else int(slate_age),
+        "slate_pass_age_s": None if _slate_pass_at is None else int(now - _slate_pass_at),
+    }
 
 
 def _player_key(row) -> str:
@@ -303,6 +327,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+
+        if parsed.path == "/healthz":
+            self._send_json(_health(), cache="no-store")
+            return
 
         if parsed.path == "/" or parsed.path == "/index.html":
             self._send_file(os.path.join(STATIC_DIR, "index.html"), "text/html; charset=utf-8")
@@ -683,14 +711,17 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    # The CLI port wins over PORT. HOST stays loopback unless set: cloudflared
+    # connects over loopback, so nothing needs to listen publicly.
+    host = os.environ.get("HOST") or "127.0.0.1"
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT") or 8765)
+    server = ThreadingHTTPServer((host, port), Handler)
     loaded = snap.enable_persistence(SNAPSHOT_DIR, _sanitize, SNAPSHOT_MAX_AGE)
     print(f"Loaded {loaded} saved snapshots")
     threading.Thread(target=_cache_warmer, daemon=True, name="cache-warmer").start()
     threading.Thread(target=_slate_refresher, daemon=True, name="slate-refresher").start()
     threading.Thread(target=_player_warmer, daemon=True, name="player-warmer").start()
-    print(f"Serving on http://127.0.0.1:{port}")
+    print(f"Serving on http://{host}:{port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

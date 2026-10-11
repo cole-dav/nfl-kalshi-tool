@@ -169,6 +169,12 @@ def age(key: str) -> float | None:
     return None if e is None or not e.built_at else time.time() - e.built_at
 
 
+def count() -> int:
+    """Number of snapshots held in memory (built or loaded from disk)."""
+    with _lock:
+        return sum(1 for e in _entries.values() if e.built_at)
+
+
 def clear() -> None:
     with _lock:
         _entries.clear()
