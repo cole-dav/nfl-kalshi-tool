@@ -152,12 +152,42 @@ def _hit(cached: dict, path: str) -> dict:
     return cached
 
 
+# Fetch listeners see every FRESH response from a public market-data path (not
+# cache hits, never /portfolio or /communications), e.g. odds_history records
+# prices from them. A listener can't affect the fetch: its exceptions are
+# logged and swallowed. Listeners run inline, so they must be quick.
+_fetch_listeners: list = []
+
+
+def add_fetch_listener(fn) -> None:
+    """Call fn(path, params, data) after each fresh public market-data fetch."""
+    if fn not in _fetch_listeners:
+        _fetch_listeners.append(fn)
+
+
+def remove_fetch_listener(fn) -> None:
+    if fn in _fetch_listeners:
+        _fetch_listeners.remove(fn)
+
+
+def _notify(path: str, params: dict | None, data) -> None:
+    if not path.startswith(_CACHEABLE_PREFIXES):
+        return
+    for fn in list(_fetch_listeners):
+        try:
+            fn(path, params, data)
+        except Exception as e:
+            print(f"kalshi fetch listener {getattr(fn, '__name__', fn)} failed: {e!r}")
+
+
 def _cached_get(path: str, params: dict | None, fetch) -> dict[str, Any]:
     cached = _cache_read(path, params)
     if cached is not None:
         return _hit(cached, path)
     if not _cacheable(path):
-        return fetch()
+        data = fetch()
+        _notify(path, params, data)
+        return data
     key = _cache_key(path, params)
     with _inflight_lock:
         lock = _inflight.setdefault(key, threading.Lock())
@@ -172,6 +202,7 @@ def _cached_get(path: str, params: dict | None, fetch) -> dict[str, Any]:
                 _cache_write(path, params, {_NOT_FOUND: True})
             raise
         _cache_write(path, params, data)
+        _notify(path, params, data)
         return data
 
 

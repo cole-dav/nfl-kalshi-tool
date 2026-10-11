@@ -11,6 +11,7 @@ from dataclasses import asdict
 import traceback
 
 import combo
+import odds_history
 import madden_ratings as mr
 import nflverse_data as nd
 import video_index as vi
@@ -146,6 +147,10 @@ def resolve_and_build(name: str, client: KalshiClient | None = None, roster_row=
         "game_log": {"season": nd.current_season(), "seasons": log_seasons, "games": game_log},
         "correlations": correlation_section,
         "season_pace": season_pace,
+        # {ticker: {open, now, chg, chg_24h, spark}} from recorded Kalshi prices
+        "line_moves": odds_history.line_moves(
+            m["ticker"] for k in ("player_props", "team_game_markets", "season_props")
+            for m in markets_section.get(k, [])),
     }
 
 

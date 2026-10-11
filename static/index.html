@@ -110,9 +110,9 @@ table.t{width:100%;border-collapse:collapse;font-size:11px}
 table.t thead th{text-align:left;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);font-weight:500;border-bottom:1px solid var(--head-rule);padding:2px 4px;white-space:nowrap}
 table.t td{padding:2px 4px;border-bottom:1px solid var(--row-rule);white-space:nowrap}
 .right{text-align:right}
-.ladder-head{height:18px;display:grid;grid-template-columns:14px 46px 30px 30px 28px minmax(0,1fr) 44px 36px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)}
+.ladder-head{height:18px;display:grid;grid-template-columns:14px 46px 30px 30px 28px minmax(0,1fr) 54px 44px 36px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)}
 .ladder-group{height:18px;display:flex;align-items:center;gap:8px;background:#0B0E12;border-bottom:1px solid #1A2027;padding:0 4px}
-.ladder-row{height:17px;display:grid;grid-template-columns:14px 46px 30px 30px 28px minmax(0,1fr) 44px 36px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule)}
+.ladder-row{height:17px;display:grid;grid-template-columns:14px 46px 30px 30px 28px minmax(0,1fr) 54px 44px 36px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule)}
 .bar-track{flex-grow:1;height:7px;background:#161B22;position:relative}
 .bar-fill{position:absolute;left:0;top:0;bottom:0;background:var(--blue-bar)}
 .bar-mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--faint)}
@@ -360,6 +360,54 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 .bb-edges{flex:0 0 38%;min-height:0;overflow:auto;border-bottom:1px solid var(--border)}
 .bb-pbar{height:6px;background:#161B22;position:relative;flex-grow:1}
 .bb-pbar span{position:absolute;left:0;top:0;bottom:0;background:var(--blue-bar)}
+
+/* odds history: sparkline + change since first recorded price */
+.lm{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;white-space:nowrap;cursor:pointer;font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.lm:hover .lm-c{text-decoration:underline}
+.lm .spark{display:block;flex-shrink:0}
+.ladder-row .lm{padding-right:4px}
+.lm-c{font-size:10px;min-width:20px;text-align:right}
+.lm-c.up{color:var(--blue)} .lm-c.dn{color:var(--orange)} .lm-c.flat{color:var(--dim)} .lm-c.none{color:var(--faint)}
+#marketsBody{container:mkts / inline-size}
+@container mkts (max-width: 720px){
+  .ladder-head,.ladder-row{grid-template-columns:14px 46px 30px 30px 28px minmax(0,1fr) 30px 42px 30px}
+  .ladder-row .lm .spark{display:none}
+}
+#histPop{position:fixed;z-index:62;width:360px;background:var(--chrome);border:1px solid var(--amber-ring);box-shadow:0 8px 24px rgba(0,0,0,0.5);font-size:11px}
+#histPop[hidden]{display:none}
+#histPop .hp-head{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--head-rule);background:var(--panel-head)}
+#histPop .hp-title{flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+#histPop .hp-x{color:var(--muted);font-size:13px;line-height:1}
+#histPop .hp-x:hover{color:var(--orange)}
+#histPop .hp-body{padding:8px 10px}
+#histPop .hp-stats{display:flex;gap:14px;font-size:10px;color:var(--dim);margin-top:6px;flex-wrap:wrap}
+#histPop .hp-stats b{color:var(--on);font-weight:500}
+#histPop .hp-tabs{display:flex;gap:2px;margin-left:auto}
+#histPop .hp-tabs button{font-size:9.5px;padding:1px 5px;color:var(--dim);border:1px solid transparent}
+#histPop .hp-tabs button.on{color:var(--amber);border-color:var(--amber-ring)}
+/* movers view */
+#moversView{display:none;flex-direction:column;flex-grow:1;min-height:0;container:movers / inline-size}
+.mv-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;padding:8px 4px}
+.mv-bar .mv-title{font-size:15px;font-weight:600}
+.mv-bar .mv-note{font-size:10.5px;color:var(--dim)}
+.mv-grid{display:grid;grid-template-columns:16px minmax(0,1fr) 92px 44px 44px 50px 92px 64px;align-items:center;gap:0 8px;padding:0 8px;font-size:11px}
+.mv-head{min-height:20px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule);position:sticky;top:0;background:var(--bg);z-index:1}
+.mv-row{min-height:22px;border-bottom:1px solid var(--row-rule)}
+.mv-row:hover{background:var(--amber-soft)}
+.mv-row .mv-mkt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--on);cursor:pointer;text-align:left}
+.mv-row .mv-mkt:hover{color:var(--amber)}
+.mv-row .mv-kind{font-size:9px;letter-spacing:0.06em;color:var(--dim);margin-right:6px}
+.mv-row .mv-game{display:flex;align-items:center;gap:4px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.mv-row .mv-game:hover{color:var(--amber)}
+.mv-chg{font-weight:600;text-align:right}
+.mv-row .mv-gm-inline{display:none;color:var(--dim);margin-right:6px}
+@container movers (max-width: 640px){
+  .mv-grid{grid-template-columns:16px minmax(0,1fr) 36px 50px 64px}
+  .mv-grid > .mv-hide{display:none !important}
+  .mv-row .mv-gm-inline{display:inline}
+}
+.game-card .gc-foot > span{white-space:nowrap}
+.game-card .gc-foot{gap:10px;overflow:hidden}
 </style>
 </head>
 <body>
@@ -401,6 +449,9 @@ button.bb-side:hover{outline:1px solid var(--faint)}
       <button class="railbtn" type="button" data-module="slate" aria-label="Weekly slate">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3.5" width="14" height="12.5"></rect><path d="M2 7.5h14M6 1.5v4M12 1.5v4"></path></svg>
       </button>
+      <button class="railbtn" type="button" data-module="movers" aria-label="Line movers" title="Line movers: biggest Kalshi price moves this week">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 13.5l4.5-4.5 3 3 6.5-6.5"></path><path d="M11.5 5.5h4v4"></path><path d="M1.5 16.5h15" stroke-opacity="0.5"></path></svg>
+      </button>
       <button class="railbtn" type="button" data-module="lab" aria-label="Viz Lab" title="Viz Lab: Big Data Bowl replays, Next Gen Stats leaders, pre-snap tells, route trees">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6.5 1.5h5M7.5 1.5v5.2L2.6 14.6a1.2 1.2 0 0 0 1 1.9h10.8a1.2 1.2 0 0 0 1-1.9L10.5 6.7V1.5"></path><path d="M4.6 11.5h8.8"></path></svg>
       </button>
@@ -415,6 +466,7 @@ button.bb-side:hover{outline:1px solid var(--faint)}
       <div id="slateView" style="display:none;flex-direction:column;flex-grow:1;min-height:0"></div>
       <div id="bookView" style="display:none;flex-direction:column;flex-grow:1;min-height:0;overflow:auto;padding:8px"></div>
       <div id="labView"></div>
+      <div id="moversView"></div>
       <div id="injPop" hidden></div>
       <div id="vidPop" hidden></div>
       <div id="overlay" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);align-items:center;justify-content:center;font-size:12px;color:var(--dim)"></div>
@@ -873,7 +925,7 @@ function renderLadder(body, t, d) {
   function col(ids, showStats) {
     const groups = ids.map(s => buildGroup(d, s, hist)).filter(Boolean);
     let html = `<div style="display:flex;flex-direction:column;min-width:0">
-      <div class="ladder-head mono"><span></span><span>LINE</span><span class="right">BID</span><span class="right">ASK</span><span class="right">SPR</span><span style="padding-left:10px">IMPLIED %</span><span class="right">VOL</span><span class="right">POS</span></div>`;
+      <div class="ladder-head mono"><span></span><span>LINE</span><span class="right">BID</span><span class="right">ASK</span><span class="right">SPR</span><span style="padding-left:10px">IMPLIED %</span><span class="right" title="Change in implied % since the first recorded price">MOVE</span><span class="right">VOL</span><span class="right">POS</span></div>`;
     groups.forEach(g => {
       html += `<div class="ladder-group">
         <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--label)">${g.meta.name.toUpperCase()}</span>
@@ -892,6 +944,7 @@ function renderLadder(body, t, d) {
             <div class="bar-track"><div class="bar-fill" style="width:${r.imp}%"></div><div class="bar-mid"></div></div>
             <span style="width:32px;text-align:right;color:var(--on)">${r.imp.toFixed(1)}</span>
           </div>
+          <span style="display:flex;justify-content:flex-end;min-width:0">${moveHtml(lmOf(d, r.m.ticker), r.m.ticker, r.m.title)}</span>
           <span class="right" style="color:${r.vol ? 'var(--muted)' : '#3A434E'}">${r.vol ? r.vol.toLocaleString('en-US') : '·'}</span>
           <span class="right" style="color:var(--amber);font-weight:600;padding-right:2px">${r.pos}</span>
         </div>`;
@@ -943,15 +996,15 @@ function renderFlatMarkets(body, t, d, which) {
   }
   const sorted = [...rows].sort((a, b) => Math.abs((a.implied_prob_yes ?? 0.5) - 0.5) - Math.abs((b.implied_prob_yes ?? 0.5) - 0.5));
   let html = `<div style="padding:4px 8px 8px;display:flex;flex-direction:column">
-    <div class="mono" style="height:18px;display:grid;grid-template-columns:16px 150px minmax(0,1fr) 200px 90px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-      <span></span><span style="padding-left:4px">WHO</span><span>MARKET</span><span>IMPLIED %</span><span class="right">LINKED</span>
+    <div class="mono" style="height:18px;display:grid;grid-template-columns:16px 150px minmax(0,1fr) 200px 60px 70px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+      <span></span><span style="padding-left:4px">WHO</span><span>MARKET</span><span>IMPLIED %</span><span class="right">MOVE</span><span class="right">LINKED</span>
     </div>`;
   sorted.forEach(r => {
     const who = r.player_name || r.team_code || '—';
     const imp = (r.implied_prob_yes ?? 0) * 100;
     const linked = correlated.has(r.ticker);
     const heldStyle = r.my_position ? 'background:var(--amber-soft)' : '';
-    html += `<div class="mono" style="height:20px;display:grid;grid-template-columns:16px 150px minmax(0,1fr) 200px 90px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule);${heldStyle}">
+    html += `<div class="mono" style="height:20px;display:grid;grid-template-columns:16px 150px minmax(0,1fr) 200px 60px 70px;align-items:center;font-size:11px;border-bottom:1px solid var(--row-rule);${heldStyle}">
       ${bmStar(r)}
       <span style="padding-left:4px;color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(who)}</span>
       <span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.title)}</span>
@@ -959,6 +1012,7 @@ function renderFlatMarkets(body, t, d, which) {
         <div class="bar-track"><div class="bar-fill" style="width:${imp}%"></div></div>
         <span style="width:36px;text-align:right">${imp.toFixed(1)}</span>
       </div>
+      <span style="display:flex;justify-content:flex-end">${moveHtml(lmOf(d, r.ticker), r.ticker, r.title)}</span>
       <span class="right" style="color:${linked ? 'var(--amber)' : 'var(--dim)'}">${linked ? 'linked' : '—'}</span>
     </div>`;
   });
@@ -1038,10 +1092,10 @@ function renderSeasonMarkets(body, d, rows, note) {
   const pace = d.season_pace;
   const fmtN = (v, dec) => dec === 0 ? Math.round(v).toLocaleString('en-US') : v.toFixed(dec);
   const sorted = [...rows].sort((a, b) => (a.series || '').localeCompare(b.series || '') || a.threshold - b.threshold);
-  const grid = 'grid-template-columns:16px minmax(0,1fr) 170px 120px 100px';
+  const grid = 'grid-template-columns:16px minmax(0,1fr) 170px 60px 110px 100px';
   let html = `<div style="padding:4px 8px 8px;display:flex;flex-direction:column">
     <div class="mono" style="min-height:18px;display:grid;${grid};align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-      <span></span><span style="padding-left:4px">MARKET</span><span>IMPLIED %</span><span class="right">NEED / GAME</span><span class="right">NEXT G EXP</span>
+      <span></span><span style="padding-left:4px">MARKET</span><span>IMPLIED %</span><span class="right">MOVE</span><span class="right">NEED / GAME</span><span class="right">NEXT G EXP</span>
     </div>`;
   sorted.forEach(r => {
     const imp = (r.implied_prob_yes ?? 0) * 100;
@@ -1065,6 +1119,7 @@ function renderSeasonMarkets(body, d, rows, note) {
         <div class="bar-track"><div class="bar-fill" style="width:${imp}%"></div></div>
         <span style="width:36px;text-align:right">${imp.toFixed(1)}</span>
       </div>
+      <span style="display:flex;justify-content:flex-end">${moveHtml(lmOf(d, r.ticker), r.ticker, r.title)}</span>
       <span class="right">${needHtml}</span>
       <span class="right" style="padding-right:2px">${expHtml}</span>
     </div>`;
@@ -2175,6 +2230,7 @@ function render() {
   document.getElementById('slateView').style.display = state.module === 'slate' ? 'flex' : 'none';
   document.getElementById('bookView').style.display = state.module === 'book' ? 'flex' : 'none';
   document.getElementById('labView').style.display = state.module === 'lab' ? 'flex' : 'none';
+  document.getElementById('moversView').style.display = state.module === 'movers' ? 'flex' : 'none';
 
   if (state.module === 'research') renderResearch();
   else {
@@ -2182,6 +2238,7 @@ function render() {
     if (state.module === 'slate') renderSlate();
     else if (state.module === 'book') renderBookModule();
     else if (state.module === 'lab') renderLab();
+    else if (state.module === 'movers') renderMovers();
   }
   renderBuilder();
 }
@@ -2226,6 +2283,7 @@ async function loadSlate(force, week, quiet) {
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'request failed');
     state.slate.games = data.games;
+    state.slate.lineMoves = data.line_moves || {};
     state.slate.week = data.week;
     state.slate.weeks = data.weeks || [];
   } catch (e) {
@@ -2437,6 +2495,8 @@ function gameKickoffText(g) {
   return `${day} · ${(h % 12) || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'} ET`;
 }
 
+function wkMove(q) { return q && q.ticker && state.slate.lineMoves ? state.slate.lineMoves[q.ticker] || null : null; }
+
 function renderGameCard(g) {
   const spreadTxt = g.spread ? `${g.spread.team} ${g.spread.line >= 0 ? '-' : '+'}${Math.abs(g.spread.line).toFixed(1)}` : '--';
   const totalTxt = g.total ? g.total.line.toFixed(1) : '--';
@@ -2450,14 +2510,14 @@ function renderGameCard(g) {
       ${teamLogo(code, 30)}
       <span><span class="gc-code">${code}</span>${lv && lv.possession === code ? '<span class="gc-poss" title="Possession">&#9679;</span>' : ''}<span class="gc-rec">${record || ''}</span></span>
       ${scoreCell(k)}
-      <span class="gc-ml" style="color:${moneylineColor(side)}">${moneylinePct(side)}</span>
+      <span class="gc-ml" style="color:${moneylineColor(side)};display:flex;align-items:center;justify-content:flex-end;gap:6px">${side && side.ticker ? moveHtml(wkMove(side), side.ticker, `${code} moneyline`, { w: 24, h: 10 }) : ''}${moneylinePct(side)}</span>
       ${star(side) || '<span></span>'}
     </div>`;
   return `<div class="game-card" data-open-game="${g.event_ticker}">
     <div class="gc-top mono">${liveStatusHtml(lv) || `<span>${gameKickoffText(g)}</span>`}<span>${lv && lv.state === 'in' && lv.down_distance ? escapeHtml(lv.down_distance + (lv.yard_line ? ' · ' + lv.yard_line : '')) : 'AWAY @ HOME'}</span></div>
     ${teamRow(g.away, rec.away, g.moneyline.away, 'away')}
     ${teamRow(g.home, rec.home, g.moneyline.home, 'home')}
-    <div class="gc-foot mono"><span style="display:flex;align-items:center;gap:3px"><span class="k">SPREAD</span>${spreadTxt}${star(g.spread)}</span><span style="display:flex;align-items:center;gap:3px"><span class="k">O/U</span>${totalTxt}${star(g.total)}</span></div>
+    <div class="gc-foot mono"><span style="display:flex;align-items:center;gap:3px"><span class="k">SPREAD</span>${spreadTxt}${g.spread ? moveHtml(wkMove(g.spread), g.spread.ticker, `Spread: ${spreadTxt}`, { spark: false }) : ''}${star(g.spread)}</span><span style="display:flex;align-items:center;gap:3px"><span class="k">O/U</span>${totalTxt}${g.total ? moveHtml(wkMove(g.total), g.total.ticker, `Total: over ${totalTxt}`, { spark: false }) : ''}${star(g.total)}</span></div>
   </div>`;
 }
 
@@ -2513,7 +2573,7 @@ function renderGameDetail(el, g) {
     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:8px 4px">
       <span class="backlink" data-back-slate="1">&larr; ALL GAMES</span>
       <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600">${teamLogo(d.away, 32)}${d.away}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).away || ''}</span><span style="color:var(--dim);font-weight:400">@</span>${teamLogo(d.home, 32)}${d.home}<span class="mono" style="font-size:10.5px;color:var(--dim);font-weight:400">${(d.records || {}).home || ''}</span></span>
-      <span class="mono" style="font-size:10.5px;color:var(--dim);display:flex;align-items:center;gap:4px">SPREAD ${spreadTxt}${gdStar(d.spread)} &middot; TOTAL ${totalTxt}${gdStar(d.total)}</span>
+      <span class="mono" style="font-size:10.5px;color:var(--dim);display:flex;align-items:center;flex-wrap:wrap;gap:4px">${['away', 'home'].filter(k => (d.moneyline || {})[k]).map(k => `${d[k]} <span style="color:var(--on)">${moneylinePct(d.moneyline[k])}</span>${moveHtml(lmOf(d, d.moneyline[k].ticker), d.moneyline[k].ticker, `${d[k]} moneyline`)}`).join(' ')}${(d.moneyline || {}).away ? ' &middot; ' : ''}SPREAD ${spreadTxt}${d.spread ? moveHtml(lmOf(d, d.spread.ticker), d.spread.ticker, `Spread: ${spreadTxt}`) : ''}${gdStar(d.spread)} &middot; TOTAL ${totalTxt}${d.total ? moveHtml(lmOf(d, d.total.ticker), d.total.ticker, `Total: over ${totalTxt}`) : ''}${gdStar(d.total)}</span>
       <span style="margin-left:auto;display:flex;align-self:stretch">${viewTabs.map(v => `<button type="button" class="tab small ${view === v.id ? 'on' : ''}" data-game-view="${v.id}">${v.label}</button>`).join('')}</span>
     </div>
     ${liveStripHtml(d)}
@@ -4484,8 +4544,229 @@ function handleBuilderInput(el, kind) {
   if (k === 'eng-min') { b.eng.minEdge = Number(el.value); saveBuilder(); renderBuilder(); return; }
 }
 
+// ========================================================================
+// ODDS HISTORY: Kalshi prices recorded by the server (odds_history.py) from
+// its own fetches. Week/game/player payloads carry `line_moves`
+// {ticker: {open, now, chg, chg_24h, since, spark}} in cents (= implied %);
+// clicking any move opens a price chart (/api/history); the MOVERS module
+// lists the week's biggest moves (/api/movers). History starts empty and is
+// only as fine as the server's fetch cadence.
+// ========================================================================
+function lmOf(d, ticker) { return d && d.line_moves && ticker ? d.line_moves[ticker] || null : null; }
+function fmtCents(v) { return v === null || v === undefined ? '--' : (Math.round(v * 10) / 10).toFixed(Number.isInteger(Math.round(v * 10) / 10) ? 0 : 1); }
+function signedCents(c, short) {
+  if (c === null || c === undefined) return '';
+  const r = short ? Math.round(c) : Math.round(c * 10) / 10;
+  if (!r) return '0';
+  return (r > 0 ? '+' : '−') + (short || Number.isInteger(r) ? String(Math.abs(r)) : Math.abs(r).toFixed(1));
+}
+function chgClass(c) { return c === null || c === undefined ? 'none' : c >= 0.5 ? 'up' : c <= -0.5 ? 'dn' : 'flat'; }
+function agoTs(ts) { return ts ? timeAgo(new Date(ts * 1000).toISOString()) : ''; }
+
+function sparkSvg(vals, w, h) {
+  const v = (vals || []).filter(x => x !== null && x !== undefined);
+  if (v.length < 2) return `<svg class="spark" width="${w}" height="${h}" aria-hidden="true"></svg>`;
+  let lo = Math.min(...v), hi = Math.max(...v);
+  // At least a 4-point range, so a 1-cent wiggle doesn't fill the box.
+  if (hi - lo < 4) { const m = (hi + lo) / 2; lo = m - 2; hi = m + 2; }
+  const pts = v.map((x, i) => `${(1 + i * (w - 2) / (v.length - 1)).toFixed(1)},${(h - 1 - (x - lo) * (h - 2) / (hi - lo)).toFixed(1)}`).join(' ');
+  const d = v[v.length - 1] - v[0];
+  const col = d >= 0.5 ? 'var(--blue)' : d <= -0.5 ? 'var(--orange)' : 'var(--neutral)';
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.2" stroke-linejoin="round"></polyline></svg>`;
+}
+
+// Sparkline + change since the first recorded price. Clicking opens the chart.
+function moveHtml(mv, ticker, label, opts) {
+  opts = opts || {};
+  if (!ticker) return '';
+  const attrs = `data-hist="${escapeHtml(ticker)}" data-hlabel="${escapeHtml(label || ticker)}"`;
+  if (!mv) return `<span class="lm" ${attrs} title="No price history recorded yet · click for chart"><span class="lm-c none">·</span></span>`;
+  const tip = `Implied ${fmtCents(mv.open)}% → ${fmtCents(mv.now)}% since first recorded ${agoTs(mv.since)}`
+    + (mv.chg_24h !== null && mv.chg_24h !== undefined ? ` · 24h ${signedCents(mv.chg_24h)}` : '') + ' · click for chart';
+  return `<span class="lm" ${attrs} title="${escapeHtml(tip)}">${opts.spark === false ? '' : sparkSvg(mv.spark, opts.w || 22, opts.h || 10)}<span class="lm-c ${chgClass(mv.chg)}">${signedCents(mv.chg, true)}</span></span>`;
+}
+
+// ---------- price chart popover ----------
+const histPop = document.createElement('div');
+histPop.id = 'histPop'; histPop.hidden = true;
+document.body.appendChild(histPop);
+const hp = { ticker: null, label: '', hours: 48, anchor: null, seq: 0 };
+const HP_WINDOWS = [[6, '6H'], [24, '24H'], [48, '48H'], [168, '7D']];
+
+function placeHistPop() {
+  const a = hp.anchor && hp.anchor.isConnected ? hp.anchor.getBoundingClientRect() : null;
+  const w = 360, pad = 8, hgt = histPop.offsetHeight || 220;
+  let left = a ? a.right - w : (window.innerWidth - w) / 2;
+  left = Math.max(pad, Math.min(left, window.innerWidth - w - pad));
+  let top = a ? a.bottom + 6 : 120;
+  if (top + hgt > window.innerHeight - pad) top = Math.max(pad, (a ? a.top : top) - hgt - 6);
+  histPop.style.left = left + 'px'; histPop.style.top = top + 'px';
+}
+
+function hpFrame(body) {
+  return `<div class="hp-head"><span class="hp-title" title="${escapeHtml(hp.label)}">${escapeHtml(hp.label)}</span>
+      <span class="hp-tabs mono">${HP_WINDOWS.map(([h, l]) => `<button type="button" data-hp-hours="${h}" class="${hp.hours === h ? 'on' : ''}">${l}</button>`).join('')}</span>
+      <button type="button" class="hp-x" data-hp-close aria-label="Close chart">×</button></div>
+    <div class="hp-body">${body}</div>`;
+}
+
+async function showHistPop(anchor, ticker, label) {
+  if (anchor) hp.anchor = anchor;
+  hp.ticker = ticker; hp.label = label || ticker;
+  const seq = ++hp.seq;
+  histPop.innerHTML = hpFrame(`<div class="empty" style="padding:30px 0">Loading…</div>`);
+  histPop.hidden = false; placeHistPop();
+  try {
+    const r = await fetch(`/api/history?ticker=${encodeURIComponent(ticker)}&hours=${hp.hours}`);
+    const data = await r.json();
+    if (seq !== hp.seq) return;
+    if (!r.ok) throw new Error(data.error || 'request failed');
+    histPop.innerHTML = hpFrame(histChartHtml(data.markets[ticker], data.now, hp.hours));
+  } catch (e) {
+    if (seq === hp.seq) histPop.innerHTML = hpFrame(`<div class="empty" style="color:var(--orange)">${escapeHtml(String(e.message || e))}</div>`);
+  }
+  placeHistPop();
+}
+function hideHistPop() { histPop.hidden = true; hp.seq++; hp.anchor = null; }
+
+function fmtEtShort(ts) {
+  return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(ts * 1000)).toUpperCase();
+}
+
+// Mid as a step line over a faint bid/ask band; the flat tail to "now" is only
+// drawn while the market is still being observed (last point < 30 min old).
+function histChartHtml(h, now, hours) {
+  if (!h || !h.points || !h.points.length) {
+    return `<div class="empty" style="padding:24px 8px">No prices recorded for this market yet.<br><span style="font-size:10.5px">History starts when the server first fetches a market.</span></div>`;
+  }
+  const W = 340, H = 120, L = 30, R = 4, T = 6, B = 16;
+  const pts = h.points.slice();
+  const last = pts[pts.length - 1];
+  const live = now - last[0] < 1800;
+  const t0 = pts[0][0], t1 = live ? now : last[0];
+  const band = pts.filter(p => p[2] !== null && p[3] !== null && !(!p[2] && p[3] === 100));
+  const vals = pts.map(p => p[1]).concat(band.flatMap(p => [p[2], p[3]])).filter(v => v !== null);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (hi - lo < 4) { const m = (hi + lo) / 2; lo = m - 2; hi = m + 2; }
+  lo = Math.max(0, lo - 1); hi = Math.min(100, hi + 1);
+  const x = t => L + (t1 > t0 ? (t - t0) * (W - L - R) / (t1 - t0) : (W - L - R));
+  const y = v => T + (hi - v) * (H - T - B) / (hi - lo);
+  const xEnd = x(t1);
+  // Step function: each value holds until the next tick, then to xEnd.
+  const stepPts = (arr, k) => {
+    const out = [];
+    arr.forEach((p, i) => {
+      if (i) out.push([x(p[0]), y(arr[i - 1][k])]);
+      out.push([x(p[0]), y(p[k])]);
+    });
+    if (arr.length) out.push([Math.max(xEnd, out[out.length - 1][0]), y(arr[arr.length - 1][k])]);
+    return out;
+  };
+  const pathOf = (ps) => ps.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('');
+  const bandPath = band.length ? `<path d="${pathOf(stepPts(band, 3).concat(stepPts(band, 2).reverse()))}Z" fill="var(--blue-bar)" opacity="0.3"></path>` : '';
+  const midPts = pts.filter(p => p[1] !== null);
+  const first = midPts.length ? midPts[0][1] : null, cur = last[1], chg = (cur !== null && first !== null) ? cur - first : null;
+  const grid = [hi, (hi + lo) / 2, lo].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--row-rule)"></line><text x="${L - 4}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end" fill="var(--dim)" font-size="9">${fmtCents(v)}</text>`).join('');
+  const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" class="mono" style="display:block" role="img" aria-label="Implied probability history">
+    ${grid}${bandPath}
+    <path d="${pathOf(stepPts(midPts, 1))}" fill="none" stroke="var(--amber)" stroke-width="1.4"></path>
+    ${cur !== null ? `<circle cx="${xEnd.toFixed(1)}" cy="${y(cur).toFixed(1)}" r="2.2" fill="var(--amber)"></circle>` : ''}
+    <text x="${L}" y="${H - 3}" fill="var(--dim)" font-size="9">${fmtEtShort(t0)}</text>
+    <text x="${W - R}" y="${H - 3}" text-anchor="end" fill="var(--dim)" font-size="9">${live ? 'NOW' : fmtEtShort(t1)}</text>
+  </svg>`;
+  const windowNote = h.first_seen_ts > now - hours * 3600 ? `first recorded ${agoTs(h.first_seen_ts)}` : `last ${hours >= 48 ? hours / 24 + 'd' : hours + 'h'}`;
+  return svg + `<div class="hp-stats mono">
+      <span>START <b>${fmtCents(first)}</b></span><span>NOW <b>${fmtCents(cur)}</b></span>
+      <span>CHG <b class="lm-c ${chgClass(chg)}" style="font-size:inherit">${signedCents(chg) || '--'}</b></span>
+      <span>OPEN <b>${fmtCents(h.open)}</b></span>
+      <span style="margin-left:auto">${windowNote}</span>
+    </div>
+    <div class="mono" style="font-size:9.5px;color:var(--faint);margin-top:4px">Implied % (mid) with bid/ask band · sampled from this site's own Kalshi fetches</div>`;
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !histPop.hidden) hideHistPop(); });
+document.addEventListener('mousedown', (e) => {
+  if (!histPop.hidden && !e.target.closest('#histPop') && !e.target.closest('[data-hist]')) hideHistPop();
+});
+
+// ---------- MOVERS module ----------
+state.movers = { hours: 24, kind: 'all', loading: false, error: null, data: null, key: null, at: 0 };
+const MV_WINDOWS = [[1, '1H'], [6, '6H'], [24, '24H'], [48, '48H']];
+const MV_KINDS = [['all', 'ALL'], ['game', 'GAME LINES'], ['prop', 'PLAYER PROPS']];
+
+async function loadMovers(quiet) {
+  const mv = state.movers, key = mv.hours + ':' + mv.kind;
+  if (!quiet) { mv.loading = true; mv.error = null; render(); }
+  try {
+    const r = await fetch(`/api/movers?hours=${mv.hours}&kind=${mv.kind}&limit=60`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'request failed');
+    if (key !== mv.hours + ':' + mv.kind) return;
+    mv.data = data; mv.key = key; mv.at = Date.now(); mv.error = null;
+  } catch (e) {
+    if (!quiet) mv.error = String(e.message || e);
+  } finally {
+    mv.loading = false;
+    if (state.module === 'movers') keepScroll(document.getElementById('moversView'), renderMovers);
+  }
+}
+setInterval(() => { if (!document.hidden && state.module === 'movers' && !state.movers.loading && Date.now() - state.movers.at > 55000) loadMovers(true); }, 15000);
+
+function moverRowHtml(m) {
+  const playerName = m.kind === 'prop' && m.title.includes(':') ? m.title.split(':')[0].trim() : null;
+  const open = playerName ? `data-open-player="${escapeHtml(playerName)}"` : (m.game_event ? `data-open-game="${escapeHtml(m.game_event)}"` : '');
+  const star = bmStar(normMkt({ ticker: m.ticker, title: m.title, event_ticker: m.event_ticker, series: m.series,
+    yes_bid: m.bid !== null ? m.bid / 100 : null, yes_ask: m.ask !== null ? m.ask / 100 : null, player_name: playerName }));
+  const game = m.away && m.home ? `<span class="mv-game mv-hide" data-open-game="${escapeHtml(m.game_event)}" title="Open ${escapeHtml(m.away)} @ ${escapeHtml(m.home)}">${teamLogo(m.away, 14)}${escapeHtml(m.away)}<span style="color:var(--dim)">@</span>${teamLogo(m.home, 14)}${escapeHtml(m.home)}</span>` : '<span class="mv-hide"></span>';
+  const since = m.first_seen_ts > state.movers.data.now - state.movers.hours * 3600 ? ` (first recorded ${agoTs(m.first_seen_ts)})` : '';
+  return `<div class="mv-grid mv-row mono">
+    ${star}
+    <span class="mv-mkt" ${open} title="${escapeHtml(m.title)}"><span class="mv-kind">${m.kind === 'prop' ? 'PROP' : 'GAME'}</span>${m.away && m.home ? `<span class="mv-gm-inline">${escapeHtml(m.away)}@${escapeHtml(m.home)}</span>` : ''}${escapeHtml(m.title)}</span>
+    ${game}
+    <span class="right mv-hide" style="color:var(--muted)" title="Implied % ${state.movers.hours}h ago${escapeHtml(since)}">${fmtCents(m.then)}</span>
+    <span class="right">${fmtCents(m.now)}</span>
+    <span class="mv-chg lm-c ${chgClass(m.change)}" style="font-size:11px">${signedCents(m.change)}</span>
+    <span class="mv-hide" style="display:flex;justify-content:flex-end"><span class="lm" data-hist="${escapeHtml(m.ticker)}" data-hlabel="${escapeHtml(m.title)}" title="Click for chart">${sparkSvg(m.spark, 84, 14)}</span></span>
+    <span class="right" style="color:${m.volume ? 'var(--muted)' : 'var(--faint)'}">${m.volume ? m.volume.toLocaleString('en-US') : '·'}</span>
+  </div>`;
+}
+
+function renderMovers() {
+  const el = document.getElementById('moversView');
+  const mv = state.movers, key = mv.hours + ':' + mv.kind;
+  if (mv.key !== key && !mv.loading && !mv.error) { loadMovers(); return; }
+  const seg = (items, cur, attr) => `<span class="seg">${items.map(([v, l]) => `<button type="button" class="${String(cur) === String(v) ? 'on' : ''}" ${attr}="${v}">${l}</button>`).join('')}</span>`;
+  const d = mv.key === key ? mv.data : null;
+  const tr = d && d.tracking;
+  let body;
+  if (mv.error) body = `<div class="empty" style="color:var(--orange)">${escapeHtml(mv.error)}</div>`;
+  else if (!d) body = `<div class="empty">Loading movers…</div>`;
+  else if (!tr || !tr.markets) body = `<div class="empty">No price history yet. Recording starts when the server first fetches each market; moves show up here within minutes.</div>`;
+  else if (!d.movers.length) body = `<div class="empty">No line moves among this week's games in the last ${mv.hours}h${tr.since && tr.since > d.now - mv.hours * 3600 ? ` (history only goes back ${agoTs(tr.since).replace(' ago', '')})` : ''}.</div>`;
+  else body = `<div class="mv-grid mv-head mono"><span></span><span>MARKET</span><span class="mv-hide">GAME</span><span class="right mv-hide">THEN</span><span class="right">NOW</span><span class="right">CHG</span><span class="right mv-hide">${mv.hours}H</span><span class="right">VOL</span></div>`
+    + d.movers.map(moverRowHtml).join('');
+  const note = tr && tr.markets ? `${tr.markets.toLocaleString('en-US')} markets tracked since ${agoTs(tr.since).replace(' ago', '')} ago · implied % (mid), change in points · this week's games` : '';
+  el.innerHTML = `<div class="mv-bar">
+      <span class="mv-title">LINE MOVERS</span>
+      ${seg(MV_WINDOWS, mv.hours, 'data-mv-hours')}
+      ${seg(MV_KINDS, mv.kind, 'data-mv-kind')}
+      ${mv.loading ? '<span class="mono mv-note">LOADING…</span>' : ''}
+      <span class="mono mv-note" style="margin-left:auto">${escapeHtml(note)}</span>
+    </div>
+    <div style="flex-grow:1;min-height:0;overflow:auto;padding:0 4px 8px">${body}</div>`;
+}
+
 // ---------- events ----------
 document.addEventListener('click', (e) => {
+  const histT = e.target.closest('[data-hist]');
+  if (histT) { e.stopPropagation(); showHistPop(histT, histT.dataset.hist, histT.dataset.hlabel); return; }
+  const hpHoursT = e.target.closest('[data-hp-hours]');
+  if (hpHoursT) { hp.hours = Number(hpHoursT.dataset.hpHours); showHistPop(null, hp.ticker, hp.label); return; }
+  if (e.target.closest('[data-hp-close]')) { hideHistPop(); return; }
+  const mvHoursT = e.target.closest('[data-mv-hours]');
+  if (mvHoursT) { state.movers.hours = Number(mvHoursT.dataset.mvHours); state.movers.error = null; loadMovers(); return; }
+  const mvKindT = e.target.closest('[data-mv-kind]');
+  if (mvKindT) { state.movers.kind = mvKindT.dataset.mvKind; state.movers.error = null; loadMovers(); return; }
   if (e.target.closest('[data-connect-kalshi]')) { showLoginModal(); return; }
   if (e.target.closest('[data-disconnect-kalshi]')) { logoutKalshi(); return; }
   if (e.target.closest('[data-login-cancel]')) { hideLoginModal(); return; }
