@@ -14,3 +14,6 @@ keys
 
 # Big Data Bowl sample tracking (downloaded on first use by bdb_tracking.py)
 data/bdb/
+
+# Odds-history DB (Phase 3; not regenerable -- backed up by deploy/backup-history.sh)
+history/

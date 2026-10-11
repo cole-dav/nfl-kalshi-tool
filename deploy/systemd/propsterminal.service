@@ -1,0 +1,44 @@
+# propsterminal.com web app (server.py). Installed by deploy/bootstrap.sh.
+[Unit]
+Description=Props Terminal web app (server.py on 127.0.0.1:8765)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=propsterminal
+Group=propsterminal
+WorkingDirectory=/opt/propsterminal/app
+# Defaults first; .env (0600, from the laptop) overrides any of them.
+Environment=PYTHONUNBUFFERED=1 HOST=127.0.0.1 PORT=8765
+EnvironmentFile=-/opt/propsterminal/app/.env
+ExecStart=/opt/propsterminal/venv/bin/python server.py
+Restart=always
+RestartSec=3
+TimeoutStopSec=15
+
+# Steady RSS is ~0.6 GB; a cold start (empty cache/) peaks near 1.8 GB while
+# nflverse data is fetched and built. Percentages are of physical RAM, so on
+# a 4 GB box: throttle/reclaim above 2.4 GB, OOM-kill (then restart) at 3 GB.
+MemoryHigh=60%
+MemoryMax=75%
+MemorySwapMax=1G
+TasksMax=1024
+LimitNOFILE=65536
+
+# Hardening: the app only writes under /opt/propsterminal.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/propsterminal
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+# One run of deploy/backup-history.sh. Triggered by propsterminal-backup.timer.
+[Unit]
+Description=Back up the propsterminal odds-history DB
+
+[Service]
+Type=oneshot
+User=propsterminal
+Group=propsterminal
+WorkingDirectory=/opt/propsterminal/app
+EnvironmentFile=-/opt/propsterminal/app/.env
+ExecStart=/opt/propsterminal/app/deploy/backup-history.sh
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/propsterminal
+PrivateTmp=yes
