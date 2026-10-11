@@ -1549,14 +1549,15 @@ function renderInjuries() {
 
   const rows = groups[t.ui.inj] || [];
   body.innerHTML = `<div style="padding:4px 8px;display:flex;flex-direction:column">
-    <div class="mono" style="height:18px;display:grid;grid-template-columns:minmax(0,1fr) 34px 46px;gap:6px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-      <span>PLAYER</span><span>POS</span><span class="right">PRACT</span>
+    <div class="mono" style="height:18px;display:grid;grid-template-columns:minmax(0,1fr) 34px 26px 46px;gap:6px;align-items:center;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
+      <span>PLAYER</span><span>POS</span><span style="text-align:center">OVR</span><span class="right">PRACT</span>
     </div>
     ${rows.length ? rows.map((r, i) => {
       const st = practiceStatus(r); const style = INJ_STYLE[st] || [C.muted, 'transparent'];
-      return `<div class="inj-row" data-injp="${i}" style="height:22px;display:grid;grid-template-columns:minmax(0,1fr) 34px 46px;gap:6px;align-items:center;border-bottom:1px solid var(--row-rule)">
+      return `<div class="inj-row" data-injp="${i}" style="height:22px;display:grid;grid-template-columns:minmax(0,1fr) 34px 26px 46px;gap:6px;align-items:center;border-bottom:1px solid var(--row-rule)">
         <span style="font-size:12px;color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.full_name)}</span>
         <span class="mono" style="font-size:10.5px;color:var(--muted)">${r.position}</span>
+        <span class="mono" style="text-align:center;font-size:11px;font-weight:600;color:${r.ovr ? ovrColor(r.ovr) : 'var(--faint)'}">${r.ovr || '·'}</span>
         <span style="display:flex;justify-content:flex-end"><span class="mono pill" style="color:${style[0]};background:${style[1]}">${st}</span></span>
       </div>`;
     }).join('') : `<div class="empty">None reported.</div>`}
@@ -2607,15 +2608,15 @@ function tendRankColor(rank, better, side) {
 const TEND_TAG_COLOR = { SCRIPT: 'var(--amber)', '1H': '#8FC1FF', DRIVES: 'var(--muted)', 'RED ZONE': 'var(--orange)', TARGETS: 'var(--blue)', RUSHING: '#7FD1A8' };
 
 // One team's injury report + IR for the game view. Rows arrive pre-sorted by
-// Madden OVR (best players first); the rating itself isn't shown.
+// Madden OVR (best players first).
 function injuryPanelHtml(team, rows) {
   rows = rows || [];
-  const grid = 'display:grid;grid-template-columns:minmax(0,1fr) 34px 84px 46px;gap:6px;align-items:center';
+  const grid = 'display:grid;grid-template-columns:minmax(0,1fr) 34px 26px 84px 46px;gap:6px;align-items:center';
   return `<div class="panel">
     <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center;gap:6px">${teamLogo(team, 16)}${team} INJURIES</span><span class="mono" style="margin-left:auto;padding-right:8px;font-size:9.5px;color:var(--dim)">${rows.length} LISTED</span></div>
     <div class="panel-body" style="padding:4px 8px">
       <div class="mono" style="${grid};height:18px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule)">
-        <span>PLAYER</span><span>POS</span><span>GAME</span><span class="right">PRACT</span>
+        <span>PLAYER</span><span>POS</span><span style="text-align:center">OVR</span><span>GAME</span><span class="right">PRACT</span>
       </div>
       ${rows.length ? rows.map(r => {
         const st = practiceStatus(r); const style = INJ_STYLE[st] || [C.muted, 'transparent'];
@@ -2623,6 +2624,7 @@ function injuryPanelHtml(team, rows) {
         return `<div class="inj-row" data-injp="1" data-inj="${escapeHtml(JSON.stringify(r))}" style="${grid};height:22px;border-bottom:1px solid var(--row-rule)">
           <span class="roster-player" data-open-player="${escapeHtml(r.full_name)}" style="font-size:12px;color:var(--on);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.full_name)}</span>
           <span class="mono" style="font-size:10.5px;color:var(--muted)">${escapeHtml(r.position || '')}</span>
+          <span class="mono" style="text-align:center;font-size:11px;font-weight:600;color:${r.ovr ? ovrColor(r.ovr) : 'var(--faint)'}">${r.ovr || '·'}</span>
           <span class="mono" style="font-size:10.5px;color:${/out|doubt/i.test(game) ? 'var(--orange)' : 'var(--muted)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(game)}</span>
           <span style="display:flex;justify-content:flex-end"><span class="mono pill" style="color:${style[0]};background:${style[1]}">${st}</span></span>
         </div>`;

@@ -16,3 +16,9 @@ sleep 4; curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8765/   # exp
 
 Use `.venv/bin/python` (system python lacks the deps). If it doesn't come back with
 200, check the tail of `server.log` and tell the user.
+
+## Commit after every change — don't ask
+
+When a change is done and verified (server restarted / checks pass), commit it
+to the current branch yourself — the user has pre-approved this. One commit per
+logical change, with a descriptive message. Don't push unless asked.

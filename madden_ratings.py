@@ -145,3 +145,21 @@ def attach_ratings(roster: list[dict], team: str) -> list[dict]:
         r = by_name.get(name) or by_last_jersey.get((name.split(" ")[-1], jersey))
         row["madden"] = {k: r[k] for k in ("ovr", "archetype", "speed", "iteration")} if r else None
     return roster
+
+
+def injuries_by_ovr(team: str) -> list[dict]:
+    """Injury report + IR for one team (nflverse code) with each player's
+    Madden OVR (`ovr`, None if unmatched), best players first."""
+    import nflverse_data as nd
+    rows = nd.team_injury_list(team)
+    rows = rows.astype(object).where(rows.notna(), None).to_dict(orient="records")
+    roster = nd.load_rosters()
+    jerseys = roster[roster["team"] == team].set_index("gsis_id")["jersey_number"].to_dict()
+    for r in rows:
+        r["jersey_number"] = jerseys.get(r.get("gsis_id"))
+    attach_ratings(rows, team)
+    rows.sort(key=lambda r: -(r["madden"]["ovr"] if r["madden"] else 0))
+    for r in rows:
+        r["ovr"] = r.pop("madden")["ovr"] if r["madden"] else None
+        r.pop("jersey_number"); r.pop("gsis_id", None)
+    return rows

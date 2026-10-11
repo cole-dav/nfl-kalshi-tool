@@ -11,6 +11,7 @@ from dataclasses import asdict
 import traceback
 
 import combo
+import madden_ratings as mr
 import nflverse_data as nd
 import video_index as vi
 import weather as wx
@@ -285,8 +286,8 @@ def _build_environment_section(next_game: dict) -> dict:
         "spread_line": next_game.get("spread_line"),
         "total_line": next_game.get("total_line"),
         "forecast": forecast,
-        "injuries_home": nd.team_injury_list(home_team).to_dict(orient="records"),
-        "injuries_away": nd.team_injury_list(away_team).to_dict(orient="records"),
+        "injuries_home": mr.injuries_by_ovr(home_team),
+        "injuries_away": mr.injuries_by_ovr(away_team),
     }
 
 
