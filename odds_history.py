@@ -87,6 +87,9 @@ def _count(v: Any) -> int | None:
         return None
 
 
+MOVERS_MAX_SPREAD = int(os.environ.get("ODDS_MOVERS_MAX_SPREAD", "15"))  # cents
+
+
 def mid(bid: int | None, ask: int | None, last: int | None) -> float | None:
     """Implied YES price in cents (same rule as MarketQuote.implied_prob_yes):
     the midpoint, or the last trade when the book is empty (bid 0, ask 100)."""
@@ -441,6 +444,10 @@ class Store:
             if kind != "all" and k != kind:
                 continue
             if event_suffixes is not None and game_key(r[2]) not in event_suffixes:
+                continue
+            # A wide book's midpoint swings with no trading (1/69 -> mid 35), so
+            # only markets with a tight spread now can rank as movers.
+            if r[10] is not None and r[11] is not None and r[11] - r[10] > MOVERS_MAX_SPREAD:
                 continue
             cur = mid(r[10], r[11], r[12])
             if cur is None:

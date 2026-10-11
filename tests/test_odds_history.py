@@ -272,6 +272,13 @@ def test_movers_ranking_kind_and_week_filter(store):
     assert m["tracking"]["markets"] == 4
 
 
+def test_movers_skip_wide_books(store):
+    wide = "KXNFLRSHYDS-26OCT11LVNE-NEDMAYE10-80"
+    record(store, T0, mkt(ML, 0.40, 0.42), mkt(wide, 0.08, 0.09))
+    record(store, T0 + 3600, mkt(ML, 0.45, 0.47), mkt(wide, 0.01, 0.69))  # mid 8.5 -> 35, no trading
+    assert [x["ticker"] for x in store.movers(hours=24, now=T0 + 7200)["movers"]] == [ML]
+
+
 def test_reads_on_empty_db(store):
     assert store.movers(now=T0)["movers"] == []
     assert store.history(["X"], 24)["markets"] == {}
