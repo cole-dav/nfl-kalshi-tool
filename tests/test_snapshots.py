@@ -177,3 +177,16 @@ def test_persisted_snapshots_reload_as_stale(monkeypatch, tmp_path):
     # Served instantly from disk (NaN already sanitized), with a background rebuild.
     assert snap.get("player:00-1", lambda: started.set() or {"x": 2}, 30) == {"x": 1, "y": None}
     assert started.wait(1)
+
+
+def test_kalshi_cache_prunes_expired_files(monkeypatch, tmp_path):
+    import os
+    monkeypatch.setattr(kb, "CACHE_TTL_SECONDS", 20)
+    monkeypatch.setattr(kb, "_API_CACHE_DIR", str(tmp_path))
+    old = tmp_path / "old.json"
+    old.write_text("{}")
+    os.utime(old, (time.time() - 3600, time.time() - 3600))
+    kb._prune()
+    assert not old.exists()
+    kb._cache_write("/trade-api/v2/markets", {"a": 1}, {"ok": True})
+    assert kb._cache_read("/trade-api/v2/markets", {"a": 1}) == {"ok": True}

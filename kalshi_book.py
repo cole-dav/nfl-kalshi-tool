@@ -71,6 +71,39 @@ def _cache_write(path: str, params: dict | None, data: dict) -> None:
     with open(tmp, "w") as f:
         json.dump(data, f)
     os.replace(tmp, fpath)
+    _maybe_prune()
+
+
+# Expired files are never read again, and keys with a moving time window
+# (candlesticks) never repeat, so the directory is swept once a minute.
+_PRUNE_EVERY = 60.0
+_prune_state = {"last": 0.0, "running": False}
+_prune_lock = threading.Lock()
+
+
+def _maybe_prune() -> None:
+    with _prune_lock:
+        now = time.time()
+        if _prune_state["running"] or now - _prune_state["last"] < _PRUNE_EVERY:
+            return
+        _prune_state["running"], _prune_state["last"] = True, now
+    threading.Thread(target=_prune, daemon=True, name="kalshi-cache-prune").start()
+
+
+def _prune() -> None:
+    cutoff = time.time() - max(3 * CACHE_TTL_SECONDS, 60.0)
+    try:
+        with os.scandir(_API_CACHE_DIR) as entries:
+            for entry in entries:
+                try:
+                    if entry.stat().st_mtime < cutoff:
+                        os.remove(entry.path)
+                except OSError:
+                    pass
+    except OSError:
+        pass
+    finally:
+        _prune_state["running"] = False
 
 
 # Every outbound Kalshi request (public or signed, any visitor) shares one
