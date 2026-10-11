@@ -4,6 +4,7 @@
 #   deploy/deploy.sh [ssh-host]              deploy origin/master (pushes local master first)
 #   deploy/deploy.sh --ref <sha|tag> [host]  deploy a specific commit (e.g. to roll back)
 #   deploy/deploy.sh --rollback [host]       redeploy the commit that ran before the last deploy
+#   e.g. deploy/deploy.sh root@37.27.158.56
 #
 # ssh-host defaults to $PT_HOST or "propsterminal" (an ~/.ssh/config alias that
 # logs in as root). On the server it: fetches, hard-resets the checkout to the

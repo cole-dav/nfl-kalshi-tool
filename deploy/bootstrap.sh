@@ -2,7 +2,7 @@
 # One-time (and safe to re-run) setup of a fresh Ubuntu 26.04 VPS for
 # propsterminal.com. Run as root ON THE SERVER:
 #
-#   curl -fsSL <raw url of this file> -o bootstrap.sh   # or scp it over
+#   scp deploy/bootstrap.sh root@37.27.158.56:/root/   # from the laptop
 #   bash bootstrap.sh
 #
 # What it does (every step checks before it acts, so re-running is harmless):

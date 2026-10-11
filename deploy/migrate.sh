@@ -3,6 +3,7 @@
 # checkout, after deploy/bootstrap.sh has run on the server:
 #
 #   deploy/migrate.sh [options] [ssh-host]       (ssh-host default: $PT_HOST or "propsterminal")
+#   e.g. deploy/migrate.sh --secrets --tunnel root@37.27.158.56
 #
 #   (no option)   same as --secrets --tunnel
 #   --secrets     .env and keys/            -> /opt/propsterminal/app (0600, app user)
@@ -34,7 +35,7 @@ for arg in "$@"; do
     --cache) cache=1 ;;
     --snapshots) snapshots=1 ;;
     --all) secrets=1 tunnel=1 history=1 bdb=1 cache=1 ;;
-    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     -*) echo "unknown option $arg" >&2; exit 1 ;;
     *) host=$arg ;;
   esac
