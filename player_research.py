@@ -75,11 +75,21 @@ def build_my_positions(client: KalshiClient | None) -> dict[str, dict]:
     return out
 
 
-def resolve_and_build(name: str, client: KalshiClient | None = None) -> dict:
+def resolve_player(name: str):
+    """The roster row for `name`, or PlayerNotFound."""
+    roster_row = nd.find_player_in_roster(name=name)
+    if roster_row is None:
+        raise PlayerNotFound(f"No active NFL player matching '{name}' found in current roster.")
+    return roster_row
+
+
+def resolve_and_build(name: str, client: KalshiClient | None = None, roster_row=None) -> dict:
     """`client` is the visiting session's own Kalshi client, if logged in --
     used only to attach that visitor's own held positions. Anonymous browsing
-    (client=None) never sees any position data, including the operator's."""
-    roster_row = nd.find_player_in_roster(name=name)
+    (client=None) never sees any position data, including the operator's.
+    Pass `roster_row` (from resolve_player) to skip the name lookup."""
+    if roster_row is None:
+        roster_row = nd.find_player_in_roster(name=name)
     if roster_row is None:
         raise PlayerNotFound(f"No active NFL player matching '{name}' found in current roster.")
 

@@ -164,8 +164,14 @@ Visitor traffic never fans out to upstream sources:
   - It is rebuilt at most once per TTL (30s for odds pages, 5 min for volume, 30-60 min for news, game logs and videos).
   - Stale payloads keep being served while one background rebuild runs, and the last good payload survives upstream failures.
   - A refresher thread rebuilds the current week and the volume ranking every 30s.
+  - A warmer thread prebuilds every game page and every player with Kalshi props this week (~300 pages).
+    - It works one game at a time, so that game's markets are fetched once for all its players: ~3 Kalshi requests per player instead of ~22.
+    - A full pass takes about 7 minutes; pages older than 4 minutes are rebuilt on the next pass.
+  - Snapshots are saved to `cache/snapshots/` and reloaded at startup (if under 6h old), so a restart doesn't start cold.
+  - A response past its 30s lifetime carries `X-Snapshot-Age` and a 5s CDN lifetime; the player page refetches once or twice, 8s apart, to swap in the rebuilt copy.
 - `kalshi_book.py`: all outbound Kalshi requests share one throttle (`KALSHI_MAX_RPS`, default 8).
   - Identical concurrent cache misses make one request.
+  - 404s are cached too (prop series with no event for a game), so builds don't re-ask for markets that don't exist.
   - Only public market-data paths are cached. `/portfolio` and `/communications` are per-user and never cached.
 - Cache-Control headers:
   - Anonymous payloads are `public, s-maxage=...`.

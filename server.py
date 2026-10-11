@@ -51,6 +51,8 @@ import player_volume as pvol
 import engine_agent as engine
 import scenario_sim as sim
 import video_index as vi
+from collections import defaultdict
+from kalshi_markets import MarketIndex
 import bdb_tracking as bdb
 import viz_lab as lab
 
@@ -67,11 +69,25 @@ TTL_NEWS = 30 * 60
 TTL_STATIC = 60 * 60   # player list, game logs, video index
 SLATE_REFRESH_SECONDS = 30
 
+# Player-page warmer: every player with Kalshi props this week is prebuilt, one
+# game at a time so that game's markets are fetched once for all its players
+# (~3 Kalshi requests per player instead of ~22). Pages are rebuilt once older
+# than WARM_MAX_AGE; a full pass is at most every WARM_PASS_SECONDS.
+WARM_MAX_AGE = 4 * 60
+WARM_PASS_SECONDS = 5 * 60
+WARM_GAP_SECONDS = 0.25
+
+SNAPSHOT_DIR = os.path.join(os.path.dirname(__file__), "cache", "snapshots")
+SNAPSHOT_MAX_AGE = 6 * 3600   # older saved snapshots aren't reloaded at startup
+
 # Cache-Control for anonymous, shared payloads. Cloudflare honors s-maxage once
 # a Cache Rule marks /api/* as eligible; browsers use max-age.
 CACHE_LIVE = "public, max-age=15, s-maxage=30, stale-while-revalidate=60"
 CACHE_SLOW = "public, max-age=300, s-maxage=600, stale-while-revalidate=1800"
 CACHE_PRIVATE = "private, no-store"
+# A snapshot served past its TTL while it rebuilds: let the CDN hold it only
+# briefly so the UI's follow-up request (see X-Snapshot-Age) gets the new one.
+CACHE_STALE = "public, max-age=0, s-maxage=5"
 
 # Engine chat spends the operator's Anthropic credits. Off for public visitors
 # unless ENGINE_CHAT_PUBLIC=1, then capped per IP per day.
@@ -108,6 +124,68 @@ def _slate_refresher():
             except Exception:
                 traceback.print_exc()
         time.sleep(SLATE_REFRESH_SECONDS)
+
+
+def _player_key(row) -> str:
+    return "player:" + str(row["gsis_id"])
+
+
+def _player_build(row):
+    return lambda: pr.resolve_and_build(row["full_name"], roster_row=row)
+
+
+def _slate_pages() -> list[tuple[str, object]]:
+    """(event_ticker, roster_row or None for the game page) for this week's
+    slate: busiest games first, each game page followed by its players with
+    Kalshi props, busiest first."""
+    vol = snap.get("player_volume", pvol.player_volume_cached, TTL_VOLUME)
+    games = MarketIndex().get_current_week_games()
+    team_game = {t: g["event_ticker"] for g in games for t in g["team_codes"]}
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for p in vol.get("players", []):
+        ev = team_game.get(p.get("team"))
+        if ev:
+            groups[ev].append(p)
+    pages: list[tuple[str, object]] = []
+    for ev in sorted(groups, key=lambda e: -sum(p["vol"] for p in groups[e])):
+        pages.append((ev, None))
+        for p in sorted(groups[ev], key=lambda p: -p["vol"]):
+            row = nd.find_player_in_roster(name=p["name"])
+            if row is not None:
+                pages.append((ev, row))
+    return pages
+
+
+def _player_warmer():
+    """Prebuild the slate's game and player pages so a visitor's first open of
+    any of them is instant. Runs in the background at a gentle pace; visitors'
+    own requests share the same Kalshi budget (kalshi_book.MAX_RPS)."""
+    time.sleep(20)  # let the slate refresher build the volume ranking first
+    while True:
+        start, built, failed = time.time(), 0, 0
+        try:
+            pages = _slate_pages()
+        except Exception:
+            traceback.print_exc()
+            pages = []
+        for ev, row in pages:
+            if row is None:
+                key, build = "game:" + ev.upper(), (lambda ev=ev: wo.build_game_detail(ev))
+            else:
+                key, build = _player_key(row), _player_build(row)
+            age = snap.age(key)
+            if age is not None and age < WARM_MAX_AGE:
+                continue
+            try:
+                snap.refresh(key, build, TTL_LIVE)
+                built += 1
+            except Exception as e:
+                failed += 1
+                print(f"warmer: {key} failed: {e}")
+            time.sleep(WARM_GAP_SECONDS)
+        elapsed = time.time() - start
+        print(f"warmer: rebuilt {built} of {len(pages)} slate pages ({failed} failed) in {elapsed:.0f}s", flush=True)
+        time.sleep(max(30.0, WARM_PASS_SECONDS - elapsed))
 
 
 def _sanitize(obj):
@@ -187,16 +265,26 @@ class Handler(BaseHTTPRequestHandler):
         return True
 
     def _send_json(self, payload: dict, status: int = 200, set_cookie: str | None = None,
-                   cache: str = CACHE_PRIVATE):
+                   cache: str = CACHE_PRIVATE, headers: dict | None = None):
         body = json.dumps(_sanitize(payload), default=str).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", cache if status == 200 and set_cookie is None else CACHE_PRIVATE)
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
         if set_cookie is not None:
             self.send_header("Set-Cookie", set_cookie)
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_snapshot(self, key: str, build, ttl: float, cache: str = CACHE_LIVE):
+        """Serve snapshot `key`. X-Snapshot-Age tells the UI how old it is; a
+        stale one (rebuilding in the background) gets a short CDN lifetime."""
+        data = snap.get(key, build, ttl)
+        age = snap.age(key) or 0.0
+        self._send_json(data, cache=CACHE_STALE if age >= ttl else cache,
+                        headers={"X-Snapshot-Age": str(int(age))})
 
     def _send_file(self, path: str, content_type: str, cache: str = "no-cache"):
         try:
@@ -234,9 +322,8 @@ class Handler(BaseHTTPRequestHandler):
                 if client is not None or (parse_qs(parsed.query).get("acct") or [""])[0] == "1":
                     self._send_json(pr.resolve_and_build(name, client=client))
                 else:
-                    self._send_json(snap.get("player:" + name.lower(),
-                                             lambda: pr.resolve_and_build(name, client=None), TTL_LIVE),
-                                    cache=CACHE_LIVE)
+                    row = pr.resolve_player(name)
+                    self._send_snapshot(_player_key(row), _player_build(row), TTL_LIVE)
             except pr.PlayerNotFound as e:
                 self._send_json({"error": str(e)}, status=404)
             except Exception as e:
@@ -326,10 +413,9 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 week = (parse_qs(parsed.query).get("week") or [""])[0].strip()
                 if week.isdigit():
-                    data = snap.get(f"week:{int(week)}", lambda: wo.build_week_overview(int(week)), TTL_LIVE)
+                    self._send_snapshot(f"week:{int(week)}", lambda: wo.build_week_overview(int(week)), TTL_LIVE)
                 else:
-                    data = snap.get("week:current", lambda: wo.build_week_overview(None), TTL_LIVE)
-                self._send_json(data, cache=CACHE_LIVE)
+                    self._send_snapshot("week:current", lambda: wo.build_week_overview(None), TTL_LIVE)
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": f"internal error: {e}"}, status=500)
@@ -355,8 +441,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "missing 'event' query param"}, status=400)
                 return
             try:
-                self._send_json(snap.get("game:" + event_ticker.upper(),
-                                         lambda: wo.build_game_detail(event_ticker), TTL_LIVE), cache=CACHE_LIVE)
+                self._send_snapshot("game:" + event_ticker.upper(), lambda: wo.build_game_detail(event_ticker), TTL_LIVE)
             except ValueError as e:
                 self._send_json({"error": str(e)}, status=404)
             except Exception as e:
@@ -600,8 +685,11 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    loaded = snap.enable_persistence(SNAPSHOT_DIR, _sanitize, SNAPSHOT_MAX_AGE)
+    print(f"Loaded {loaded} saved snapshots")
     threading.Thread(target=_cache_warmer, daemon=True, name="cache-warmer").start()
     threading.Thread(target=_slate_refresher, daemon=True, name="slate-refresher").start()
+    threading.Thread(target=_player_warmer, daemon=True, name="player-warmer").start()
     print(f"Serving on http://127.0.0.1:{port}")
     try:
         server.serve_forever()

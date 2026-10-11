@@ -512,12 +512,35 @@ async function loadTicket(t) {
     t.ui.curve = firstSeriesId(data);
     t.ui.inj = data.game_environment ? data.game_environment.home_team : null;
     t.loading = false;
+    refreshIfStale(t, resp);
   } catch (e) {
     state.kalshiOk = false;
     t.error = String(e);
     t.loading = false;
   }
   render();
+}
+
+// The server answers instantly with its last snapshot and rebuilds it in the
+// background when it's past its 30s lifetime (X-Snapshot-Age). Fetch once more
+// after the rebuild so the odds on screen are current; the ticket's UI state stays.
+const SNAPSHOT_STALE_SECONDS = 30;
+function refreshIfStale(t, resp, attempt = 0) {
+  // The rebuild shares Kalshi's rate budget with the background warmer, so it
+  // can take a few seconds; check twice.
+  if (attempt >= 2 || +(resp.headers.get('X-Snapshot-Age') || 0) < SNAPSHOT_STALE_SECONDS) return;
+  setTimeout(async () => {
+    if (!state.tickets.includes(t)) return;
+    try {
+      const r = await fetch('/api/player?name=' + encodeURIComponent(t.query) + (state.session.connected ? '&acct=1' : ''));
+      if (!r.ok || !state.tickets.includes(t)) return;
+      const data = await r.json();
+      if (!data.player || !t.data || data.player.name !== t.data.player.name) return;
+      t.data = data;
+      render();
+      refreshIfStale(t, r, attempt + 1);
+    } catch (e) {}
+  }, 8000);
 }
 
 function closeTicket(id) {
