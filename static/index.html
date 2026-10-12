@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Player Research Terminal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -369,6 +370,10 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 .lm-c{font-size:10px;min-width:20px;text-align:right}
 .lm-c.up{color:var(--blue)} .lm-c.dn{color:var(--orange)} .lm-c.flat{color:var(--dim)} .lm-c.none{color:var(--faint)}
 #marketsBody{container:mkts / inline-size}
+.ladder-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:4px 8px 8px}
+@container mkts (max-width: 560px){
+  .ladder-cols{grid-template-columns:minmax(0,1fr)}
+}
 @container mkts (max-width: 720px){
   .ladder-head,.ladder-row{grid-template-columns:14px 46px 30px 30px 28px minmax(0,1fr) 30px 42px 30px}
   .ladder-row .lm .spark{display:none}
@@ -408,6 +413,60 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 }
 .game-card .gc-foot > span{white-space:nowrap}
 .game-card .gc-foot{gap:10px;overflow:hidden}
+/* phones: the rail becomes a bottom tab bar, search gets its own row, the
+   builder opens as a full-screen sheet, and small text is bumped up. */
+@media (max-width: 700px){
+  body{font-size:13px;-webkit-text-size-adjust:100%}
+  #app{height:100dvh}
+  #topbar{height:auto;flex-wrap:wrap}
+  #topbar > *{min-height:40px}
+  #logo{width:40px}
+  #tickets{flex:1 1 0;min-width:0}
+  #statusbar{display:none}
+  #searchwrap{order:9;flex-basis:100%;padding:0 8px 6px;min-height:0}
+  #searchbox{width:100%;height:34px}
+  #q{font-size:16px}
+  .kbdhint{display:none}
+  #body{flex-direction:column}
+  #main{order:1;flex-grow:1;min-height:0}
+  #rail{order:2;width:100%;height:calc(52px + env(safe-area-inset-bottom));flex-direction:row;justify-content:space-around;padding:0 0 env(safe-area-inset-bottom);border-right:0;border-top:1px solid var(--border)}
+  .railbtn{width:auto;flex:1 1 0;height:52px}
+  #builder{position:fixed;inset:0;z-index:900;width:auto;border-left:0}
+  #ctx{height:auto;min-height:60px}
+  #ctx .who{min-width:0}
+  #grid{padding:6px;gap:6px}
+  #markets{height:70dvh}
+  #curve{height:240px}
+  #book{height:auto;min-height:320px}
+  #lowerrow{height:auto;grid-auto-rows:420px}
+  .panel-head{height:36px}
+  .tab{font-size:13px;padding:0 10px}
+  .tab.small{font-size:12.5px}
+  .panel-title{font-size:11px}
+  table.gl,table.t{font-size:12.5px}
+  table.gl th,table.t thead th{font-size:10.5px}
+  table.gl td{padding:6px}
+  table.t td{padding:5px 4px}
+  .ladder-head{height:22px;font-size:10.5px}
+  .ladder-row{height:30px;font-size:12.5px}
+  .ladder-group{height:24px}
+  .stat-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat-tile .sl{font-size:10.5px}
+  .stat-tile .sv{font-size:14px}
+  .kpi .kl{font-size:10.5px}
+  .kpi .kv{font-size:14px}
+  .game-cards{grid-template-columns:minmax(0,1fr)}
+  .mv-grid{font-size:12.5px}
+  .mv-row{min-height:34px}
+  .bb-l1,.bb-grid{font-size:12.5px}
+  .bb-l2{font-size:11.5px}
+  .bb-row{padding:6px 8px 6px 6px}
+  .bb-msg{font-size:13px}
+  .bb-inputbar textarea{font-size:16px;height:52px}
+  .bb-in,.combo-stake input{font-size:16px;height:30px}
+  .bm{width:24px;font-size:15px}
+  #injPop,#vidPop,#histPop{left:8px !important;right:8px;width:auto;max-height:70dvh;overflow-y:auto}
+}
 </style>
 </head>
 <body>
@@ -424,7 +483,7 @@ button.bb-side:hover{outline:1px solid var(--faint)}
       <div id="searchbox">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#7A8591" stroke-width="1.3"><circle cx="5" cy="5" r="4"></circle><path d="M8 8l3.5 3.5"></path></svg>
         <input id="q" type="text" placeholder="Player name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-controls="suggest" aria-expanded="false">
-        <span class="mono" style="font-size:10px;color:var(--dim);border:1px solid var(--head-rule);padding:0 4px">/</span>
+        <span class="mono kbdhint" style="font-size:10px;color:var(--dim);border:1px solid var(--head-rule);padding:0 4px">/</span>
         <div id="suggest" role="listbox" hidden></div>
       </div>
     </div>
@@ -438,7 +497,7 @@ button.bb-side:hover{outline:1px solid var(--faint)}
     </button>
   </div>
 
-  <div style="flex-grow:1;min-height:0;display:flex">
+  <div id="body" style="flex-grow:1;min-height:0;display:flex">
     <div id="rail">
       <button class="railbtn" type="button" data-module="research" aria-label="Player research">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"></circle><path d="M12 12l4.5 4.5"></path></svg>
@@ -966,7 +1025,7 @@ function renderLadder(body, t, d) {
     return html;
   }
 
-  body.innerHTML = `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:4px 8px 8px">
+  body.innerHTML = `<div class="ladder-cols">
     ${col(leftIds, false)}
     ${col(rightIds, true)}
   </div>`;
