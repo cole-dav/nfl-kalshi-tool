@@ -478,7 +478,19 @@ def main(argv=None):
     g.add_argument("--parallel", type=int, default=3, help="games written at once")
     sub.add_parser("backfill-ledger", help="record bets from posts written before the ledger existed")
     gr = sub.add_parser("grade", help="grade due bets now and print the last 24h of results")
+    pr = sub.add_parser("promote", help="publish A/B variants to the live feed")
+    pr.add_argument("--model", required=True, help="e.g. claude-sonnet-5-5")
+    pr.add_argument("--event", help="one game; default: every A/B game that has this model's variant")
     args = ap.parse_args(argv)
+
+    if args.cmd == "promote":
+        events = [args.event] if args.event else list(_load(AB_PATH))
+        for ev in events:
+            try:
+                print(f"  {ev}: {promote(ev, args.model)['headline']}")
+            except ea.EngineError as e:
+                print(f"  {ev}: skipped ({e})")
+        return 0
 
     if args.cmd == "backfill-ledger":
         print(f"recorded {backfill_ledger()} bet(s)")

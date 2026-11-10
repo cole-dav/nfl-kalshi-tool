@@ -32,7 +32,15 @@ are written with the CLI, which needs `ANTHROPIC_API_KEY` in the server `.env`:
 
 ```sh
 ssh propsterminal 'cd /opt/propsterminal/app && runuser -u propsterminal -- .venv/bin/python week_feed.py generate --missing'
+# A/B both models (data/feed/ab.json), then publish one model's versions:
+#   week_feed.py generate --ab claude-sonnet-5-5,claude-opus-5-5
+#   week_feed.py promote --model claude-sonnet-5-5 [--event KXNFLGAME-...]
 ```
+
+Every recommended bet (live and A/B) is recorded in `data/feed/ledger.json`
+and graded by a server thread (`bet_ledger.py`) from Kalshi settlement 12h
+after its game ends; results show on the Week tab and at `/api/feed/results`.
+`data/feed/` only lives on the host: back it up before wiping the server.
 
 ## Local dev server
 
