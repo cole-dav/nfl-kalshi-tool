@@ -40,6 +40,8 @@ PUBLISH = {
 def isolated(monkeypatch, tmp_path):
     monkeypatch.setattr(wf, "FEED_PATH", str(tmp_path / "feed" / "posts.json"))
     monkeypatch.setattr(wf, "AB_PATH", str(tmp_path / "feed" / "ab.json"))
+    import bet_ledger as bl
+    monkeypatch.setattr(bl, "LEDGER_PATH", str(tmp_path / "feed" / "ledger.json"))
     monkeypatch.setattr(fv, "current_games", lambda: [])
     monkeypatch.setattr(ss, "price_legs", fake_price_legs)
     monkeypatch.setattr(wo, "build_game_detail", lambda ev: dict(DETAIL))
@@ -74,6 +76,8 @@ def test_write_preview_runs_tools_then_publishes_priced_post():
     out = wf.feed(overview)
     assert [p["event_ticker"] for p in out["posts"]] == [EVENT]
     assert [g["has_post"] for g in out["games"]] == [True, False]
+    assert out["posts"][0]["bets"][0]["grade"]["outcome"] is None      # recorded in the ledger, not graded yet
+    assert out["scorecard"][0]["label"] == "LIVE FEED" and out["scorecard"][0]["pending"] == 1
     assert wf.delete_post(EVENT) and not wf.feed(overview)["posts"]
 
 

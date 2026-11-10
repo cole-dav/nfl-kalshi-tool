@@ -467,6 +467,11 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 .wk-ab-col .wk-post{flex-grow:1}
 .wk-cols.ab .wk-side{display:none}
 @container week (max-width: 900px){ .wk-ab{grid-template-columns:minmax(0,1fr)} }
+.wk-res{font-size:9.5px;font-weight:600;letter-spacing:0.06em;padding:2px 6px;white-space:nowrap}
+.wk-res.win{color:var(--bg);background:var(--blue)}
+.wk-res.loss{color:var(--bg);background:var(--orange)}
+.wk-res.push,.wk-res.pend{color:var(--muted);border:1px solid var(--head-rule)}
+.wk-card{display:flex;align-items:center;flex-wrap:wrap;gap:6px 18px;padding:6px 10px;border:1px solid var(--border);background:var(--panel);font-size:11px;flex-shrink:0}
 .wk-todo{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px dashed var(--head-rule);font-size:11.5px;color:var(--muted);flex-shrink:0}
 .wk-inj-grid{display:grid;grid-template-columns:26px minmax(0,1fr) 78px 44px 34px;gap:6px;align-items:center}
 .wk-inj-grid .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -5008,6 +5013,31 @@ function wkMatchupHtml(away, home, records, ev) {
 }
 
 const WK_CONF = { high: 'var(--blue)', medium: 'var(--amber)', low: 'var(--muted)' };
+const fmtPnl = x => (x >= 0 ? '+' : '-') + '$' + Math.abs(x).toFixed(2);
+
+// A bet's result once the server has graded it (12h after the game ends).
+function wkGradeHtml(g) {
+  if (!g) return '';
+  if (!g.outcome) {
+    const due = g.due_at ? new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(g.due_at)).toUpperCase() + ' ET' : null;
+    return `<span class="wk-res pend mono" title="Graded from Kalshi settlement 12h after the game ends">${due ? 'GRADES ' + due : 'PENDING'}</span>`;
+  }
+  return `<span class="wk-res ${g.outcome} mono" title="Per $1 at the price when posted">${g.outcome.toUpperCase()}${g.record ? ' ' + g.record : ''} ${fmtPnl(g.pnl)}</span>`;
+}
+const WK_LEG_MARK = { win: ['✓', 'var(--blue)'], loss: ['✗', 'var(--orange)'], void: ['VOID', 'var(--muted)'] };
+
+// Graded-bet scorecard for the week: per model, plus the live feed.
+function wkScorecardHtml(card) {
+  if (!card || !card.length) return '';
+  return `<div class="wk-card mono"><span style="font-size:10px;letter-spacing:0.1em;color:var(--dim)">RESULTS</span>
+    ${card.map(r => {
+      const n = r.w + r.l + r.p;
+      return `<span><b style="color:${r.label === 'LIVE FEED' ? 'var(--on)' : 'var(--amber)'}">${escapeHtml(r.label === 'LIVE FEED' ? r.label : WK_MODEL_LABEL('claude-' + r.label))}</b>
+        ${n ? `${r.w}-${r.l}-${r.p} <span style="color:${r.pnl >= 0 ? 'var(--blue)' : 'var(--orange)'}">${fmtPnl(r.pnl)}</span>${r.roi != null ? ` <span style="color:var(--dim)">ROI ${(r.roi * 100).toFixed(1)}%</span>` : ''}` : '<span style="color:var(--dim)">no results yet</span>'}
+        ${r.pending ? `<span style="color:var(--dim)">· ${r.pending} pending</span>` : ''}</span>`;
+    }).join('')}
+    <span style="color:var(--dim);font-size:10px">graded 12h after each game · per $1 at posted price</span></div>`;
+}
 
 function wkBetHtml(b, ev, i, model) {
   const legs = b.legs || [];
@@ -5016,11 +5046,13 @@ function wkBetHtml(b, ev, i, model) {
   const edge = b.joint_fair != null && pc != null ? b.joint_fair - pc : null;
   return `<div class="wk-bet">
     <div class="wk-bet-hd"><span style="flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(b.title || 'Bet')}</span>
+      ${wkGradeHtml(b.grade)}
       <span class="wk-tag mono" style="color:var(--muted)">${escapeHtml(String(b.kind || '').toUpperCase())}</span></div>
     ${b.rationale ? `<div class="wk-bet-why">${mdInline(b.rationale)}</div>` : ''}
-    ${legs.map(l => {
+    ${legs.map((l, li) => {
       const le = l.fair != null && l.cost != null ? l.fair - l.cost : null;
-      return `<div class="wk-leg mono"><span class="lbl" title="${escapeHtml(l.title || l.market_ticker)}">${escapeHtml(legLabelFromTicker(l.market_ticker, l.side, l.title))}</span>
+      const mk = b.grade && b.grade.legs && WK_LEG_MARK[b.grade.legs[li]];
+      return `<div class="wk-leg mono"><span class="lbl" title="${escapeHtml(l.title || l.market_ticker)}">${mk ? `<span style="color:${mk[1]};font-weight:600">${mk[0]}</span> ` : ''}${escapeHtml(legLabelFromTicker(l.market_ticker, l.side, l.title))}</span>
         <span>${fmtPrice(l.cost)}</span><span>${fairTxt(l.fair, le)}</span></div>`;
     }).join('')}
     <div class="wk-bet-ft mono">
@@ -5176,7 +5208,7 @@ function renderWeek() {
   let feed;
   if (w.error) feed = `<div class="empty" style="color:var(--orange)">${escapeHtml(w.error)}</div>`;
   else if (!d) feed = `<div class="empty">Loading week…</div>`;
-  else feed = w.ab && d.ab && Object.keys(d.ab).length ? wkAbHtml() : wkFeedHtml();
+  else feed = wkScorecardHtml(d.scorecard) + (w.ab && d.ab && Object.keys(d.ab).length ? wkAbHtml() : wkFeedHtml());
   const inj = wkInjuriesHtml();
   const abN = d && d.ab ? Object.keys(d.ab).length : 0;
   if (!abN) w.ab = false;

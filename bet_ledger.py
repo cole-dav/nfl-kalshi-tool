@@ -6,9 +6,9 @@ rewriting a game later never loses them. Each bet becomes due for grading 12
 hours after its game ends -- taken as the close time of the game's moneyline
 market, which Kalshi closes as soon as a winner is declared -- and is graded
 from each leg's settled `result` (yes/no). The server grades in the
-background; /api/feed/results serves what was graded in a time window, with a
-ready-to-send email subject and body (the hourly results email routine reads
-it).
+background; the Week tab shows each bet's result and a per-model scorecard
+(week_feed.feed), and /api/feed/results serves graded bets for a time window
+with a plain-text report.
 
 P&L is per $1 staked at the price when the bet was posted: a single or parlay
 wins 1/price - 1 or loses 1; a ladder is graded as its legs, $1 each. A leg
@@ -215,6 +215,42 @@ def _fmt_money(x: float) -> str:
     return f"{'+' if x >= 0 else '-'}${abs(x):.2f}"
 
 
+def _stake(b: dict) -> int:
+    if b["outcome"] == "push":
+        return 0
+    if b["kind"] == "ladder" and len(b["legs"]) > 1:
+        return len([l for l in b["legs"] if l.get("result") != "void"])
+    return 1
+
+
+def scorecard(bets: list[dict]) -> list[dict]:
+    """W-L-P, P&L and ROI per model (graded bets), plus pending counts, and a
+    'LIVE FEED' row for bets that were published to the feed."""
+    rows: dict[str, dict] = {}
+
+    def add(key, b):
+        r = rows.setdefault(key, {"label": key, "w": 0, "l": 0, "p": 0, "pnl": 0.0, "staked": 0, "pending": 0})
+        if not b["graded_at"]:
+            r["pending"] += 1
+            return
+        r[{"win": "w", "loss": "l", "push": "p"}[b["outcome"]]] += 1
+        r["pnl"] = round(r["pnl"] + b["pnl"], 4)
+        r["staked"] += _stake(b)
+
+    for b in bets:
+        add((b.get("model") or "?").replace("claude-", ""), b)
+        if "live" in b["sources"]:
+            add("LIVE FEED", b)
+    out = sorted(rows.values(), key=lambda r: (r["label"] != "LIVE FEED", r["label"]))
+    for r in out:
+        r["roi"] = round(r["pnl"] / r["staked"], 4) if r["staked"] else None
+    return out
+
+
+def week_bets(event_tickers: set[str]) -> list[dict]:
+    return [b for b in _load().values() if b["event_ticker"] in event_tickers]
+
+
 def results(since: datetime, until: datetime) -> dict:
     """Bets graded in [since, until), grouped by game, with an email
     subject/body ready to send (empty when nothing was graded)."""
@@ -222,21 +258,10 @@ def results(since: datetime, until: datetime) -> dict:
             if b["graded_at"] and since <= _parse(b["graded_at"]) < until]
     bets.sort(key=lambda b: (b.get("kickoff") or "", b["event_ticker"], _label(b), b["id"]))
     out = {"since": _iso(since), "until": _iso(until), "count": len(bets), "bets": bets,
-           "subject": "", "body": ""}
+           "scorecard": scorecard(bets), "report": ""}
     if not bets:
         return out
-
-    def stake(b):
-        return len([l for l in b["legs"] if l.get("result") != "void"]) if b["kind"] == "ladder" and len(b["legs"]) > 1 else 1
-
-    totals: dict[str, list] = {}
-    for b in bets:
-        t = totals.setdefault(_label(b).replace("LIVE · ", ""), [0, 0, 0, 0.0, 0])
-        t[{"win": 0, "loss": 1, "push": 2}[b["outcome"]]] += 1
-        t[3] += b["pnl"]
-        t[4] += stake(b) if b["outcome"] != "push" else 0
     games = list(dict.fromkeys(b["matchup"] for b in bets))
-    out["subject"] = f"PropsTerminal bet results: {', '.join(games)}"
     lines = [f"Engine bet results, graded {DELAY_HOURS}h after each game ended.",
              "P&L is per $1 staked at the price when the bet was posted.", ""]
     for game in games:
@@ -250,16 +275,11 @@ def results(since: datetime, until: datetime) -> dict:
                 lines.append(f"    {l['side'].upper()} {l.get('title') or l['market_ticker']} @ "
                              f"{(l.get('cost') or 0) * 100:.0f}c: {l.get('result', '?')}")
         lines.append("")
-    lines.append("Totals by model (W-L-P, P&L, ROI):")
-    for who, (w, l, p, pnl, staked) in totals.items():
-        roi = f"{pnl / staked * 100:+.1f}%" if staked else "--"
-        lines.append(f"  {who}: {w}-{l}-{p}, {_fmt_money(pnl)}, ROI {roi}")
-    out["body"] = "\n".join(lines)
+    lines.append("Totals (W-L-P, P&L, ROI):")
+    for r in out["scorecard"]:
+        roi = f"{r['roi'] * 100:+.1f}%" if r["roi"] is not None else "--"
+        lines.append(f"  {r['label']}: {r['w']}-{r['l']}-{r['p']}, {_fmt_money(r['pnl'])}, ROI {roi}")
+    out["report"] = "\n".join(lines)
     return out
 
 
-def last_hour_window(now: datetime | None = None) -> tuple[datetime, datetime]:
-    """The previous whole clock hour (UTC), e.g. 14:00-15:00 when called at 15:20."""
-    now = now or _now()
-    until = now.replace(minute=0, second=0, microsecond=0)
-    return until - timedelta(hours=1), until

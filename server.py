@@ -32,6 +32,7 @@ import sys
 import threading
 import time
 import traceback
+from datetime import timedelta
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -469,17 +470,14 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/feed/results":
-            # Graded feed bets. Default window is the previous whole UTC hour,
-            # which the hourly results-email routine reads.
+            # Graded feed bets with a plain-text report; default: the last 7 days.
             qs = parse_qs(parsed.query)
             try:
                 since = (qs.get("since") or [""])[0].strip()
                 until = (qs.get("until") or [""])[0].strip()
-                if since:
-                    window = (bl._parse(since), bl._parse(until) if until else bl._now())
-                else:
-                    window = bl.last_hour_window()
-                self._send_json(bl.results(*window))
+                now = bl._now()
+                self._send_json(bl.results(bl._parse(since) if since else now - timedelta(days=7),
+                                           bl._parse(until) if until else now))
             except ValueError:
                 self._send_json({"error": "since/until must be ISO timestamps"}, status=400)
             return

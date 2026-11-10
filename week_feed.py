@@ -138,8 +138,17 @@ def feed(overview: dict) -> dict:
             out.append(posts[g["event_ticker"]])
     ab = _load(AB_PATH)
     week_events = {g["event_ticker"] for g in games}
+    ab = {ev: v for ev, v in ab.items() if ev in week_events}
+    bets = bl.week_bets(week_events)
+    by_id = {b["id"]: b for b in bets}
+    for p in out + [v for e in ab.values() for v in e["variants"].values()]:
+        for i, b in enumerate(p.get("bets") or []):
+            g = by_id.get(f"{p.get('post_id')}:{i}")
+            if g:
+                b["grade"] = {k: g.get(k) for k in ("outcome", "pnl", "record", "due_at", "graded_at")}
+                b["grade"]["legs"] = [l.get("result") for l in g["legs"]]
     return {"week": overview["week"], "weeks": overview["weeks"], "games": games, "posts": out,
-            "ab": {ev: v for ev, v in ab.items() if ev in week_events},
+            "ab": ab, "scorecard": bl.scorecard(bets),
             "chat_enabled": ea.chat_enabled(), "model": MODEL, "effort": EFFORT}
 
 
@@ -477,7 +486,7 @@ def main(argv=None):
     if args.cmd == "grade":
         print(f"graded {bl.grade_due()} bet(s)")
         now = bl._now()
-        print(bl.results(now - bl.timedelta(hours=24), now)["body"] or "nothing graded in the last 24h")
+        print(bl.results(now - bl.timedelta(hours=24), now)["report"] or "nothing graded in the last 24h")
         return 0
 
     models = [m.strip() for m in args.ab.split(",") if m.strip()] if args.ab else None

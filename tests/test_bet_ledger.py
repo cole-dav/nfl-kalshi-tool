@@ -80,16 +80,22 @@ def test_game_still_going_or_leg_unsettled_waits():
     assert bl._load()["p1:1"]["outcome"] == "win"                                   # ML alone at 0.5
 
 
-def test_results_window_and_email_body():
+def test_results_window_report_and_scorecard():
     bl.record(post(), "ab")
     bl.record(post("p2", "claude-opus-5-5", bets=[post()["bets"][1]]), "live")
     graded_at = END + timedelta(hours=12, minutes=10)
     bl.grade_due(graded_at, FakeIdx(MARKETS))
-    since, until = bl.last_hour_window(graded_at + timedelta(minutes=55))     # run at 17:15 -> 16:00-17:00
-    assert (since.hour, until.hour) == (16, 17)
-    out = bl.results(since, until)
-    assert out["count"] == 5 and out["subject"] == "PropsTerminal bet results: WAS @ NYG"
-    body = out["body"]
-    assert "[LIVE · opus-5-5] NYG ML + TJ 1+ rec" in body and "WIN +$1.50" in body
-    assert "sonnet-5-5: 1-1-2, +$0.50, ROI +25.0%" in body
-    assert bl.results(until, until + timedelta(hours=1))["count"] == 0
+    out = bl.results(graded_at - timedelta(minutes=1), graded_at + timedelta(minutes=1))
+    assert out["count"] == 5
+    assert "[LIVE · opus-5-5] NYG ML + TJ 1+ rec" in out["report"] and "WIN +$1.50" in out["report"]
+    card = {r["label"]: r for r in out["scorecard"]}
+    assert (card["sonnet-5-5"]["w"], card["sonnet-5-5"]["l"], card["sonnet-5-5"]["p"]) == (1, 1, 2)
+    assert card["sonnet-5-5"]["pnl"] == 0.5 and card["sonnet-5-5"]["roi"] == 0.25
+    assert card["LIVE FEED"]["w"] == 1 and out["scorecard"][0]["label"] == "LIVE FEED"
+    assert bl.results(graded_at + timedelta(hours=1), graded_at + timedelta(hours=2))["count"] == 0
+
+
+def test_scorecard_counts_pending():
+    bl.record(post(), "ab")
+    (row,) = bl.scorecard(list(bl._load().values()))
+    assert row["pending"] == 4 and row["w"] == 0 and row["roi"] is None
