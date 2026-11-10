@@ -27,8 +27,10 @@ import os
 import threading
 import time
 import traceback
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 
+import bet_ledger as bl
 import engine_agent as ea
 import madden_ratings as mr
 import nflverse_data as nd
@@ -364,6 +366,7 @@ def write_preview(event_ticker: str, client=None, model: str = MODEL, effort: st
     detail, ctx = prepare(event_ticker)
     post = run_writer(event_ticker, detail, ctx, client, model, effort)
     save_post(post)
+    bl.record(post, "live")
     return post
 
 
@@ -386,6 +389,9 @@ def write_ab(event_ticker: str, models: list[str], client=None, effort: str = EF
         ab = _load(AB_PATH)
         ab[event_ticker] = {"models": models, "variants": out}
         _save(ab, AB_PATH)
+    for p in out.values():
+        if not p.get("error"):
+            bl.record(p, "ab")
     return out
 
 
@@ -395,6 +401,7 @@ def promote(event_ticker: str, model: str) -> dict:
     if not variant or variant.get("error"):
         raise ea.EngineError(f"no {model} preview for {event_ticker}")
     save_post(variant)
+    bl.record(variant, "live")
     return variant
 
 
@@ -409,7 +416,7 @@ def _week_of(away: str, home: str) -> int | None:
 def _build_post(event_ticker: str, detail: dict, inp: dict, slip: dict) -> dict:
     bets = [ea._price_proposal(b, slip) for b in (inp.get("bets") or [])[:3]]
     return {
-        "event_ticker": event_ticker, "away": detail["away"], "home": detail["home"],
+        "post_id": uuid.uuid4().hex[:12], "event_ticker": event_ticker, "away": detail["away"], "home": detail["home"],
         "kickoff": detail.get("kickoff"), "week": _week_of(detail["away"], detail["home"]),
         "created_at": ea._iso(time.time()),
         "headline": inp.get("headline") or "", "lean": inp.get("lean") or "",
@@ -417,6 +424,31 @@ def _build_post(event_ticker: str, detail: dict, inp: dict, slip: dict) -> dict:
         "key_injuries": inp.get("key_injuries") or [], "key_matchups": inp.get("key_matchups") or [],
         "bets": bets,
     }
+
+
+def backfill_ledger() -> int:
+    """Give older posts (live and A/B) a post_id and record their bets."""
+    added = 0
+    with _lock:
+        posts, ab = _load(), _load(AB_PATH)
+        for p in posts.values():
+            p.setdefault("post_id", uuid.uuid4().hex[:12])
+        # a promoted variant is the same post: share its id
+        live_keys = {(p["event_ticker"], p.get("created_at"), p.get("model")): p["post_id"] for p in posts.values()}
+        for entry in ab.values():
+            for v in entry["variants"].values():
+                if not v.get("error"):
+                    v.setdefault("post_id", live_keys.get((v["event_ticker"], v.get("created_at"), v.get("model")))
+                                 or uuid.uuid4().hex[:12])
+        _save(posts)
+        _save(ab, AB_PATH)
+    for entry in ab.values():
+        for v in entry["variants"].values():
+            if not v.get("error"):
+                added += bl.record(v, "ab")
+    for p in posts.values():
+        added += bl.record(p, "live")
+    return added
 
 
 # -- CLI ------------------------------------------------------------------------------------
@@ -435,7 +467,18 @@ def main(argv=None):
     g.add_argument("--effort", default=EFFORT, choices=["low", "medium", "high", "xhigh", "max"])
     g.add_argument("--ab", help="comma-separated models to compare side by side (A/B store, not the live feed)")
     g.add_argument("--parallel", type=int, default=3, help="games written at once")
+    sub.add_parser("backfill-ledger", help="record bets from posts written before the ledger existed")
+    gr = sub.add_parser("grade", help="grade due bets now and print the last 24h of results")
     args = ap.parse_args(argv)
+
+    if args.cmd == "backfill-ledger":
+        print(f"recorded {backfill_ledger()} bet(s)")
+        return 0
+    if args.cmd == "grade":
+        print(f"graded {bl.grade_due()} bet(s)")
+        now = bl._now()
+        print(bl.results(now - bl.timedelta(hours=24), now)["body"] or "nothing graded in the last 24h")
+        return 0
 
     models = [m.strip() for m in args.ab.split(",") if m.strip()] if args.ab else None
     if args.event:

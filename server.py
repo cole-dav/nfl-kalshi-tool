@@ -53,6 +53,7 @@ import snapshots as snap
 import team_tendencies as tt
 import week_overview as wo
 import week_feed as wf
+import bet_ledger as bl
 import player_volume as pvol
 import engine_agent as engine
 import scenario_sim as sim
@@ -467,6 +468,22 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"internal error: {e}"}, status=500)
             return
 
+        if parsed.path == "/api/feed/results":
+            # Graded feed bets. Default window is the previous whole UTC hour,
+            # which the hourly results-email routine reads.
+            qs = parse_qs(parsed.query)
+            try:
+                since = (qs.get("since") or [""])[0].strip()
+                until = (qs.get("until") or [""])[0].strip()
+                if since:
+                    window = (bl._parse(since), bl._parse(until) if until else bl._now())
+                else:
+                    window = bl.last_hour_window()
+                self._send_json(bl.results(*window))
+            except ValueError:
+                self._send_json({"error": "since/until must be ISO timestamps"}, status=400)
+            return
+
         if parsed.path in ("/api/feed", "/api/week_injuries"):
             week = (parse_qs(parsed.query).get("week") or [""])[0].strip()
             week = int(week) if week.isdigit() else None
@@ -838,6 +855,7 @@ def main():
     threading.Thread(target=_cache_warmer, daemon=True, name="cache-warmer").start()
     threading.Thread(target=_slate_refresher, daemon=True, name="slate-refresher").start()
     threading.Thread(target=_player_warmer, daemon=True, name="player-warmer").start()
+    threading.Thread(target=bl.grader_loop, daemon=True, name="bet-grader").start()
     print(f"Serving on http://{host}:{port}")
     try:
         server.serve_forever()
