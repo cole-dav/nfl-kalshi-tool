@@ -16,6 +16,7 @@ BACKUP_DIR=${BACKUP_DIR:-/opt/propsterminal/backups}
 KEEP_DAYS=${BACKUP_KEEP_DAYS:-14}
 DB=${ODDS_DB_PATH:-history/odds.sqlite3}
 case "$DB" in /*) ;; *) DB="$APP_DIR/$DB" ;; esac
+cd "$APP_DIR"  # find/tar need a readable cwd (a manual runuser from /root has none)
 
 mkdir -p "$BACKUP_DIR"
 stamp=$(date -u +%Y%m%d-%H%M%S)
