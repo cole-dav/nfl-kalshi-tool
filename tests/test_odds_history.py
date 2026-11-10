@@ -279,6 +279,31 @@ def test_movers_skip_wide_books(store):
     assert [x["ticker"] for x in store.movers(hours=24, now=T0 + 7200)["movers"]] == [ML]
 
 
+def test_wide_books_are_not_prices(store):
+    # Listed early at 4/95 (mid 49.5), tightens to 80/82, briefly widens to 70/90.
+    record(store, T0, mkt(ML, 0.04, 0.95))
+    record(store, T0 + 600, mkt(ML, 0.80, 0.82))
+    record(store, T0 + 1200, mkt(ML, 0.70, 0.90))
+    record(store, T0 + 1800, mkt(ML, 0.82, 0.84))
+    now = T0 + 2400
+    h = store.history([ML], hours=24, now=now)["markets"][ML]
+    assert [p[1] for p in h["points"]] == [81, 83]
+    assert h["open"] == 81 and h["first_seen_ts"] == T0 + 600
+    lm = store.line_moves([ML], now=now)[ML]
+    assert (lm["open"], lm["now"], lm["chg"], lm["since"]) == (81, 83, 2, T0 + 600)
+    assert set(lm["spark"]) == {81, 83}
+    assert store.summary([ML], now=T0 + 1500)[ML]["now"] == 81  # last quoted price while wide
+    assert store.movers(hours=24, now=now)["movers"][0]["change"] == 2
+
+
+def test_never_quoted_market_has_no_moves(store):
+    record(store, T0, mkt(ML, 0.04, 0.95))
+    record(store, T0 + 600, mkt(ML, 0.10, 0.90))
+    assert store.line_moves([ML], now=T0 + 1200) == {}
+    assert store.history([ML], hours=24, now=T0 + 1200)["markets"][ML]["points"] == []
+    assert store.movers(hours=24, now=T0 + 1200)["movers"] == []
+
+
 def test_reads_on_empty_db(store):
     assert store.movers(now=T0)["movers"] == []
     assert store.history(["X"], 24)["markets"] == {}

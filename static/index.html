@@ -4775,7 +4775,7 @@ function fmtEtShort(ts) {
 // drawn while the market is still being observed (last point < 30 min old).
 function histChartHtml(h, now, hours) {
   if (!h || !h.points || !h.points.length) {
-    return `<div class="empty" style="padding:24px 8px">No prices recorded for this market yet.<br><span style="font-size:10.5px">History starts when the server first fetches a market.</span></div>`;
+    return `<div class="empty" style="padding:24px 8px">No prices recorded for this market yet.<br><span style="font-size:10.5px">History starts once the market trades with a bid/ask spread of 15¢ or less.</span></div>`;
   }
   const W = 340, H = 120, L = 30, R = 4, T = 6, B = 16;
   const pts = h.points.slice();

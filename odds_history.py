@@ -15,6 +15,10 @@ slate pass) and visitor traffic.
     have points and "value at time T" stays well defined.
   * Prices are integer cents. Mid follows MarketQuote.implied_prob_yes: the
     bid/ask midpoint, or the last trade when the book is empty.
+  * Everything is recorded, but reads (charts, sparklines, open/change,
+    movers) only use ticks whose bid/ask spread is at most MAX_SPREAD: a wide
+    book's midpoint is noise (Kalshi lists moneylines days early at 4/95 ->
+    "50%"), and charting it shows a fake open and a big jump.
 
 Storage: history/odds.sqlite3 (ODDS_DB_PATH overrides), WAL mode.
 """
@@ -87,7 +91,14 @@ def _count(v: Any) -> int | None:
         return None
 
 
-MOVERS_MAX_SPREAD = int(os.environ.get("ODDS_MOVERS_MAX_SPREAD", "15"))  # cents
+MAX_SPREAD = int(os.environ.get("ODDS_MAX_SPREAD", os.environ.get("ODDS_MOVERS_MAX_SPREAD", "15")))  # cents
+# SQL filter for ticks whose price is meaningful (see module docstring).
+_QUOTED = f"yes_bid IS NOT NULL AND yes_ask IS NOT NULL AND yes_ask - yes_bid <= {MAX_SPREAD}"
+
+
+def quoted(bid: int | None, ask: int | None) -> bool:
+    """A two-sided book tight enough for its midpoint to mean something."""
+    return bid is not None and ask is not None and ask - bid <= MAX_SPREAD
 
 
 def mid(bid: int | None, ask: int | None, last: int | None) -> float | None:
@@ -349,22 +360,30 @@ class Store:
         return out
 
     def _value_at(self, mid_id: int, ts: float) -> float | None:
+        """Mid of the last quoted tick at or before `ts`."""
         r = self._reader().execute(
-            "SELECT yes_bid, yes_ask, last_price FROM ticks WHERE market_id=? AND ts<=? ORDER BY ts DESC LIMIT 1",
-            (mid_id, int(ts))).fetchone()
+            f"SELECT yes_bid, yes_ask, last_price FROM ticks WHERE market_id=? AND ts<=? AND {_QUOTED}"
+            " ORDER BY ts DESC LIMIT 1", (mid_id, int(ts))).fetchone()
         return mid(*r) if r else None
 
+    def _first(self, mid_id: int) -> tuple[int | None, float | None]:
+        """(ts, mid) of the first quoted tick: the market's real open."""
+        r = self._reader().execute(
+            f"SELECT ts, yes_bid, yes_ask, last_price FROM ticks WHERE market_id=? AND {_QUOTED}"
+            " ORDER BY ts LIMIT 1", (mid_id,)).fetchone()
+        return (r[0], mid(*r[1:])) if r else (None, None)
+
     def _series(self, mid_id: int, since: float) -> list[tuple]:
-        """[(ts, mid, bid, ask)] from `since` on, starting with the value in
-        force at `since` (when the market was already being tracked)."""
+        """[(ts, mid, bid, ask)] of quoted ticks from `since` on, starting with
+        the value in force at `since` (when the market was already quoted)."""
         conn = self._reader()
         out = []
-        r = conn.execute("SELECT ts, yes_bid, yes_ask, last_price FROM ticks WHERE market_id=? AND ts<=?"
+        r = conn.execute(f"SELECT ts, yes_bid, yes_ask, last_price FROM ticks WHERE market_id=? AND ts<=? AND {_QUOTED}"
                          " ORDER BY ts DESC LIMIT 1", (mid_id, int(since))).fetchone()
         if r:
             out.append((int(since), mid(*r[1:]), r[1], r[2]))
-        for ts, b, a, lp in conn.execute("SELECT ts, yes_bid, yes_ask, last_price FROM ticks WHERE market_id=?"
-                                         " AND ts>? ORDER BY ts", (mid_id, int(since))):
+        for ts, b, a, lp in conn.execute(f"SELECT ts, yes_bid, yes_ask, last_price FROM ticks WHERE market_id=?"
+                                         f" AND ts>? AND {_QUOTED} ORDER BY ts", (mid_id, int(since))):
             out.append((ts, mid(b, a, lp), b, a))
         return out
 
@@ -376,10 +395,11 @@ class Store:
         out = {}
         for t, m in self._markets(tickers).items():
             pts = downsample(self._series(m[1], since), max_points)
+            first_ts, opn = self._first(m[1])
             out[t] = {
                 "title": m[4], "event_ticker": m[2], "series": m[3], "kind": kind_of(m[3]),
-                "first_seen_ts": m[5], "last_ts": m[9],
-                "open": mid(m[6], m[7], m[8]),
+                "first_seen_ts": first_ts, "last_ts": m[9],
+                "open": _r(opn),
                 # [ts, mid, bid, ask]
                 "points": [[ts, _r(v), b, a] for ts, v, b, a in pts],
             }
@@ -390,12 +410,15 @@ class Store:
         now = time.time() if now is None else now
         out = {}
         for t, m in self._markets(tickers).items():
-            cur, opn = mid(m[10], m[11], m[12]), mid(m[6], m[7], m[8])
+            first_ts, opn = self._first(m[1])
+            if first_ts is None:
+                continue
+            cur = self._value_at(m[1], now)
             h1 = self._value_at(m[1], now - 3600)
             h24 = self._value_at(m[1], now - 86400)
             out[t] = {"open": _r(opn), "h1": _r(h1), "h24": _r(h24), "now": _r(cur),
                       "chg_open": _d(cur, opn), "chg_1h": _d(cur, h1), "chg_24h": _d(cur, h24),
-                      "first_seen_ts": m[5], "last_ts": m[9]}
+                      "first_seen_ts": first_ts, "last_ts": m[9]}
         return out
 
     @_reads
@@ -411,17 +434,21 @@ class Store:
 
     @_reads
     def line_moves(self, tickers: Iterable[str], hours: float = 24, now: float | None = None) -> dict[str, dict]:
-        """Compact per-ticker movement for page payloads: open (first recorded),
-        now, change since open and since `hours` ago, and a sparkline over the
-        last `hours` (or since first seen)."""
+        """Compact per-ticker movement for page payloads: open (first quoted
+        price), now (last quoted price), change since open and since `hours`
+        ago, and a sparkline over the last `hours` (or since first quoted).
+        Markets never quoted tighter than MAX_SPREAD are left out."""
         now = time.time() if now is None else now
         since = now - hours * 3600
         out = {}
         for t, m in self._markets(tickers).items():
-            cur, opn = mid(m[10], m[11], m[12]), mid(m[6], m[7], m[8])
+            first_ts, opn = self._first(m[1])
+            if first_ts is None:
+                continue
+            cur = self._value_at(m[1], now)
             ago = self._value_at(m[1], since)
             out[t] = {"open": _r(opn), "now": _r(cur), "chg": _d(cur, opn), "chg_24h": _d(cur, ago),
-                      "since": m[5], "spark": self.spark(m[1], since, now, first_seen=m[5])}
+                      "since": first_ts, "spark": self.spark(m[1], since, now, first_seen=first_ts)}
         return out
 
     @_reads
@@ -447,28 +474,28 @@ class Store:
                 continue
             # A wide book's midpoint swings with no trading (1/69 -> mid 35), so
             # only markets with a tight spread now can rank as movers.
-            if r[10] is not None and r[11] is not None and r[11] - r[10] > MOVERS_MAX_SPREAD:
+            if not quoted(r[10], r[11]):
                 continue
             cur = mid(r[10], r[11], r[12])
             if cur is None:
                 continue
+            first_ts = None
             then = self._value_at(r[0], since)
-            if then is None:
-                if r[5] < since:
-                    continue
-                then = mid(r[6], r[7], r[8])
+            if then is None:  # first quoted inside the window: compare to that
+                first_ts, then = self._first(r[0])
             if then is None or cur == then:
                 continue
-            cands.append((abs(cur - then), r[13] or 0, r, k, then, cur))
+            cands.append((abs(cur - then), r[13] or 0, r, k, then, cur, first_ts))
         cands.sort(key=lambda c: (-c[0], -c[1]))
         movers = []
-        for _, vol, r, k, then, cur in cands[:limit]:
+        for _, vol, r, k, then, cur, first_ts in cands[:limit]:
+            first_ts = first_ts or self._first(r[0])[0]
             movers.append({
                 "ticker": r[1], "event_ticker": r[2], "series": r[3], "title": r[4], "kind": k,
                 "then": _r(then), "now": _r(cur), "change": _r(cur - then),
                 "bid": r[10], "ask": r[11], "volume": vol,
-                "first_seen_ts": r[5], "last_ts": r[9],
-                "spark": self.spark(r[0], since, now, first_seen=r[5]),
+                "first_seen_ts": first_ts, "last_ts": r[9],
+                "spark": self.spark(r[0], since, now, first_seen=first_ts),
             })
         return {"hours": hours, "kind": kind, "now": int(now), "count": len(cands), "movers": movers,
                 "tracking": {"markets": tracked[0], "since": tracked[1]}}
