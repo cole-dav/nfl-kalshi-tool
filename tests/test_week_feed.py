@@ -39,6 +39,7 @@ PUBLISH = {
 @pytest.fixture(autouse=True)
 def isolated(monkeypatch, tmp_path):
     monkeypatch.setattr(wf, "FEED_PATH", str(tmp_path / "feed" / "posts.json"))
+    monkeypatch.setattr(wf, "AB_PATH", str(tmp_path / "feed" / "ab.json"))
     monkeypatch.setattr(fv, "current_games", lambda: [])
     monkeypatch.setattr(ss, "price_legs", fake_price_legs)
     monkeypatch.setattr(wo, "build_game_detail", lambda ev: dict(DETAIL))
@@ -61,7 +62,7 @@ def test_write_preview_runs_tools_then_publishes_priced_post():
     # the context handed over drops healthy players and keeps the IR starter
     ctx = msgs.calls[0]["messages"][0]["content"][0]["text"]
     assert "Laremy Tunsil" in ctx and "Healthy Guy" not in ctx
-    assert msgs.calls[0]["model"] == wf.MODEL and "propose_bets" not in [t["name"] for t in msgs.calls[0]["tools"]]
+    assert msgs.calls[0]["model"] == wf.MODEL and msgs.calls[0]["output_config"] == {"effort": "low"} and "propose_bets" not in [t["name"] for t in msgs.calls[0]["tools"]]
     # tool results went back as a user turn before the publish call
     assert msgs.calls[1]["messages"][-1]["content"][0]["tool_use_id"] == "tu_1"
 
@@ -113,3 +114,43 @@ def test_week_injuries_sorted_by_ovr_with_opponent(monkeypatch):
     out = wf.week_injuries([{"event_ticker": EVENT, "away": "WAS", "home": "NYG"}])
     assert [(r["full_name"], r["team"], r["opp"], r["kind"]) for r in out["injuries"]] == [
         ("B", "NYG", "WAS", "reserve"), ("A", "WAS", "NYG", "report")]
+
+
+class PerModelMessages:
+    """Scripted replies per model, so parallel A/B runs don't share a queue."""
+    def __init__(self, script):
+        self.script = {m: list(r) for m, r in script.items()}
+        self.calls = []
+
+    def create(self, **kwargs):
+        self.calls.append({**kwargs, "messages": [dict(m) for m in kwargs["messages"]]})
+        return self.script[kwargs["model"]].pop(0)
+
+
+def test_write_ab_runs_models_independently_and_promotes():
+    usage = SimpleNamespace(input_tokens=1000, output_tokens=500, cache_creation_input_tokens=0, cache_read_input_tokens=0)
+    sonnet_pub = {**PUBLISH, "headline": "Sonnet take"}
+    msgs = PerModelMessages({
+        "claude-sonnet-5-5": [SimpleNamespace(stop_reason="tool_use", model="claude-sonnet-5-5", usage=usage,
+                                              content=[tool_use("s1", "publish_preview", sonnet_pub)])],
+        "claude-opus-5-5": [SimpleNamespace(stop_reason="end_turn", model="claude-opus-5-5", usage=usage,
+                                            content=[text("no publish")])],
+    })
+    client = SimpleNamespace(beta=SimpleNamespace(messages=msgs))
+    out = wf.write_ab(EVENT, ["claude-sonnet-5-5", "claude-opus-5-5"], client=client)
+
+    s = out["claude-sonnet-5-5"]
+    assert s["headline"] == "Sonnet take" and s["model"] == "claude-sonnet-5-5" and s["effort"] == "low"
+    assert s["stats"]["cost_usd"] == round((1000 * 2 + 500 * 10) / 1e6, 4)
+    assert "error" in out["claude-opus-5-5"]
+    # each model got only the shared game context, never the other's output
+    for c in msgs.calls:
+        assert len(c["messages"]) == 1 and "Sonnet take" not in json.dumps(c["messages"], default=str)
+    # A/B results stay out of the live feed until promoted
+    assert not wf._load()
+    feed = wf.feed({"week": 10, "weeks": [10], "games": [{"event_ticker": EVENT, "away": "WAS", "home": "NYG"}]})
+    assert set(feed["ab"][EVENT]["variants"]) == {"claude-sonnet-5-5", "claude-opus-5-5"} and not feed["posts"]
+    wf.promote(EVENT, "claude-sonnet-5-5")
+    assert wf._load()[EVENT]["headline"] == "Sonnet take"
+    with pytest.raises(ea.EngineError):
+        wf.promote(EVENT, "claude-opus-5-5")

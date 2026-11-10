@@ -459,6 +459,14 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 .wk-leg .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--on)}
 .wk-bet-ft{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;padding:5px 8px;border-top:1px solid var(--row-rule);font-size:10.5px}
 .wk-foot{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;padding:6px 12px;border-top:1px solid var(--row-rule);font-size:10px;color:var(--dim)}
+.wk-ab{display:grid;grid-template-columns:repeat(var(--abn,2),minmax(0,1fr));gap:8px;flex-shrink:0}
+.wk-ab-col{display:flex;flex-direction:column;min-width:0}
+.wk-ab-hd{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:5px 10px;border:1px solid var(--amber-ring);border-bottom:0;background:var(--amber-soft);font-size:10.5px}
+.wk-ab-hd .m{font-weight:600;color:var(--amber);letter-spacing:0.06em}
+.wk-ab-hd .s{color:var(--muted)}
+.wk-ab-col .wk-post{flex-grow:1}
+.wk-cols.ab .wk-side{display:none}
+@container week (max-width: 900px){ .wk-ab{grid-template-columns:minmax(0,1fr)} }
 .wk-todo{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px dashed var(--head-rule);font-size:11.5px;color:var(--muted);flex-shrink:0}
 .wk-inj-grid{display:grid;grid-template-columns:26px minmax(0,1fr) 78px 44px 34px;gap:6px;align-items:center}
 .wk-inj-grid .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -644,7 +652,7 @@ const state = {
   tickets: [], activeId: null, kalshiOk: true, module: 'slate',
   games: [], activeGameId: null,
   slate: { loading: false, error: null, games: null, view: 'list', week: null, weeks: [] },
-  week: { week: null, loading: false, error: null, data: null, inj: null, injError: null, pane: 'feed', injFilter: 'report', writing: [], writeErr: {} },
+  week: { week: null, loading: false, error: null, data: null, inj: null, injError: null, pane: 'feed', injFilter: 'report', writing: [], writeErr: {}, ab: false },
   book: { loading: false, error: null, data: null },
   session: { connected: false },
 };
@@ -4965,6 +4973,20 @@ async function writePreviews(events) {
   }
 }
 
+async function promoteVariant(ev, model) {
+  const w = state.week;
+  try {
+    const r = await fetch('/api/feed/promote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: ev, model }) });
+    const post = await r.json();
+    if (!r.ok) throw new Error(post.error || 'request failed');
+    w.data.posts = w.data.posts.filter(p => p.event_ticker !== ev).concat(post);
+    const g = w.data.games.find(g => g.event_ticker === ev); if (g) g.has_post = true;
+  } catch (e) {
+    w.writeErr[ev] = String(e.message || e);
+  }
+  keepScroll(document.querySelector('#weekView .wk-feed'), renderWeek);
+}
+
 async function deletePreview(ev) {
   try {
     await fetch('/api/feed/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: ev }) });
@@ -4986,7 +5008,7 @@ function wkMatchupHtml(away, home, records, ev) {
 
 const WK_CONF = { high: 'var(--blue)', medium: 'var(--amber)', low: 'var(--muted)' };
 
-function wkBetHtml(b, ev, i) {
+function wkBetHtml(b, ev, i, model) {
   const legs = b.legs || [];
   const costs = legs.map(l => l.cost);
   const pc = b.parlay_cost != null ? b.parlay_cost : (costs.length && costs.every(c => c != null) ? costs.reduce((a, c) => a * c, 1) : null);
@@ -5005,12 +5027,12 @@ function wkBetHtml(b, ev, i) {
       <span><span style="color:var(--dim)">PRICE</span> ${fmtPrice(pc)}</span>${edgeTxt(edge)}` : ''}
       ${(b.notes || []).length ? `<span style="color:var(--dim)">${escapeHtml(b.notes.join('; '))}</span>` : ''}
       <span style="flex-grow:1"></span>
-      <button type="button" class="wk-btn" data-wk-slip="${escapeHtml(ev)}" data-wk-bet="${i}" ${legs.length ? '' : 'disabled'}>ADD TO SLIP</button>
+      <button type="button" class="wk-btn" data-wk-slip="${escapeHtml(ev)}" data-wk-bet="${i}"${model ? ` data-wk-model="${escapeHtml(model)}"` : ''} ${legs.length ? '' : 'disabled'}>ADD TO SLIP</button>
     </div>
   </div>`;
 }
 
-function wkPostHtml(p, game, canWrite) {
+function wkPostHtml(p, game, canWrite, model) {
   const busy = state.week.writing.includes(p.event_ticker);
   const conf = p.confidence || 'low';
   return `<article class="wk-post">
@@ -5028,13 +5050,13 @@ function wkPostHtml(p, game, canWrite) {
       ${(p.key_matchups || []).length ? `<div class="wk-sec mono">KEY MATCHUPS</div>
         <div class="wk-mus">${p.key_matchups.map(m => `<span class="t">${escapeHtml(m.title)}</span><span class="n">${mdInline(m.note)}</span>`).join('')}</div>` : ''}
       ${(p.bets || []).length ? `<div class="wk-sec mono">RECOMMENDED BETS</div>
-        <div class="wk-bets">${p.bets.map((b, i) => wkBetHtml(b, p.event_ticker, i)).join('')}</div>` : ''}
+        <div class="wk-bets">${p.bets.map((b, i) => wkBetHtml(b, p.event_ticker, i, model)).join('')}</div>` : ''}
     </div>
     <div class="wk-foot mono">
       <span>ENGINE PREVIEW · ${escapeHtml(timeAgo(p.created_at))}</span>
       <span>prices as of writing</span>
       <span style="flex-grow:1"></span>
-      ${canWrite ? `<button type="button" class="wk-btn quiet" data-wk-write="${escapeHtml(p.event_ticker)}" ${busy ? 'disabled' : ''}>${busy ? 'REWRITING…' : 'REWRITE'}</button>
+      ${canWrite && !model ? `<button type="button" class="wk-btn quiet" data-wk-write="${escapeHtml(p.event_ticker)}" ${busy ? 'disabled' : ''}>${busy ? 'REWRITING…' : 'REWRITE'}</button>
         <button type="button" class="wk-btn quiet" data-wk-delete="${escapeHtml(p.event_ticker)}" ${busy ? 'disabled' : ''}>DELETE</button>` : ''}
       <button type="button" class="wk-btn quiet" data-open-game="${escapeHtml(p.event_ticker)}">OPEN GAME →</button>
     </div>
@@ -5067,6 +5089,41 @@ function wkFeedHtml() {
     }).join('');
   }
   return h;
+}
+
+const WK_MODEL_LABEL = m => String(m || '').replace(/^claude-/, '').replace(/-(\d)-(\d)$/, ' $1.$2').replace(/-(\d)$/, ' $1').toUpperCase();
+
+// A/B: each game's variants side by side. Every model wrote from the same
+// context in its own conversation (week_feed.write_ab), so none saw another's.
+function wkAbHtml() {
+  const d = state.week.data;
+  const games = Object.fromEntries(d.games.map(g => [g.event_ticker, g]));
+  const evs = Object.keys(d.ab).sort((a, b) => weekGameOrder(a) - weekGameOrder(b));
+  const live = Object.fromEntries(d.posts.map(p => [p.event_ticker, p]));
+  const tot = {};
+  evs.forEach(ev => Object.entries(d.ab[ev].variants).forEach(([m, p]) => {
+    const t = tot[m] = tot[m] || { cost: 0, secs: 0, n: 0, fail: 0 };
+    if (p.error) t.fail++; else { t.cost += p.stats.cost_usd; t.secs += p.stats.seconds; t.n++; }
+  }));
+  const summary = `<div class="wk-todo" style="border-style:solid;flex-wrap:wrap;gap:6px 18px"><span class="mono" style="font-size:10px;letter-spacing:0.1em;color:var(--dim)">A/B · ${evs.length} GAMES · SAME CONTEXT, INDEPENDENT RUNS</span>
+    ${Object.entries(tot).map(([m, t]) => `<span class="mono" style="font-size:11px"><b style="color:var(--amber)">${escapeHtml(WK_MODEL_LABEL(m))}</b> $${t.cost.toFixed(2)} total · $${t.n ? (t.cost / t.n).toFixed(3) : '--'}/post · ${t.n ? Math.round(t.secs / t.n) : '--'}s avg${t.fail ? ` · <span style="color:var(--orange)">${t.fail} failed</span>` : ''}</span>`).join('')}</div>`;
+  return summary + evs.map(ev => {
+    const entry = d.ab[ev], models = entry.models || Object.keys(entry.variants);
+    const lp = live[ev];
+    return `<div class="wk-ab" style="--abn:${models.length}">${models.map(m => {
+      const p = entry.variants[m] || { error: 'missing' };
+      const isLive = lp && !p.error && lp.created_at === p.created_at && lp.model === p.model;
+      const st = p.stats || {};
+      const hd = `<div class="wk-ab-hd mono"><span class="m">${escapeHtml(WK_MODEL_LABEL(p.model || m))}</span>
+        <span class="s">effort ${escapeHtml(p.effort || '--')}</span>
+        ${p.error ? '' : `<span class="s">$${(st.cost_usd ?? 0).toFixed(3)} · ${st.seconds ?? '--'}s · ${((st.input_tokens || 0) + (st.cache_read_input_tokens || 0) + (st.cache_creation_input_tokens || 0)).toLocaleString('en-US')} in / ${(st.output_tokens || 0).toLocaleString('en-US')} out · ${(p.trace || []).length} tool calls</span>`}
+        <span style="flex-grow:1"></span>
+        ${isLive ? '<span class="wk-tag lean mono">LIVE</span>' : (d.can_generate && !p.error ? `<button type="button" class="wk-btn" data-wk-promote="${escapeHtml(ev)}" data-wk-model="${escapeHtml(m)}">USE THIS</button>` : '')}</div>`;
+      return `<div class="wk-ab-col">${hd}${p.error
+        ? `<div class="wk-post"><div class="empty" style="color:var(--orange)">${escapeHtml(p.error)}</div></div>`
+        : wkPostHtml(p, games[ev], false, m)}</div>`;
+    }).join('')}</div>`;
+  }).join('');
 }
 
 const WK_STATUS_ABBR = { Questionable: 'QUES', Doubtful: 'DOUBT', Out: 'OUT' };
@@ -5115,8 +5172,11 @@ function renderWeek() {
   let feed;
   if (w.error) feed = `<div class="empty" style="color:var(--orange)">${escapeHtml(w.error)}</div>`;
   else if (!d) feed = `<div class="empty">Loading week…</div>`;
-  else feed = wkFeedHtml();
+  else feed = w.ab && d.ab && Object.keys(d.ab).length ? wkAbHtml() : wkFeedHtml();
   const inj = wkInjuriesHtml();
+  const abN = d && d.ab ? Object.keys(d.ab).length : 0;
+  if (!abN) w.ab = false;
+  const abSeg = abN ? `<span class="seg">${[[false, 'FEED'], [true, `A/B (${abN})`]].map(([v, l]) => `<button type="button" class="${w.ab === v ? 'on' : ''}" data-wk-ab="${v ? 1 : 0}">${l}</button>`).join('')}</span>` : '';
   el.innerHTML = `<div class="wk-bar">
       <span class="wk-title">${d ? `WEEK ${d.week} OVERVIEW` : 'WEEK OVERVIEW'}</span>
       ${weeks.length > 1 ? `<span style="display:flex;gap:4px">${weekBtn(wi > 0 ? weeks[wi - 1] : null, '&#9664;')}${weekBtn(wi !== -1 && wi < weeks.length - 1 ? weeks[wi + 1] : null, '&#9654;')}</span>` : ''}
@@ -5124,10 +5184,11 @@ function renderWeek() {
       ${w.loading ? '<span class="mono wk-note">LOADING…</span>' : ''}
       ${w.writing.length ? `<span class="mono wk-note" style="color:var(--amber)">ENGINE WRITING ${w.writing.length} PREVIEW${w.writing.length === 1 ? '' : 'S'}…</span>` : ''}
       <span style="flex-grow:1"></span>
-      ${canWrite && missing.length ? `<button type="button" class="wk-btn" data-wk-writeall>WRITE ALL (${missing.length})</button>` : ''}
-      ${panes}
+      ${canWrite && missing.length && !w.ab ? `<button type="button" class="wk-btn" data-wk-writeall>WRITE ALL (${missing.length})</button>` : ''}
+      ${abSeg}
+      ${w.ab ? '' : panes}
     </div>
-    <div class="wk-cols" data-pane="${w.pane}">
+    <div class="wk-cols${w.ab ? ' ab' : ''}" data-pane="${w.ab ? 'feed' : w.pane}">
       <div class="wk-feed">${feed}</div>
       <div class="wk-side">${inj.html}</div>
     </div>`;
@@ -5138,6 +5199,10 @@ function handleWeekClick(e) {
   const w = state.week;
   const weekT = e.target.closest('[data-wk-week]');
   if (weekT) { w.inj = null; loadWeek(Number(weekT.dataset.wkWeek)); return true; }
+  const abT = e.target.closest('[data-wk-ab]');
+  if (abT) { w.ab = abT.dataset.wkAb === '1'; renderWeek(); return true; }
+  const promoteT = e.target.closest('[data-wk-promote]');
+  if (promoteT) { promoteVariant(promoteT.dataset.wkPromote, promoteT.dataset.wkModel); return true; }
   const paneT = e.target.closest('[data-wk-pane]');
   if (paneT) { w.pane = paneT.dataset.wkPane; renderWeek(); return true; }
   const injT = e.target.closest('[data-wk-inj]');
@@ -5152,7 +5217,8 @@ function handleWeekClick(e) {
   if (delT) { deletePreview(delT.dataset.wkDelete); return true; }
   const slipT = e.target.closest('[data-wk-slip]');
   if (slipT) {
-    const p = weekPost(slipT.dataset.wkSlip), b = p && p.bets[Number(slipT.dataset.wkBet)];
+    const ev = slipT.dataset.wkSlip, m = slipT.dataset.wkModel;
+    const p = m ? w.data.ab[ev] && w.data.ab[ev].variants[m] : weekPost(ev), b = p && p.bets[Number(slipT.dataset.wkBet)];
     if (b) { acceptProposal({ ...b, legs: b.legs.map(l => ({ ...l })) }); setBuilderOpen(true); }
     return true;
   }

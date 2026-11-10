@@ -796,7 +796,7 @@ class Handler(BaseHTTPRequestHandler):
                 str(body.get("event") or ""), str(body.get("team") or ""), str(body.get("family") or ""),
                 body.get("strikes") or [], body.get("stakes"), body.get("scenario"), bool(body.get("include_ml"))))
             return
-        if parsed.path in ("/api/feed/generate", "/api/feed/delete"):
+        if parsed.path in ("/api/feed/generate", "/api/feed/delete", "/api/feed/promote"):
             # Writing posts spends API credits: operator's own machine only (the CLI on the VPS).
             if not self._is_direct_local():
                 self._send_json({"error": "posting to the feed is only available on the operator's machine"}, status=403)
@@ -807,6 +807,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/api/feed/delete":
                 self._send_json({"ok": wf.delete_post(event)})
+            elif parsed.path == "/api/feed/promote":
+                self._engine_call(lambda: wf.promote(event, str(body.get("model") or "")))
             else:
                 self._engine_call(lambda: wf.write_preview(event))
             return
