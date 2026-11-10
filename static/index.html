@@ -4919,6 +4919,7 @@ async function loadWeek(week) {
     const r = await fetch('/api/feed' + q);
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'request failed');
+    if (!w.data && data.ab && Object.keys(data.ab).length && !data.posts.length) w.ab = true;
     w.data = data; w.week = data.week;
   } catch (e) {
     w.error = String(e.message || e);
@@ -5072,7 +5073,10 @@ function wkFeedHtml() {
   let h = Object.entries(w.writeErr).filter(([ev]) => weekPost(ev))
     .map(([ev, err]) => `<div class="empty" style="color:var(--orange)">Rewrite of ${escapeHtml(ev)} failed: ${escapeHtml(err)}</div>`).join('');
   h += posts.map(p => wkPostHtml(p, games[p.event_ticker], canWrite)).join('');
-  if (!posts.length) {
+  const abN = d.ab ? Object.keys(d.ab).length : 0;
+  if (!posts.length && abN) {
+    h += `<div class="empty">No live previews for week ${d.week} yet. ${d.can_generate ? `Pick from the <a href="#" data-wk-ab="1" style="color:var(--amber)">A/B versions (${abN})</a> with USE THIS.` : ''}</div>`;
+  } else if (!posts.length) {
     h += `<div class="empty">${d.can_generate
       ? (d.chat_enabled ? `No previews for week ${d.week} yet. Write them below, or all at once with WRITE ALL.` : 'No previews yet. Set ANTHROPIC_API_KEY on this server so the engine can write them.')
       : `No previews for week ${d.week} yet. The engine posts a write-up with recommended bets for each game here.`}</div>`;
@@ -5200,7 +5204,7 @@ function handleWeekClick(e) {
   const weekT = e.target.closest('[data-wk-week]');
   if (weekT) { w.inj = null; loadWeek(Number(weekT.dataset.wkWeek)); return true; }
   const abT = e.target.closest('[data-wk-ab]');
-  if (abT) { w.ab = abT.dataset.wkAb === '1'; renderWeek(); return true; }
+  if (abT) { e.preventDefault(); w.ab = abT.dataset.wkAb === '1'; renderWeek(); return true; }
   const promoteT = e.target.closest('[data-wk-promote]');
   if (promoteT) { promoteVariant(promoteT.dataset.wkPromote, promoteT.dataset.wkModel); return true; }
   const paneT = e.target.closest('[data-wk-pane]');
