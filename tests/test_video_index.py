@@ -113,3 +113,29 @@ def test_match_player_namesakes():
     ])
     assert vi.match_player("DeVonta Smith", None, rosters) == "WR"
     assert vi.match_player("Devonta Smith", "CAR", rosters) == "DB"   # team decides first
+
+
+def test_deleted_playlist_is_not_refetched(monkeypatch, tmp_path):
+    import urllib.error
+
+    monkeypatch.setattr(vi.nd, "CACHE_DIR", str(tmp_path))
+    monkeypatch.setattr(vi, "CHANNELS", {})
+    monkeypatch.setattr(vi, "embeddable", lambda vid: True)
+    calls = []
+
+    def listing(pid, *a):
+        calls.append(pid)
+        if pid == "PLgone":
+            raise urllib.error.HTTPError(pid, 404, "Not Found", {}, None)
+        return [("v1", "t")]
+
+    monkeypatch.setattr(vi, "list_playlist_videos", listing)
+    idx = vi.VideoIndex(2026)
+    for pid in ("PLgone", "PLok"):
+        idx.state["playlists"][pid] = {"channel": "nfl", "title": pid, "kind": "game", "week": 5,
+                                       "fetched_at": 0, "videos": [("v0", "old")]}
+    idx.refresh(now=1_000_000)
+    idx.refresh(now=1_000_000 + 10 * 24 * 3600)  # both due again
+    assert calls.count("PLgone") == 1 and calls.count("PLok") == 2
+    gone = idx.state["playlists"]["PLgone"]
+    assert gone["gone"] and gone["videos"] == [["v0", "old"]]  # kept (state round-trips through JSON)

@@ -35,6 +35,7 @@ import re
 import threading
 import time
 import traceback
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -427,8 +428,8 @@ class VideoIndex:
                 traceback.print_exc()
 
         newest = max((p["week"] for p in pls.values() if p["week"] is not None), default=0)
-        due = [pid for pid, p in pls.items()
-               if now - p["fetched_at"] > (FRESH_TTL if p["week"] is None or p["week"] >= newest - 1 else SETTLED_TTL)]
+        due = [pid for pid, p in pls.items() if not p.get("gone")
+               and now - p["fetched_at"] > (FRESH_TTL if p["week"] is None or p["week"] >= newest - 1 else SETTLED_TTL)]
         for pid in due:
             p = pls[pid]
             try:
@@ -441,6 +442,14 @@ class VideoIndex:
                 else:
                     p["videos"] = list_playlist_videos(pid)
                 p["fetched_at"] = now
+            except urllib.error.HTTPError as e:
+                if e.code != 404:
+                    traceback.print_exc()
+                    continue
+                # Deleted or made private: stop asking every hour. Its videos
+                # stay listed; embeddable() already drops ones that are gone.
+                p["gone"], p["fetched_at"] = True, now
+                print(f"video index: playlist {pid} ({p.get('title')}) is gone (404); no longer refreshed")
             except Exception:
                 traceback.print_exc()
 
