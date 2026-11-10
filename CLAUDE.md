@@ -23,6 +23,17 @@ The Kalshi API key is deliberately disabled on the server (commented out in its
 Kalshi requests from there. Don't re-enable it without asking.
 Rollback to the laptop and other procedures: `deploy/README.md`.
 
+## Week feed (engine game previews)
+
+The Week tab's posts are written by `week_feed.py` (Claude + the quant engine)
+and stored in `data/feed/posts.json` on each host (gitignored, not deployed).
+The WRITE buttons only appear on a direct localhost visit, so on the VPS posts
+are written with the CLI, which needs `ANTHROPIC_API_KEY` in the server `.env`:
+
+```sh
+ssh propsterminal 'cd /opt/propsterminal/app && runuser -u propsterminal -- .venv/bin/python week_feed.py generate --missing'
+```
+
 ## Local dev server
 
 For testing changes locally before deploying (frontend-only changes in

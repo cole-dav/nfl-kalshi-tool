@@ -413,6 +413,62 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 }
 .game-card .gc-foot > span{white-space:nowrap}
 .game-card .gc-foot{gap:10px;overflow:hidden}
+/* week overview: engine preview feed + the week's top injuries */
+#weekView{display:none;flex-direction:column;flex-grow:1;min-height:0;container:week / inline-size}
+.wk-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:8px 4px}
+.wk-bar .wk-title{font-size:15px;font-weight:600}
+.wk-bar .wk-note{font-size:10.5px;color:var(--dim)}
+.wk-panes{display:none}
+.wk-cols{flex-grow:1;min-height:0;display:flex;gap:8px;padding:0 4px 8px}
+.wk-feed{flex:1 1 0;min-width:0;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.wk-side{flex:0 0 400px;min-width:0;display:flex;flex-direction:column}
+.wk-side .panel{flex-grow:1}
+.wk-side .panel-body{overflow:auto;flex-grow:1}
+.wk-btn{font-size:10px;letter-spacing:0.06em;padding:3px 8px;border:1px solid var(--amber-ring);color:var(--amber);background:transparent;cursor:pointer;white-space:nowrap}
+.wk-btn:hover:not(:disabled){border-color:var(--amber);background:var(--amber-soft)}
+.wk-btn:disabled{color:var(--faint);border-color:var(--head-rule);cursor:default}
+.wk-btn.quiet{border-color:var(--head-rule);color:var(--muted)}
+.wk-post{background:var(--panel);border:1px solid var(--border);flex-shrink:0}
+.wk-ph{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:7px 10px;background:var(--panel-head);border-bottom:1px solid var(--border)}
+.wk-ph .wk-mu{display:flex;align-items:center;gap:5px;font-weight:600;font-size:12.5px;cursor:pointer}
+.wk-ph .wk-mu:hover{color:var(--amber)}
+.wk-ph .wk-rec{font-size:10px;color:var(--dim);font-weight:400}
+.wk-ph .wk-ko{font-size:10px;color:var(--dim)}
+.wk-lean{margin-left:auto;display:flex;gap:6px;align-items:center}
+.wk-tag{font-size:9.5px;font-weight:600;letter-spacing:0.06em;padding:2px 6px;border:1px solid var(--head-rule);white-space:nowrap}
+.wk-tag.lean{color:var(--bg);background:var(--amber);border-color:var(--amber)}
+.wk-pb{padding:10px 12px 4px}
+.wk-hl{font-size:16px;font-weight:600;line-height:1.3;margin-bottom:6px;color:var(--on)}
+.wk-wu{font-size:12.5px;line-height:1.55;color:var(--label)}
+.wk-wu p{margin:0 0 8px}
+.wk-wu ul,.wk-wu ol{margin:0 0 8px;padding-left:18px}
+.wk-sec{font-size:9.5px;letter-spacing:0.1em;color:var(--dim);margin:8px 0 4px}
+.wk-chips{display:flex;flex-wrap:wrap;gap:4px 6px}
+.wk-chip{display:flex;align-items:center;gap:5px;font-size:11px;padding:2px 7px 2px 4px;border:1px solid var(--row-rule);background:var(--bg);color:var(--label)}
+.wk-chip b{color:var(--on);font-weight:600;cursor:pointer}
+.wk-chip b:hover{color:var(--amber)}
+.wk-chip span{color:var(--dim)}
+.wk-mus{display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:3px 10px;font-size:11.5px}
+.wk-mus .t{color:var(--on);font-weight:500}
+.wk-mus .n{color:var(--muted)}
+.wk-bets{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.wk-bet{border:1px solid var(--row-rule);background:var(--bg)}
+.wk-bet-hd{display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:12px;font-weight:600}
+.wk-bet-why{padding:0 8px 5px;font-size:11.5px;color:var(--muted);line-height:1.45}
+.wk-leg{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:3px 8px;border-top:1px solid var(--row-rule);font-size:11px}
+.wk-leg .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--on)}
+.wk-bet-ft{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;padding:5px 8px;border-top:1px solid var(--row-rule);font-size:10.5px}
+.wk-foot{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;padding:6px 12px;border-top:1px solid var(--row-rule);font-size:10px;color:var(--dim)}
+.wk-todo{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px dashed var(--head-rule);font-size:11.5px;color:var(--muted);flex-shrink:0}
+.wk-inj-grid{display:grid;grid-template-columns:26px minmax(0,1fr) 78px 44px 34px;gap:6px;align-items:center}
+.wk-inj-grid .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wk-inj-grid .opp{display:flex;align-items:center;gap:3px;font-size:10.5px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.wk-inj-grid .opp:hover{color:var(--amber)}
+@container week (max-width: 900px){
+  .wk-panes{display:flex}
+  .wk-side{flex:1 1 0}
+  .wk-cols[data-pane="feed"] .wk-side,.wk-cols[data-pane="inj"] .wk-feed{display:none}
+}
 /* phones: the rail becomes a bottom tab bar, search gets its own row, the
    builder opens as a full-screen sheet, and small text is bumped up. */
 @media (max-width: 700px){
@@ -458,6 +514,11 @@ button.bb-side:hover{outline:1px solid var(--faint)}
   .game-cards{grid-template-columns:minmax(0,1fr)}
   .mv-grid{font-size:12.5px}
   .mv-row{min-height:34px}
+  .wk-wu{font-size:14px}
+  .wk-hl{font-size:17px}
+  .wk-leg,.wk-chip,.wk-mus{font-size:12.5px}
+  .wk-inj-grid{min-height:34px;font-size:12.5px}
+  .wk-btn{font-size:11.5px;padding:6px 10px}
   .bb-l1,.bb-grid{font-size:12.5px}
   .bb-l2{font-size:11.5px}
   .bb-row{padding:6px 8px 6px 6px}
@@ -508,6 +569,9 @@ button.bb-side:hover{outline:1px solid var(--faint)}
       <button class="railbtn" type="button" data-module="slate" aria-label="Weekly slate">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3.5" width="14" height="12.5"></rect><path d="M2 7.5h14M6 1.5v4M12 1.5v4"></path></svg>
       </button>
+      <button class="railbtn" type="button" data-module="week" aria-label="Week overview" title="Week overview: engine game previews with recommended bets, and the week's top injuries">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="2" width="14" height="14"></rect><path d="M5 6h8M5 9h8M5 12h5"></path></svg>
+      </button>
       <button class="railbtn" type="button" data-module="movers" aria-label="Line movers" title="Line movers: biggest Kalshi price moves this week">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 13.5l4.5-4.5 3 3 6.5-6.5"></path><path d="M11.5 5.5h4v4"></path><path d="M1.5 16.5h15" stroke-opacity="0.5"></path></svg>
       </button>
@@ -526,6 +590,7 @@ button.bb-side:hover{outline:1px solid var(--faint)}
       <div id="bookView" style="display:none;flex-direction:column;flex-grow:1;min-height:0;overflow:auto;padding:8px"></div>
       <div id="labView"></div>
       <div id="moversView"></div>
+      <div id="weekView"></div>
       <div id="injPop" hidden></div>
       <div id="vidPop" hidden></div>
       <div id="overlay" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);align-items:center;justify-content:center;font-size:12px;color:var(--dim)"></div>
@@ -579,6 +644,7 @@ const state = {
   tickets: [], activeId: null, kalshiOk: true, module: 'slate',
   games: [], activeGameId: null,
   slate: { loading: false, error: null, games: null, view: 'list', week: null, weeks: [] },
+  week: { week: null, loading: false, error: null, data: null, inj: null, injError: null, pane: 'feed', injFilter: 'report', writing: [], writeErr: {} },
   book: { loading: false, error: null, data: null },
   session: { connected: false },
 };
@@ -2301,6 +2367,7 @@ function render() {
   document.getElementById('bookView').style.display = state.module === 'book' ? 'flex' : 'none';
   document.getElementById('labView').style.display = state.module === 'lab' ? 'flex' : 'none';
   document.getElementById('moversView').style.display = state.module === 'movers' ? 'flex' : 'none';
+  document.getElementById('weekView').style.display = state.module === 'week' ? 'flex' : 'none';
 
   if (state.module === 'research') renderResearch();
   else {
@@ -2309,6 +2376,7 @@ function render() {
     else if (state.module === 'book') renderBookModule();
     else if (state.module === 'lab') renderLab();
     else if (state.module === 'movers') renderMovers();
+    else if (state.module === 'week') renderWeek();
   }
   renderBuilder();
 }
@@ -4826,6 +4894,271 @@ function renderMovers() {
     <div style="flex-grow:1;min-height:0;overflow:auto;padding:0 4px 8px">${body}</div>`;
 }
 
+// ========================================================================
+// WEEK module: the engine's game previews (write-up + recommended bets) as a
+// feed, beside the week's top injuries league-wide (best players first by
+// Madden OVR). Wide screens show both; narrow ones toggle FEED / INJURIES.
+// Posts are written server-side (week_feed.py); only the operator's own
+// machine gets the WRITE buttons.
+// ========================================================================
+
+async function loadWeek(week) {
+  const w = state.week;
+  if (week !== undefined) w.week = week;
+  w.loading = true; w.error = null; render();
+  const q = w.week ? `?week=${w.week}` : '';
+  try {
+    const r = await fetch('/api/feed' + q);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'request failed');
+    w.data = data; w.week = data.week;
+  } catch (e) {
+    w.error = String(e.message || e);
+  } finally {
+    w.loading = false;
+    if (state.module === 'week') renderWeek();
+  }
+  if (w.data && (!w.inj || w.inj.week !== w.data.week)) loadWeekInjuries();
+}
+
+async function loadWeekInjuries() {
+  const w = state.week;
+  w.injError = null;
+  try {
+    const r = await fetch(`/api/week_injuries?week=${w.data.week}`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'request failed');
+    w.inj = data;
+  } catch (e) {
+    w.injError = String(e.message || e);
+  }
+  if (state.module === 'week') renderWeek();
+}
+
+// Writes previews (operator only), one game at a time so WRITE ALL doesn't
+// fire a dozen engine runs at once.
+async function writePreviews(events) {
+  const w = state.week;
+  const queued = events.filter(ev => !w.writing.includes(ev));
+  if (!queued.length) return;
+  const idle = !w.writing.length;
+  w.writing.push(...queued);
+  queued.forEach(ev => { delete w.writeErr[ev]; });
+  renderWeek();
+  if (!idle) return;  // the running loop picks the new ones up
+  while (w.writing.length) {
+    const ev = w.writing[0];
+    try {
+      const r = await fetch('/api/feed/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: ev }) });
+      const post = await r.json();
+      if (!r.ok) throw new Error(post.error || 'request failed');
+      const g = w.data && w.data.games.find(g => g.event_ticker === ev);
+      if (g) {
+        w.data.posts = w.data.posts.filter(p => p.event_ticker !== ev).concat(post);
+        g.has_post = true;
+      }
+    } catch (e) {
+      w.writeErr[ev] = String(e.message || e);
+    }
+    w.writing.shift();
+    if (state.module === 'week') keepScroll(document.querySelector('#weekView .wk-feed'), renderWeek);
+  }
+}
+
+async function deletePreview(ev) {
+  try {
+    await fetch('/api/feed/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: ev }) });
+  } catch (e) { /* the reload below shows what's left */ }
+  loadWeek();
+}
+
+function weekPost(ev) { const d = state.week.data; return d && d.posts.find(p => p.event_ticker === ev); }
+
+function weekGameOrder(ev) {
+  const d = state.week.data, i = d ? d.games.findIndex(g => g.event_ticker === ev) : -1;
+  return i === -1 ? 999 : i;
+}
+
+function wkMatchupHtml(away, home, records, ev) {
+  return `<span class="wk-mu" data-open-game="${escapeHtml(ev)}" title="Open the game">${teamLogo(away, 16)}${escapeHtml(away)}${records ? ` <span class="wk-rec mono">${escapeHtml(records.away)}</span>` : ''}
+    <span style="color:var(--dim);font-weight:400">@</span>${teamLogo(home, 16)}${escapeHtml(home)}${records ? ` <span class="wk-rec mono">${escapeHtml(records.home)}</span>` : ''}</span>`;
+}
+
+const WK_CONF = { high: 'var(--blue)', medium: 'var(--amber)', low: 'var(--muted)' };
+
+function wkBetHtml(b, ev, i) {
+  const legs = b.legs || [];
+  const costs = legs.map(l => l.cost);
+  const pc = b.parlay_cost != null ? b.parlay_cost : (costs.length && costs.every(c => c != null) ? costs.reduce((a, c) => a * c, 1) : null);
+  const edge = b.joint_fair != null && pc != null ? b.joint_fair - pc : null;
+  return `<div class="wk-bet">
+    <div class="wk-bet-hd"><span style="flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(b.title || 'Bet')}</span>
+      <span class="wk-tag mono" style="color:var(--muted)">${escapeHtml(String(b.kind || '').toUpperCase())}</span></div>
+    ${b.rationale ? `<div class="wk-bet-why">${mdInline(b.rationale)}</div>` : ''}
+    ${legs.map(l => {
+      const le = l.fair != null && l.cost != null ? l.fair - l.cost : null;
+      return `<div class="wk-leg mono"><span class="lbl" title="${escapeHtml(l.title || l.market_ticker)}">${escapeHtml(legLabelFromTicker(l.market_ticker, l.side, l.title))}</span>
+        <span>${fmtPrice(l.cost)}</span><span>${fairTxt(l.fair, le)}</span></div>`;
+    }).join('')}
+    <div class="wk-bet-ft mono">
+      ${legs.length > 1 ? `<span><span style="color:var(--dim)">${b.same_event ? 'JOINT FAIR' : 'MODEL FAIR'}</span> <span style="color:var(--blue)">${fmtAm(b.joint_fair)}</span></span>
+      <span><span style="color:var(--dim)">PRICE</span> ${fmtPrice(pc)}</span>${edgeTxt(edge)}` : ''}
+      ${(b.notes || []).length ? `<span style="color:var(--dim)">${escapeHtml(b.notes.join('; '))}</span>` : ''}
+      <span style="flex-grow:1"></span>
+      <button type="button" class="wk-btn" data-wk-slip="${escapeHtml(ev)}" data-wk-bet="${i}" ${legs.length ? '' : 'disabled'}>ADD TO SLIP</button>
+    </div>
+  </div>`;
+}
+
+function wkPostHtml(p, game, canWrite) {
+  const busy = state.week.writing.includes(p.event_ticker);
+  const conf = p.confidence || 'low';
+  return `<article class="wk-post">
+    <div class="wk-ph">
+      ${wkMatchupHtml(p.away, p.home, game && game.records, p.event_ticker)}
+      <span class="wk-ko mono">${escapeHtml(game ? gameKickoffText(game) : (p.kickoff ? formatKickoff(p.kickoff) : ''))}</span>
+      <span class="wk-lean">${p.lean ? `<span class="wk-tag lean mono">${escapeHtml(p.lean)}</span>` : ''}
+        <span class="wk-tag mono" style="color:${WK_CONF[conf] || 'var(--muted)'}" title="Engine confidence">${escapeHtml(conf.toUpperCase())}</span></span>
+    </div>
+    <div class="wk-pb">
+      <div class="wk-hl">${escapeHtml(p.headline)}</div>
+      <div class="wk-wu">${mdHtml(p.writeup)}</div>
+      ${(p.key_injuries || []).length ? `<div class="wk-sec mono">KEY INJURIES</div>
+        <div class="wk-chips">${p.key_injuries.map(k => `<span class="wk-chip">${teamLogo(k.team, 14)}<b data-open-player="${escapeHtml(k.player)}">${escapeHtml(k.player)}</b><span>${escapeHtml(k.impact)}</span></span>`).join('')}</div>` : ''}
+      ${(p.key_matchups || []).length ? `<div class="wk-sec mono">KEY MATCHUPS</div>
+        <div class="wk-mus">${p.key_matchups.map(m => `<span class="t">${escapeHtml(m.title)}</span><span class="n">${mdInline(m.note)}</span>`).join('')}</div>` : ''}
+      ${(p.bets || []).length ? `<div class="wk-sec mono">RECOMMENDED BETS</div>
+        <div class="wk-bets">${p.bets.map((b, i) => wkBetHtml(b, p.event_ticker, i)).join('')}</div>` : ''}
+    </div>
+    <div class="wk-foot mono">
+      <span>ENGINE PREVIEW · ${escapeHtml(timeAgo(p.created_at))}</span>
+      <span>prices as of writing</span>
+      <span style="flex-grow:1"></span>
+      ${canWrite ? `<button type="button" class="wk-btn quiet" data-wk-write="${escapeHtml(p.event_ticker)}" ${busy ? 'disabled' : ''}>${busy ? 'REWRITING…' : 'REWRITE'}</button>
+        <button type="button" class="wk-btn quiet" data-wk-delete="${escapeHtml(p.event_ticker)}" ${busy ? 'disabled' : ''}>DELETE</button>` : ''}
+      <button type="button" class="wk-btn quiet" data-open-game="${escapeHtml(p.event_ticker)}">OPEN GAME →</button>
+    </div>
+  </article>`;
+}
+
+function wkFeedHtml() {
+  const w = state.week, d = w.data;
+  const canWrite = d.can_generate && d.chat_enabled;
+  const games = Object.fromEntries(d.games.map(g => [g.event_ticker, g]));
+  const posts = d.posts.slice().sort((a, b) => weekGameOrder(a.event_ticker) - weekGameOrder(b.event_ticker));
+  const todo = d.games.filter(g => !g.has_post);
+  let h = Object.entries(w.writeErr).filter(([ev]) => weekPost(ev))
+    .map(([ev, err]) => `<div class="empty" style="color:var(--orange)">Rewrite of ${escapeHtml(ev)} failed: ${escapeHtml(err)}</div>`).join('');
+  h += posts.map(p => wkPostHtml(p, games[p.event_ticker], canWrite)).join('');
+  if (!posts.length) {
+    h += `<div class="empty">${d.can_generate
+      ? (d.chat_enabled ? `No previews for week ${d.week} yet. Write them below, or all at once with WRITE ALL.` : 'No previews yet. Set ANTHROPIC_API_KEY on this server so the engine can write them.')
+      : `No previews for week ${d.week} yet. The engine posts a write-up with recommended bets for each game here.`}</div>`;
+  }
+  if (d.can_generate) {
+    h += todo.map(g => {
+      const busy = w.writing.includes(g.event_ticker), err = w.writeErr[g.event_ticker];
+      return `<div class="wk-todo">${wkMatchupHtml(g.away, g.home, g.records, g.event_ticker)}
+        <span class="mono" style="font-size:10px;color:var(--dim)">${escapeHtml(gameKickoffText(g))}</span>
+        ${err ? `<span class="mono" style="font-size:10px;color:var(--orange);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(err)}">${escapeHtml(err)}</span>` : ''}
+        <span style="flex-grow:1"></span>
+        <button type="button" class="wk-btn" data-wk-write="${escapeHtml(g.event_ticker)}" ${busy || !d.chat_enabled ? 'disabled' : ''}>${busy ? (w.writing[0] === g.event_ticker ? 'WRITING…' : 'QUEUED') : 'WRITE'}</button>
+      </div>`;
+    }).join('');
+  }
+  return h;
+}
+
+const WK_STATUS_ABBR = { Questionable: 'QUES', Doubtful: 'DOUBT', Out: 'OUT' };
+const WK_INJ_FILTERS = [['report', 'INJ REPORT'], ['reserve', 'IR / PUP'], ['all', 'ALL']];
+
+function wkInjuriesHtml() {
+  const w = state.week;
+  const rows = w.inj ? w.inj.injuries.filter(r => w.injFilter === 'all' || r.kind === w.injFilter) : [];
+  const shown = rows.slice(0, 150);
+  const seg = `<span class="seg" style="align-self:center;margin-left:auto;padding-right:8px">${WK_INJ_FILTERS.map(([v, l]) => `<button type="button" class="${w.injFilter === v ? 'on' : ''}" data-wk-inj="${v}">${l}</button>`).join('')}</span>`;
+  let body;
+  if (w.injError) body = `<div class="empty" style="color:var(--orange)">${escapeHtml(w.injError)}</div>`;
+  else if (!w.inj) body = `<div class="empty">Loading injuries…</div>`;
+  else if (!rows.length) body = `<div class="empty">None listed.</div>`;
+  else body = `<div class="mono wk-inj-grid" style="height:18px;font-size:9.5px;letter-spacing:0.06em;color:var(--dim);border-bottom:1px solid var(--head-rule);position:sticky;top:0;background:var(--panel);z-index:1">
+      <span style="text-align:center">OVR</span><span>PLAYER</span><span>GAME</span><span>STATUS</span><span class="right">PRACT</span></div>`
+    + shown.map((r, i) => {
+      const st = practiceStatus(r), style = INJ_STYLE[st] || [C.muted, 'transparent'];
+      const game = r.report_status && r.report_status !== st ? r.report_status : '';
+      return `<div class="inj-row wk-inj-grid" data-injp="${i}" style="min-height:24px;border-bottom:1px solid var(--row-rule)">
+        <span class="mono" style="text-align:center;font-size:11px;font-weight:600;color:${r.ovr ? ovrColor(r.ovr) : 'var(--faint)'}">${r.ovr || '·'}</span>
+        <span class="who"><span class="roster-player" data-open-player="${escapeHtml(r.full_name)}" style="color:var(--on)">${escapeHtml(r.full_name)}</span> <span class="mono" style="font-size:10px;color:var(--muted)">${escapeHtml(r.position || '')}</span></span>
+        <span class="opp mono" data-open-game="${escapeHtml(r.event_ticker)}" title="Open the game">${teamLogo(r.team, 14)}${escapeHtml(r.team)} <span style="color:var(--dim)">${r.home ? 'v' : '@'}</span> ${escapeHtml(r.opp)}</span>
+        <span class="mono" title="${escapeHtml(game)}" style="font-size:10.5px;color:${/out|doubt/i.test(game) ? 'var(--orange)' : 'var(--muted)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(WK_STATUS_ABBR[game] || game)}</span>
+        <span style="display:flex;justify-content:flex-end"><span class="mono pill" style="color:${style[0]};background:${style[1]}">${st}</span></span>
+      </div>`;
+    }).join('')
+    + `<div class="mono" style="margin-top:8px;font-size:9.5px;color:var(--dim)">${rows.length > shown.length ? `Top ${shown.length} of ${rows.length} · ` : ''}sorted by Madden OVR · DNP did not practice · LP limited · FP full · hover for news</div>`;
+  return { html: `<div class="panel">
+    <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center">TOP INJURIES${w.inj ? `<span class="mono" style="margin-left:8px;font-size:9.5px;color:var(--dim)">${rows.length}</span>` : ''}</span>${seg}</div>
+    <div class="panel-body" style="padding:4px 8px">${body}</div>
+  </div>`, rows: shown };
+}
+
+function renderWeek() {
+  const el = document.getElementById('weekView');
+  const w = state.week, d = w.data;
+  if (!d && !w.loading && !w.error) { loadWeek(); return; }
+  if (typeof hideInjPop === 'function') hideInjPop();
+  const weeks = d ? d.weeks : [];
+  const wi = d ? weeks.indexOf(d.week) : -1;
+  const weekBtn = (wk, glyph) => `<button type="button" class="week-step" ${wk ? `data-wk-week="${wk}" title="Week ${wk}"` : 'disabled'}>${glyph}</button>`;
+  const canWrite = d && d.can_generate && d.chat_enabled;
+  const missing = d ? d.games.filter(g => !g.has_post && !w.writing.includes(g.event_ticker)) : [];
+  const panes = `<span class="seg wk-panes">${[['feed', 'FEED'], ['inj', 'INJURIES']].map(([v, l]) => `<button type="button" class="${w.pane === v ? 'on' : ''}" data-wk-pane="${v}">${l}</button>`).join('')}</span>`;
+  let feed;
+  if (w.error) feed = `<div class="empty" style="color:var(--orange)">${escapeHtml(w.error)}</div>`;
+  else if (!d) feed = `<div class="empty">Loading week…</div>`;
+  else feed = wkFeedHtml();
+  const inj = wkInjuriesHtml();
+  el.innerHTML = `<div class="wk-bar">
+      <span class="wk-title">${d ? `WEEK ${d.week} OVERVIEW` : 'WEEK OVERVIEW'}</span>
+      ${weeks.length > 1 ? `<span style="display:flex;gap:4px">${weekBtn(wi > 0 ? weeks[wi - 1] : null, '&#9664;')}${weekBtn(wi !== -1 && wi < weeks.length - 1 ? weeks[wi + 1] : null, '&#9654;')}</span>` : ''}
+      ${d ? `<span class="mono wk-note">${d.posts.length}/${d.games.length} GAMES PREVIEWED</span>` : ''}
+      ${w.loading ? '<span class="mono wk-note">LOADING…</span>' : ''}
+      ${w.writing.length ? `<span class="mono wk-note" style="color:var(--amber)">ENGINE WRITING ${w.writing.length} PREVIEW${w.writing.length === 1 ? '' : 'S'}…</span>` : ''}
+      <span style="flex-grow:1"></span>
+      ${canWrite && missing.length ? `<button type="button" class="wk-btn" data-wk-writeall>WRITE ALL (${missing.length})</button>` : ''}
+      ${panes}
+    </div>
+    <div class="wk-cols" data-pane="${w.pane}">
+      <div class="wk-feed">${feed}</div>
+      <div class="wk-side">${inj.html}</div>
+    </div>`;
+  el.querySelectorAll('.wk-side [data-injp]').forEach(r => { r._inj = inj.rows[Number(r.dataset.injp)]; });
+}
+
+function handleWeekClick(e) {
+  const w = state.week;
+  const weekT = e.target.closest('[data-wk-week]');
+  if (weekT) { w.inj = null; loadWeek(Number(weekT.dataset.wkWeek)); return true; }
+  const paneT = e.target.closest('[data-wk-pane]');
+  if (paneT) { w.pane = paneT.dataset.wkPane; renderWeek(); return true; }
+  const injT = e.target.closest('[data-wk-inj]');
+  if (injT) { w.injFilter = injT.dataset.wkInj; renderWeek(); return true; }
+  const writeT = e.target.closest('[data-wk-write]');
+  if (writeT) { if (!writeT.disabled) writePreviews([writeT.dataset.wkWrite]); return true; }
+  if (e.target.closest('[data-wk-writeall]')) {
+    writePreviews(w.data.games.filter(g => !g.has_post).map(g => g.event_ticker));
+    return true;
+  }
+  const delT = e.target.closest('[data-wk-delete]');
+  if (delT) { deletePreview(delT.dataset.wkDelete); return true; }
+  const slipT = e.target.closest('[data-wk-slip]');
+  if (slipT) {
+    const p = weekPost(slipT.dataset.wkSlip), b = p && p.bets[Number(slipT.dataset.wkBet)];
+    if (b) { acceptProposal({ ...b, legs: b.legs.map(l => ({ ...l })) }); setBuilderOpen(true); }
+    return true;
+  }
+  return false;
+}
+
 // ---------- events ----------
 document.addEventListener('click', (e) => {
   const histT = e.target.closest('[data-hist]');
@@ -4837,6 +5170,7 @@ document.addEventListener('click', (e) => {
   if (mvHoursT) { state.movers.hours = Number(mvHoursT.dataset.mvHours); state.movers.error = null; loadMovers(); return; }
   const mvKindT = e.target.closest('[data-mv-kind]');
   if (mvKindT) { state.movers.kind = mvKindT.dataset.mvKind; state.movers.error = null; loadMovers(); return; }
+  if (state.module === 'week' && handleWeekClick(e)) return;
   if (e.target.closest('[data-connect-kalshi]')) { showLoginModal(); return; }
   if (e.target.closest('[data-disconnect-kalshi]')) { logoutKalshi(); return; }
   if (e.target.closest('[data-login-cancel]')) { hideLoginModal(); return; }

@@ -17,3 +17,6 @@ data/bdb/
 
 # Recorded Kalshi price history (odds_history.py); not regenerable -- backed up by deploy/backup-history.sh
 history/
+
+# Engine-written week feed posts (week_feed.py); written on each host, not deployed
+data/feed/

@@ -52,6 +52,7 @@ import sessions
 import snapshots as snap
 import team_tendencies as tt
 import week_overview as wo
+import week_feed as wf
 import player_volume as pvol
 import engine_agent as engine
 import scenario_sim as sim
@@ -466,6 +467,23 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"internal error: {e}"}, status=500)
             return
 
+        if parsed.path in ("/api/feed", "/api/week_injuries"):
+            week = (parse_qs(parsed.query).get("week") or [""])[0].strip()
+            week = int(week) if week.isdigit() else None
+            key = f"week:{week}" if week is not None else "week:current"
+            try:
+                overview = snap.get(key, lambda: wo.build_week_overview(week), TTL_LIVE)
+                if parsed.path == "/api/feed":
+                    # can_generate depends on who's asking, so this one stays private
+                    self._send_json({**wf.feed(overview), "can_generate": self._is_direct_local()})
+                else:
+                    self._send_snapshot(f"wkinj:{overview['week']}", lambda: {
+                        "week": overview["week"], **wf.week_injuries(overview["games"])}, TTL_NEWS, cache=CACHE_SLOW)
+            except Exception as e:
+                traceback.print_exc()
+                self._send_json({"error": f"internal error: {e}"}, status=500)
+            return
+
         if parsed.path == "/api/team/next":
             team = (parse_qs(parsed.query).get("team") or [""])[0].strip().upper()
             if not team:
@@ -777,6 +795,20 @@ class Handler(BaseHTTPRequestHandler):
             self._engine_call(lambda: sim.ladder(
                 str(body.get("event") or ""), str(body.get("team") or ""), str(body.get("family") or ""),
                 body.get("strikes") or [], body.get("stakes"), body.get("scenario"), bool(body.get("include_ml"))))
+            return
+        if parsed.path in ("/api/feed/generate", "/api/feed/delete"):
+            # Writing posts spends API credits: operator's own machine only (the CLI on the VPS).
+            if not self._is_direct_local():
+                self._send_json({"error": "posting to the feed is only available on the operator's machine"}, status=403)
+                return
+            event = str(body.get("event") or "").strip().upper()
+            if not event:
+                self._send_json({"error": "event is required"}, status=400)
+                return
+            if parsed.path == "/api/feed/delete":
+                self._send_json({"ok": wf.delete_post(event)})
+            else:
+                self._engine_call(lambda: wf.write_preview(event))
             return
         if parsed.path == "/api/engine/chat":
             if not self._chat_allowed(count=True):
