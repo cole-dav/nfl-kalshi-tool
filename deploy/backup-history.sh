@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Nightly backup of the odds-history SQLite DB (the one piece of server state
-# that can't be regenerated). Run by propsterminal-backup.timer as the app
+# Nightly backup of the server state that can't be regenerated: the
+# odds-history SQLite DB and data/feed (week-feed posts and the bet ledger). Run by propsterminal-backup.timer as the app
 # user; safe to run by hand any time:
 #
 #   sudo -u propsterminal /opt/propsterminal/app/deploy/backup-history.sh
@@ -17,13 +17,22 @@ KEEP_DAYS=${BACKUP_KEEP_DAYS:-14}
 DB=${ODDS_DB_PATH:-history/odds.sqlite3}
 case "$DB" in /*) ;; *) DB="$APP_DIR/$DB" ;; esac
 
+mkdir -p "$BACKUP_DIR"
+stamp=$(date -u +%Y%m%d-%H%M%S)
+
+if [ -d "$APP_DIR/data/feed" ]; then
+  feed="$BACKUP_DIR/feed-$stamp.tar.gz"
+  tar -czf "$feed.part" -C "$APP_DIR/data" --exclude '*.tmp' feed
+  mv "$feed.part" "$feed"
+  echo "backup: $feed ($(du -h "$feed" | cut -f1))"
+  find "$BACKUP_DIR" -maxdepth 1 -name 'feed-*.tar.gz' -mtime +"$((KEEP_DAYS - 1))" -print -delete
+fi
+
 if [ ! -f "$DB" ]; then
-  echo "no history DB at $DB -- nothing to back up"
+  echo "no history DB at $DB -- nothing else to back up"
   exit 0
 fi
 
-mkdir -p "$BACKUP_DIR"
-stamp=$(date -u +%Y%m%d-%H%M%S)
 tmp="$BACKUP_DIR/.odds-$stamp.sqlite3"
 out="$BACKUP_DIR/odds-$stamp.sqlite3.gz"
 trap 'rm -f "$tmp"' EXIT
@@ -41,6 +50,6 @@ echo "backup: $out ($(du -h "$out" | cut -f1))"
 find "$BACKUP_DIR" -maxdepth 1 -name 'odds-*.sqlite3.gz' -mtime +"$((KEEP_DAYS - 1))" -print -delete
 
 if [ -n "${BACKUP_RCLONE_DEST:-}" ]; then
-  rclone copy --max-age 48h "$BACKUP_DIR" "$BACKUP_RCLONE_DEST" --include 'odds-*.sqlite3.gz'
+  rclone copy --max-age 48h "$BACKUP_DIR" "$BACKUP_RCLONE_DEST" --include 'odds-*.sqlite3.gz' --include 'feed-*.tar.gz'
   echo "copied off-box to $BACKUP_RCLONE_DEST"
 fi
