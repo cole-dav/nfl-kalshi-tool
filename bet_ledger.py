@@ -29,7 +29,11 @@ from kalshi_markets import MarketIndex
 LEDGER_PATH = os.path.join(os.path.dirname(__file__), "data", "feed", "ledger.json")
 DELAY_HOURS = 12            # grade this long after the game ends
 GIVE_UP_HOURS = 72          # legs still unsettled this long after the game: graded as void
+GAME_MIN_HOURS = 3          # no game ends sooner than this after kickoff
+END_POLL = timedelta(minutes=15)    # after that, how often to ask Kalshi whether it's over
+RETRY = timedelta(minutes=30)       # due, but a leg hasn't settled yet
 _lock = threading.Lock()
+_wake = threading.Event()   # set when new bets are recorded, so the grader reschedules
 
 
 def _now() -> datetime:
@@ -96,6 +100,8 @@ def record(post: dict, source: str) -> int:
             }
             added += 1
         _save(ledger)
+    if added:
+        _wake.set()
     return added
 
 
@@ -157,9 +163,9 @@ def grade_due(now: datetime | None = None, idx: MarketIndex | None = None) -> in
     if not pending:
         return 0
     idx = idx or MarketIndex()
-    # Only look up games that have kicked off; game end comes from Kalshi.
+    # Only ask Kalshi about games that could be over by now.
     events = {b["event_ticker"] for b in pending
-              if not b["game_end"] and (_parse(b.get("kickoff")) or now) <= now}
+              if not b["game_end"] and _earliest_end(b, now) <= now}
     ends = {}
     for ev in events:
         try:
@@ -191,17 +197,48 @@ def grade_due(now: datetime | None = None, idx: MarketIndex | None = None) -> in
     return graded
 
 
-def grader_loop(interval: int = 600) -> None:
-    """Background thread for the server."""
-    time.sleep(60)
+def _earliest_end(b: dict, now: datetime) -> datetime:
+    kick = _parse(b.get("kickoff"))
+    return kick + timedelta(hours=GAME_MIN_HOURS) if kick else now
+
+
+def next_check(now: datetime | None = None) -> datetime | None:
+    """When the grader next has something to do: a known due time, the
+    earliest a game can have ended (then every END_POLL until Kalshi closes
+    its moneyline), or a retry for a due bet whose legs haven't settled.
+    None when nothing is pending."""
+    now = now or _now()
+    times = []
+    for b in _load().values():
+        if b["graded_at"]:
+            continue
+        if b["due_at"]:
+            due = _parse(b["due_at"])
+            times.append(due if due > now else now + RETRY)
+        else:
+            end = _earliest_end(b, now)
+            times.append(end if end > now else now + END_POLL)
+    return min(times) if times else None
+
+
+def grader_loop() -> None:
+    """Background thread for the server: sleeps until the next game can have
+    ended or the next bet is due, rather than polling."""
+    time.sleep(30)
     while True:
         try:
             n = grade_due()
             if n:
                 print(f"bet_ledger: graded {n} bet(s)", flush=True)
+            nxt = next_check()
         except Exception:
             traceback.print_exc()
-        time.sleep(interval)
+            nxt = _now() + RETRY
+        wait = (nxt - _now()).total_seconds() if nxt else 7 * 24 * 3600
+        if nxt:
+            print(f"bet_ledger: next check {_iso(nxt)}", flush=True)
+        _wake.wait(max(30.0, wait))
+        _wake.clear()
 
 
 # -- results ----------------------------------------------------------------------------------

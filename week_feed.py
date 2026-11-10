@@ -414,19 +414,28 @@ def promote(event_ticker: str, model: str) -> dict:
     return variant
 
 
-def _week_of(away: str, home: str) -> int | None:
+def _schedule(away: str, home: str) -> tuple[int | None, str | None]:
+    """(week, kickoff as UTC ISO) from the nflverse schedule. Kalshi's own
+    kickoff field is a market-close window (about two days late), so the
+    ledger's grading schedule can't use it."""
     try:
         sched = nd.find_upcoming_game(nd.kalshi_to_nflverse_team(away), nd.kalshi_to_nflverse_team(home))
-        return sched["week"] if sched else None
     except Exception:
-        return None
+        return None, None
+    if not sched:
+        return None, None
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    ko = datetime.fromisoformat(f"{sched['gameday']}T{sched['gametime']}").replace(tzinfo=ZoneInfo("America/New_York"))
+    return sched["week"], bl._iso(ko)
 
 
 def _build_post(event_ticker: str, detail: dict, inp: dict, slip: dict) -> dict:
     bets = [ea._price_proposal(b, slip) for b in (inp.get("bets") or [])[:3]]
+    week, kickoff = _schedule(detail["away"], detail["home"])
     return {
         "post_id": uuid.uuid4().hex[:12], "event_ticker": event_ticker, "away": detail["away"], "home": detail["home"],
-        "kickoff": detail.get("kickoff"), "week": _week_of(detail["away"], detail["home"]),
+        "kickoff": kickoff, "week": week,
         "created_at": ea._iso(time.time()),
         "headline": inp.get("headline") or "", "lean": inp.get("lean") or "",
         "confidence": inp.get("confidence") or "low", "writeup": inp.get("writeup") or "",
@@ -436,10 +445,16 @@ def _build_post(event_ticker: str, detail: dict, inp: dict, slip: dict) -> dict:
 
 
 def backfill_ledger() -> int:
-    """Give older posts (live and A/B) a post_id and record their bets."""
+    """Give older posts (live and A/B) a post_id and their schedule kickoff,
+    record their bets, and correct the kickoff on ungraded ledger bets."""
     added = 0
     with _lock:
         posts, ab = _load(), _load(AB_PATH)
+        kickoffs = {}
+        for p in list(posts.values()) + [v for e in ab.values() for v in e["variants"].values() if not v.get("error")]:
+            if p["event_ticker"] not in kickoffs:
+                kickoffs[p["event_ticker"]] = _schedule(p["away"], p["home"])[1]
+            p["kickoff"] = kickoffs[p["event_ticker"]] or p.get("kickoff")
         for p in posts.values():
             p.setdefault("post_id", uuid.uuid4().hex[:12])
         # a promoted variant is the same post: share its id
@@ -457,6 +472,13 @@ def backfill_ledger() -> int:
                 added += bl.record(v, "ab")
     for p in posts.values():
         added += bl.record(p, "live")
+    with bl._lock:
+        ledger = bl._load()
+        for b in ledger.values():
+            if not b["graded_at"] and kickoffs.get(b["event_ticker"]):
+                b["kickoff"] = kickoffs[b["event_ticker"]]
+        bl._save(ledger)
+    bl._wake.set()
     return added
 
 

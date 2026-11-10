@@ -99,3 +99,27 @@ def test_scorecard_counts_pending():
     bl.record(post(), "ab")
     (row,) = bl.scorecard(list(bl._load().values()))
     assert row["pending"] == 4 and row["w"] == 0 and row["roi"] is None
+
+
+def test_next_check_sleeps_until_something_can_happen():
+    assert bl.next_check(END) is None
+    bl.record(post(), "ab")
+    kick = datetime(2026, 11, 13, 1, 15, tzinfo=timezone.utc)
+    assert bl.next_check(kick) == kick + timedelta(hours=3)               # earliest possible end
+    later = kick + timedelta(hours=3, minutes=5)
+    assert bl.next_check(later) == later + bl.END_POLL                    # polling for the final whistle
+    idx = FakeIdx(MARKETS)
+    assert bl.grade_due(later, idx) == 0 and idx.calls == 0               # end found; nothing due yet
+    assert bl.next_check(later) == END + timedelta(hours=12)              # sleep until due
+    unsettled = {**MARKETS, REC: {"result": "", "status": "active"}}
+    due = END + timedelta(hours=12, minutes=1)
+    bl.grade_due(due, FakeIdx(unsettled))
+    assert bl.next_check(due) == due + bl.RETRY                           # parlay leg still open
+
+
+def test_no_kalshi_calls_before_a_game_can_be_over():
+    bl.record(post(), "ab")
+    idx = FakeIdx(MARKETS)
+    kick = datetime(2026, 11, 13, 1, 15, tzinfo=timezone.utc)
+    bl.grade_due(kick + timedelta(hours=1), idx)
+    assert bl._load()["p1:0"]["game_end"] is None

@@ -46,7 +46,7 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setattr(ss, "price_legs", fake_price_legs)
     monkeypatch.setattr(wo, "build_game_detail", lambda ev: dict(DETAIL))
     monkeypatch.setattr(wf, "_edges", lambda ev: [])
-    monkeypatch.setattr(wf, "_week_of", lambda a, h: 10)
+    monkeypatch.setattr(wf, "_schedule", lambda a, h: (10, "2026-11-13T01:15:00+00:00"))
 
 
 def test_write_preview_runs_tools_then_publishes_priced_post():
