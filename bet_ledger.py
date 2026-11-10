@@ -235,9 +235,13 @@ def grader_loop() -> None:
             traceback.print_exc()
             nxt = _now() + RETRY
         wait = (nxt - _now()).total_seconds() if nxt else 7 * 24 * 3600
-        if nxt:
+        if nxt and nxt != getattr(grader_loop, "_last", None):
             print(f"bet_ledger: next check {_iso(nxt)}", flush=True)
-        _wake.wait(max(30.0, wait))
+            grader_loop._last = nxt
+        # At most an hour: CLI runs (week_feed generate/backfill) record bets in
+        # another process, so re-read the ledger hourly (a local file read,
+        # no Kalshi calls unless something is due).
+        _wake.wait(min(3600.0, max(30.0, wait)))
         _wake.clear()
 
 

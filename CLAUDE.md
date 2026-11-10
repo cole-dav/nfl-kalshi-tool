@@ -31,7 +31,7 @@ The WRITE buttons only appear on a direct localhost visit, so on the VPS posts
 are written with the CLI, which needs `ANTHROPIC_API_KEY` in the server `.env`:
 
 ```sh
-ssh propsterminal 'cd /opt/propsterminal/app && runuser -u propsterminal -- .venv/bin/python week_feed.py generate --missing'
+ssh propsterminal 'cd /opt/propsterminal/app && runuser -u propsterminal -- ../venv/bin/python week_feed.py generate --missing'
 # A/B both models (data/feed/ab.json), then publish one model's versions:
 #   week_feed.py generate --ab claude-sonnet-5-5,claude-opus-5-5
 #   week_feed.py promote --model claude-sonnet-5-5 [--event KXNFLGAME-...]
