@@ -3,11 +3,16 @@ Week overview tab: an engine-written preview feed (one post per game) and the
 week's notable injuries league-wide, best players (Madden OVR) first.
 
 Posts are written by Claude driving the quant engine: the game's lines,
-injuries (with OVR), depth-chart matchups, tendency reads and the engine's top
-edges are gathered here and handed over up front; the model can price more
-legs with the engine tools, then must call publish_preview. Every recommended
-bet is re-priced server-side (engine_agent._price_proposal) before it's saved,
-so the numbers on a post always come from the engine, never the model.
+injuries (with OVR), depth-chart matchups, tendency reads, the engine's top
+edges, both teams' scouting notebooks and recent review lessons
+(game_review.py) are handed over up front; the model can price more legs with
+the engine tools, then must call publish_preview with the assumptions its bets
+depend on (checked against the play-by-play after the game). A bet needs an
+engine edge and a football reason that agree; passing is allowed. Every
+recommended bet is re-priced server-side (engine_agent._price_proposal) before
+it's saved, so the numbers on a post always come from the engine, never the
+model. Each run's reasoning summary, tool calls and context are saved to
+data/feed/audits/<post_id>.json.
 
 Posts live in data/feed/posts.json keyed by event ticker (one per game;
 rewriting replaces). A/B runs (generate --ab) write the same game with several
@@ -16,7 +21,9 @@ Week tab shows them and can promote one to the live feed. Generating costs API c
 from the operator's own machine; on the VPS use the CLI:
 
     .venv/bin/python week_feed.py generate [--week N] [--event KXNFLGAME-...] [--missing]
-    .venv/bin/python week_feed.py generate --ab claude-sonnet-5-5,claude-opus-5-5   # A/B, effort low
+    .venv/bin/python week_feed.py generate --ab claude-sonnet-5-5,claude-opus-5-5   # A/B
+    .venv/bin/python week_feed.py review [--game 2026_10_NE_DET | --week N] [--force]
+    .venv/bin/python week_feed.py notes [TEAM]
 """
 
 from __future__ import annotations
@@ -32,11 +39,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 import bet_ledger as bl
 import engine_agent as ea
+import game_review as gr
 import madden_ratings as mr
 import nflverse_data as nd
 
 MODEL = "claude-opus-5-5"
-EFFORT = "low"
+EFFORT = "medium"
 MAX_TOKENS = 16000
 MAX_TOOL_ITERS = 10
 FEED_PATH = os.path.join(os.path.dirname(__file__), "data", "feed", "posts.json")
@@ -147,9 +155,34 @@ def feed(overview: dict) -> dict:
             if g:
                 b["grade"] = {k: g.get(k) for k in ("outcome", "pnl", "record", "due_at", "graded_at")}
                 b["grade"]["legs"] = [l.get("result") for l in g["legs"]]
+    _attach_reviews(overview["week"], games, out + [v for e in ab.values() for v in e["variants"].values()])
+    notes = gr.all_notes()
+    teams = [t for g in games for t in (g["away"], g["home"])]
     return {"week": overview["week"], "weeks": overview["weeks"], "games": games, "posts": out,
             "ab": ab, "scorecard": bl.scorecard(bets),
+            "team_notes": {t: {k: notes[t].get(k) for k in ("notes", "week", "updated_at")} for t in teams if t in notes},
             "chat_enabled": ea.chat_enabled(), "model": MODEL, "effort": EFFORT}
+
+
+def _attach_reviews(week: int, games: list[dict], posts: list[dict]) -> None:
+    """Post-game review on each game (g["review"]) and, per post, the verdict
+    on each assumption and the reasoning grade (p["review"])."""
+    by_game = {(r["away"], r["home"]): r for r in gr.reviews().values() if r.get("week") == week}
+    for g in games:
+        r = by_game.get((g["away"], g["home"]))
+        g["review"] = r and {k: r.get(k) for k in ("game_id", "final", "summary", "engine_review", "lessons",
+                                                    "model", "created_at")}
+    for p in posts:
+        r = by_game.get((p.get("away"), p.get("home")))
+        if not r or p.get("error"):
+            continue
+        checks = {c["index"]: {"verdict": c["verdict"], "evidence": c["evidence"]}
+                  for c in r.get("assumption_checks") or [] if c.get("post_id") == p.get("post_id")}
+        grade = next((x for x in r.get("reasoning_review") or [] if x.get("post_id") == p.get("post_id")), None)
+        p["review"] = {"checks": [checks.get(i) for i in range(len(p.get("assumptions") or []))],
+                       "reasoning": grade and {"grade": grade["grade"], "note": grade["note"]},
+                       "game": next((g["review"] for g in games if g["away"] == p.get("away")
+                                     and g["home"] == p.get("home")), None)}
 
 
 # -- game context handed to the model -------------------------------------------------------
@@ -206,7 +239,8 @@ def _edges(event_ticker: str) -> list[dict]:
         res = ea.edges(event_ticker, 0.02, "all")
     except Exception as e:
         return [{"error": str(e)}]
-    return [ea._compact_edge(r) for r in res["edges"] if r.get("confidence") != "low"][:15]
+    return [{**ea._compact_edge(r), "volume": round(r.get("volume") or 0)}
+            for r in res["edges"] if r.get("confidence") != "low"][:15]
 
 
 # -- the writer ---------------------------------------------------------------------------
@@ -243,9 +277,17 @@ PUBLISH_TOOL = ea._tool(
             "properties": {"title": {"type": "string", "description": "e.g. 'NYG edge rush vs WAS RT'"},
                            "note": {"type": "string"}},
             "required": ["title", "note"], "additionalProperties": False}},
-        "bets": {"type": "array", "items": _BET},
+        "assumptions": {"type": "array", "description": "2-5 specific, checkable claims your lean and bets depend on.",
+                        "items": {
+            "type": "object",
+            "properties": {"team": {"type": "string", "description": "Team the claim is about (Kalshi code)."},
+                           "claim": {"type": "string", "description": "e.g. 'DET averages under 4.0 YPC on runs to the right'"},
+                           "check": {"type": "string", "description": "How the play-by-play will confirm or refute it."}},
+            "required": ["team", "claim", "check"], "additionalProperties": False}},
+        "bets": {"type": "array", "items": _BET, "description": "0-3 bets. Empty is fine: say why in pass_reason."},
+        "pass_reason": {"type": "string", "description": "If bets is empty, why; otherwise ''."},
     },
-    ["headline", "lean", "confidence", "writeup", "key_injuries", "key_matchups", "bets"],
+    ["headline", "lean", "confidence", "writeup", "key_injuries", "key_matchups", "assumptions", "bets", "pass_reason"],
 )
 
 def _writer_tool(t: dict) -> dict:
@@ -259,19 +301,26 @@ def _writer_tool(t: dict) -> dict:
 WRITER_TOOLS = [_writer_tool(t) for t in ea.TOOLS
                 if t["name"] not in ("propose_bets", "simulate_scenario")] + [PUBLISH_TOOL]
 
-SYSTEM_PROMPT = """You write the game previews in the weekly feed of an NFL research tool for Kalshi prediction markets. Readers are bettors who want a fast, sharp take on each game and a few bets backed by the tool's quant engine.
+SYSTEM_PROMPT = """You write the game previews in the weekly feed of an NFL research tool for Kalshi prediction markets. Readers are bettors who want a sharp, honest take on each game and only the bets that hold up.
 
-Each request gives you one game's context: Kalshi lines, both injury reports with Madden OVR ratings (higher = better player; an absent 85+ starter matters, a backup's absence usually doesn't), depth-chart matchups with OVR gaps (positive ovr_edge favors the offense), tendency reads, and the engine's top edges (fair value vs cost) for the game.
+Each request gives you one game's context: Kalshi lines, both injury reports with Madden OVR ratings (higher = better player; an absent 85+ starter matters, a backup's absence usually doesn't), depth-chart matchups with OVR gaps (positive ovr_edge favors the offense), tendency reads, the engine's top edges, a scouting notebook on each team written by the post-game reviewer after earlier games, and recent lessons from reviews of past previews.
 
-How to write it
-- Lead with what decides the game: the injuries that actually change it (who's out or doubtful, and who replaces them) and the two or three matchups with real leverage. Connect them to game script and to the markets.
+What the engine is, and isn't
+- Its game-line fair values (moneyline, spread, total, team totals) come from a margin/total distribution fitted to Kalshi's own moneyline, spread and total prices, lightly blended toward the sportsbook line. It knows nothing about injuries, matchups or weather. An engine edge on a game line means that one Kalshi market disagrees with the rest of the game's markets. Sometimes that's real, often it's a stale or thin quote (check volume).
+- Player-prop fair values blend a projection model with the Kalshi ladder.
+- So the engine prices; it doesn't scout. The football case is yours.
+
+How to work
+- Build your own read first: which injuries actually change the game (who's out, who replaces them), the two or three matchups with real leverage, how the notebooks say these teams play, and the likely game script. Then look at the edges.
+- A bet needs both: an engine edge of ~2c or more on a market with real volume, and a football reason that points the same way. If your read argues against an edge, don't bet it. Don't write a narrative to justify a bet you'd make anyway.
+- Passing is a fine outcome. If nothing passes both tests, leave bets empty, set confidence low, and say why in pass_reason.
+- Use price_market / price_parlay / build_ladder to check legs before recommending them; get_game_context adds weather. Only use market tickers that appear in the context or in tool results. Kalshi combos allow at most one game-level leg (ML, spread, total, team total) per game.
+- List 2-5 assumptions your lean and bets depend on, each specific enough to check against the play-by-play after the game (e.g. "NE holds DET under 4.0 YPC on runs to the right", not "NE's defense plays well"). The post-game reviewer will grade them and update the notebooks, so make them the claims you'd most want to learn from.
+- Confidence: high only when the football case is strong and the edge is on a liquid market; medium when both are decent; low otherwise.
+
+Writing
 - Be specific and grounded in the data given or fetched. Never invent players, injuries, prices or probabilities. If the data is thin, say less.
 - Plain, confident sports-writing voice. No hype, no disclaimers, no "as an AI".
-
-Bets
-- Recommend 1-3 bets that follow from the write-up: singles, a same-game parlay, or a same-team ladder. Only use market tickers that appear in the context or in tool results.
-- Prefer real edges (engine fair above cost by ~2c or more, not low confidence). Use price_market / price_parlay / build_ladder to check legs before recommending them; get_game_context adds weather.
-- Kalshi combos allow at most one game-level leg (ML, spread, total, team total) per game. If nothing has an edge, recommend the single best-priced look and set confidence to low.
 
 Finish by calling publish_preview exactly once. Don't write the preview as a normal message."""
 
@@ -281,7 +330,7 @@ def _create(client, messages, model: str, effort: str):
         model=model, max_tokens=MAX_TOKENS,
         system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
         tools=WRITER_TOOLS, messages=messages,
-        thinking={"type": "adaptive"}, output_config={"effort": effort},
+        thinking={"type": "adaptive", "display": "summarized"}, output_config={"effort": effort},
         betas=[ea.FALLBACK_BETA],
     )
     try:
@@ -312,6 +361,9 @@ def prepare(event_ticker: str) -> tuple[dict, dict]:
     detail["event_ticker"] = event_ticker
     ctx = game_context(detail)
     ctx["engine_edges"] = _edges(event_ticker)
+    ctx["team_notebooks"] = {t: (lambda n: {"written_after_week": n.get("week"), "notes": n.get("notes")} if n
+                                 else "no notebook yet")(gr.team_notes(t)) for t in (detail["away"], detail["home"])}
+    ctx["recent_review_lessons"] = gr.recent_lessons()
     ctx["now_utc"] = ea._iso(time.time())
     return detail, ctx
 
@@ -329,6 +381,8 @@ def run_writer(event_ticker: str, detail: dict, ctx: dict, client=None, model: s
         f"Write the preview for {ctx['matchup']} and publish it."}]}]
     slip = ea.normalize_slip({})
     trace: list[str] = []
+    thinking: list[str] = []
+    calls: list[dict] = []
     usage = dict.fromkeys(("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"), 0)
     served, t0 = model, time.time()
     for _ in range(MAX_TOOL_ITERS):
@@ -342,6 +396,7 @@ def run_writer(event_ticker: str, detail: dict, ctx: dict, client=None, model: s
             raise ea.EngineError("the model declined to write this preview")
         content = list(resp.content or [])
         messages.append({"role": "assistant", "content": content})
+        thinking += [b.thinking for b in content if getattr(b, "type", None) == "thinking" and getattr(b, "thinking", "")]
         if stop == "pause_turn":
             continue
         tool_uses = [b for b in content if getattr(b, "type", None) == "tool_use"]
@@ -350,6 +405,10 @@ def run_writer(event_ticker: str, detail: dict, ctx: dict, client=None, model: s
             post = _build_post(event_ticker, detail, publish.input, slip)
             post.update(model=served, effort=effort, trace=trace,
                         stats={**usage, "cost_usd": _usage_cost(usage, served), "seconds": round(time.time() - t0)})
+            gr.save_audit(post["post_id"], {
+                "post_id": post["post_id"], "event_ticker": event_ticker, "model": served, "effort": effort,
+                "created_at": post["created_at"], "thinking": thinking, "trace": trace, "tool_calls": calls,
+                "published": publish.input, "context": ea.fv_sanitize(ctx)})
             return post
         if stop != "tool_use" or not tool_uses:
             raise ea.EngineError("the engine finished without publishing a preview")
@@ -363,6 +422,8 @@ def run_writer(event_ticker: str, detail: dict, ctx: dict, client=None, model: s
                     traceback.print_exc()
                 res, is_err = {"error": str(e)}, True
             trace.append(ea._summary(b.name, inp, res))
+            calls.append({"tool": b.name, "input": inp,
+                          "result": json.dumps(ea.fv_sanitize(res), default=str)[:4000], "error": is_err})
             results.append({"type": "tool_result", "tool_use_id": b.id,
                             "content": json.dumps(ea.fv_sanitize(res), default=str)[:60_000],
                             **({"is_error": True} if is_err else {})})
@@ -440,7 +501,8 @@ def _build_post(event_ticker: str, detail: dict, inp: dict, slip: dict) -> dict:
         "headline": inp.get("headline") or "", "lean": inp.get("lean") or "",
         "confidence": inp.get("confidence") or "low", "writeup": inp.get("writeup") or "",
         "key_injuries": inp.get("key_injuries") or [], "key_matchups": inp.get("key_matchups") or [],
-        "bets": bets,
+        "assumptions": inp.get("assumptions") or [], "bets": bets,
+        "pass_reason": (inp.get("pass_reason") or "").strip() if not bets else "",
     }
 
 
@@ -500,6 +562,14 @@ def main(argv=None):
     g.add_argument("--parallel", type=int, default=3, help="games written at once")
     sub.add_parser("backfill-ledger", help="record bets from posts written before the ledger existed")
     gr = sub.add_parser("grade", help="grade due bets now and print the last 24h of results")
+    rv = sub.add_parser("review", help="review finished games against play-by-play and update team notebooks")
+    rv.add_argument("--game", help="nflverse game id, e.g. 2026_10_NE_DET")
+    rv.add_argument("--week", type=int, help="every final game that week")
+    rv.add_argument("--force", action="store_true", help="re-review games that already have one / skip waiting on bets")
+    rv.add_argument("--model", default=gr.MODEL)
+    rv.add_argument("--effort", default=gr.EFFORT, choices=["low", "medium", "high", "xhigh", "max"])
+    nt = sub.add_parser("notes", help="print team notebooks")
+    nt.add_argument("team", nargs="?", help="Kalshi team code; default: list every team")
     pr = sub.add_parser("promote", help="publish A/B variants to the live feed")
     pr.add_argument("--model", required=True, help="e.g. claude-sonnet-5-5")
     pr.add_argument("--event", help="one game; default: every A/B game that has this model's variant")
@@ -514,6 +584,28 @@ def main(argv=None):
                 print(f"  {ev}: skipped ({e})")
         return 0
 
+    if args.cmd == "review":
+        games = [args.game] if args.game else gr.due_games(force=args.force, week=args.week)
+        print(f"{len(games)} game(s) to review")
+        failed = 0
+        for gid in games:
+            try:
+                r = gr.review_game(gid, model=args.model, effort=args.effort)
+                print(f"  {gid}: {r['final']} · {len(r['assumption_checks'])} assumption checks · "
+                      f"{len(r['lessons'])} lessons · ${r['stats']['cost_usd']:.3f} {r['stats']['seconds']}s", flush=True)
+            except Exception as e:
+                failed += 1
+                print(f"  {gid}: FAILED {e}", flush=True)
+        return 1 if failed else 0
+    if args.cmd == "notes":
+        notes = gr.all_notes()
+        if args.team:
+            n = notes.get(args.team.upper())
+            print(f"{args.team.upper()} (after week {n['week']}, {n['updated_at']})\n\n{n['notes']}" if n else "no notebook yet")
+        else:
+            for t, n in sorted(notes.items()):
+                print(f"  {t}: after week {n['week']} ({len(n.get('history') or [])} earlier versions)")
+        return 0
     if args.cmd == "backfill-ledger":
         print(f"recorded {backfill_ledger()} bet(s)")
         return 0

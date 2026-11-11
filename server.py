@@ -53,6 +53,7 @@ import sessions
 import snapshots as snap
 import team_tendencies as tt
 import week_overview as wo
+import game_review as gr
 import week_feed as wf
 import bet_ledger as bl
 import player_volume as pvol
@@ -482,6 +483,19 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "since/until must be ISO timestamps"}, status=400)
             return
 
+        if parsed.path in ("/api/feed/audit", "/api/feed/review"):
+            # How a preview was written (reasoning summary, engine calls) or a
+            # game's full post-game review, including the reviewer's reasoning.
+            qs = parse_qs(parsed.query)
+            if parsed.path == "/api/feed/audit":
+                a = gr.load_audit((qs.get("post_id") or [""])[0].strip())
+                body = a and {k: a.get(k) for k in ("post_id", "model", "effort", "created_at", "thinking", "trace",
+                                                     "tool_calls")}
+            else:
+                body = gr.reviews().get((qs.get("game_id") or [""])[0].strip())
+            self._send_json(body or {"error": "not found"}, status=200 if body else 404)
+            return
+
         if parsed.path in ("/api/feed", "/api/week_injuries"):
             week = (parse_qs(parsed.query).get("week") or [""])[0].strip()
             week = int(week) if week.isdigit() else None
@@ -854,6 +868,7 @@ def main():
     threading.Thread(target=_slate_refresher, daemon=True, name="slate-refresher").start()
     threading.Thread(target=_player_warmer, daemon=True, name="player-warmer").start()
     threading.Thread(target=bl.grader_loop, daemon=True, name="bet-grader").start()
+    threading.Thread(target=gr.review_loop, daemon=True, name="game-reviewer").start()  # FEED_AUTO_REVIEW=1
     print(f"Serving on http://{host}:{port}")
     try:
         server.serve_forever()

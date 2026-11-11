@@ -37,6 +37,22 @@ ssh propsterminal 'cd /opt/propsterminal/app && runuser -u propsterminal -- /opt
 #   week_feed.py promote --model claude-sonnet-5-5 [--event KXNFLGAME-...]
 ```
 
+Each preview lists the assumptions its bets depend on and may pass (no bet).
+Its reasoning summary, engine calls and context are saved to
+`data/feed/audits/<post_id>.json` (REASONING button on the Week tab).
+
+After each game, `game_review.py` reviews it against nflverse play-by-play:
+grades every assumption, the reasoning and the engine's edge, writes lessons,
+and rewrites both teams' scouting notebooks (`data/feed/team_notes.json`,
+TEAM NOTES on the Week tab), which the next previews read. On the VPS the
+server does this by itself (`FEED_AUTO_REVIEW=1` in its `.env`); manually:
+
+```sh
+ssh propsterminal 'cd /opt/propsterminal/app && runuser -u propsterminal -- /opt/propsterminal/venv/bin/python week_feed.py review --week 10'
+#   week_feed.py review --game 2026_10_NE_DET [--force]   # one game / redo
+#   week_feed.py notes [DET]                               # print notebooks
+```
+
 Every recommended bet (live and A/B) is recorded in `data/feed/ledger.json`
 and graded by a server thread (`bet_ledger.py`) from Kalshi settlement 12h
 after its game ends; results show on the Week tab and at `/api/feed/results`.

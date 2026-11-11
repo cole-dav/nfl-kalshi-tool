@@ -7,6 +7,7 @@ import pytest
 
 import engine_agent as ea
 import fair_value as fv
+import game_review as gr
 import scenario_sim as ss
 import week_feed as wf
 import week_overview as wo
@@ -42,6 +43,9 @@ def isolated(monkeypatch, tmp_path):
     monkeypatch.setattr(wf, "AB_PATH", str(tmp_path / "feed" / "ab.json"))
     import bet_ledger as bl
     monkeypatch.setattr(bl, "LEDGER_PATH", str(tmp_path / "feed" / "ledger.json"))
+    monkeypatch.setattr(gr, "REVIEWS_PATH", str(tmp_path / "feed" / "reviews.json"))
+    monkeypatch.setattr(gr, "NOTES_PATH", str(tmp_path / "feed" / "team_notes.json"))
+    monkeypatch.setattr(gr, "AUDIT_DIR", str(tmp_path / "feed" / "audits"))
     monkeypatch.setattr(fv, "current_games", lambda: [])
     monkeypatch.setattr(ss, "price_legs", fake_price_legs)
     monkeypatch.setattr(wo, "build_game_detail", lambda ev: dict(DETAIL))
@@ -64,7 +68,7 @@ def test_write_preview_runs_tools_then_publishes_priced_post():
     # the context handed over drops healthy players and keeps the IR starter
     ctx = msgs.calls[0]["messages"][0]["content"][0]["text"]
     assert "Laremy Tunsil" in ctx and "Healthy Guy" not in ctx
-    assert msgs.calls[0]["model"] == wf.MODEL and msgs.calls[0]["output_config"] == {"effort": "low"} and "propose_bets" not in [t["name"] for t in msgs.calls[0]["tools"]]
+    assert msgs.calls[0]["model"] == wf.MODEL and msgs.calls[0]["output_config"] == {"effort": wf.EFFORT} and "propose_bets" not in [t["name"] for t in msgs.calls[0]["tools"]]
     # tool results went back as a user turn before the publish call
     assert msgs.calls[1]["messages"][-1]["content"][0]["tool_use_id"] == "tu_1"
 
@@ -144,7 +148,7 @@ def test_write_ab_runs_models_independently_and_promotes():
     out = wf.write_ab(EVENT, ["claude-sonnet-5-5", "claude-opus-5-5"], client=client)
 
     s = out["claude-sonnet-5-5"]
-    assert s["headline"] == "Sonnet take" and s["model"] == "claude-sonnet-5-5" and s["effort"] == "low"
+    assert s["headline"] == "Sonnet take" and s["model"] == "claude-sonnet-5-5" and s["effort"] == wf.EFFORT
     assert s["stats"]["cost_usd"] == round((1000 * 2 + 500 * 10) / 1e6, 4)
     assert "error" in out["claude-opus-5-5"]
     # each model got only the shared game context, never the other's output
