@@ -130,3 +130,14 @@ def test_writer_saves_audit_and_can_pass(monkeypatch):
     assert audit["thinking"] == ["Engine edge conflicts with the matchup read."]
     assert audit["context"]["matchup"] == "NE @ DET"
     assert bl.record(post, "ab") == 0      # no bets, nothing in the ledger
+
+
+def test_cli_review_and_notes(monkeypatch, capsys):
+    calls = []
+    monkeypatch.setattr(gr, "review_game", lambda gid, model, effort: calls.append((gid, model, effort)) or {
+        "final": {"NE": 20, "DET": 24}, "assumption_checks": [], "lessons": [], "stats": {"cost_usd": 0.1, "seconds": 3}})
+    assert wf.main(["review", "--game", GID]) == 0
+    assert calls == [(GID, gr.MODEL, gr.EFFORT)]
+    gr._write_notes([{"team": "DET", "notes": "run-first"}], 10, 2026, GID)
+    assert wf.main(["notes", "det"]) == 0
+    assert "run-first" in capsys.readouterr().out

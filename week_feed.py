@@ -561,7 +561,7 @@ def main(argv=None):
     g.add_argument("--ab", help="comma-separated models to compare side by side (A/B store, not the live feed)")
     g.add_argument("--parallel", type=int, default=3, help="games written at once")
     sub.add_parser("backfill-ledger", help="record bets from posts written before the ledger existed")
-    gr = sub.add_parser("grade", help="grade due bets now and print the last 24h of results")
+    sub.add_parser("grade", help="grade due bets now and print the last 24h of results")
     rv = sub.add_parser("review", help="review finished games against play-by-play and update team notebooks")
     rv.add_argument("--game", help="nflverse game id, e.g. 2026_10_NE_DET")
     rv.add_argument("--week", type=int, help="every final game that week")
