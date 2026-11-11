@@ -18,6 +18,12 @@ a final margin of 3, 7, 10, ... happens than a smooth normal would say). The
 pmf for one game is a discretized normal(mu, sd) times those weights, so
 moving mu keeps the key-number spikes on the integers they belong to.
 
+Team points: home = (T+M)/2 and away = (T-M)/2, so team totals come from a
+joint pmf over integer (home, away) scores: f_M(h-a) * f_T(h+a) * w(h) * w(a),
+raked back to the fitted M and T marginals. w(k) are team-score key weights
+(17, 20, 24, 27 happen far more than 25 or 26), fitted to 2019-2025 finals and
+stored in team_score_weights.json (refit: python fair_value.py fit-team-weights).
+
 Location: weighted least squares of the model's P(yes) against every ML /
 spread (or total) strike mid, weights ~ log(volume) / bid-ask width, then a
 light blend toward nflverse spread_line / total_line when available.
@@ -25,7 +31,9 @@ light blend toward nflverse spread_line / total_line when available.
 
 from __future__ import annotations
 
+import json
 import math
+import os
 import re
 import threading
 import time
@@ -97,7 +105,6 @@ MARGIN_SUPPORT = np.arange(-80, 81)      # home - away
 TOTAL_SUPPORT = np.arange(0, 141)
 MARGIN_SD_PRIOR = 12.7                   # sd(result - spread_line), 2019-2025
 TOTAL_SD_PRIOR = 13.1                    # sd(total - total_line), 2019-2025
-MT_RHO = 0.03                            # corr(fav margin resid, total resid) ~ 0.026
 NFLVERSE_LINE_WEIGHT = 0.15              # blend weight on nflverse line vs Kalshi fit
 _KEY_PSEUDO = 8.0                        # shrink per-integer key weights toward 1
 
@@ -160,6 +167,69 @@ def key_weights() -> tuple[np.ndarray, np.ndarray]:
         w_m = np.ones(len(MARGIN_SUPPORT))
         w_m[MARGIN_SUPPORT == 0] = 0.1
         return w_m, np.ones(len(TOTAL_SUPPORT))
+
+
+PTS_SUPPORT = np.arange(0, 71)           # one team's final score
+_H, _A = np.meshgrid(PTS_SUPPORT, PTS_SUPPORT, indexing="ij")
+_GRID_M = (_H - _A) - MARGIN_SUPPORT[0]                  # index into MARGIN_SUPPORT
+_GRID_T = np.minimum(_H + _A, TOTAL_SUPPORT[-1])        # index into TOTAL_SUPPORT
+TEAM_WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "team_score_weights.json")
+
+
+@lru_cache(maxsize=1)
+def team_score_weights() -> np.ndarray:
+    """Per-score key weights over PTS_SUPPORT (flat if the file is missing)."""
+    try:
+        with open(TEAM_WEIGHTS_PATH) as f:
+            w = np.array(json.load(f)["weights"], dtype=float)
+        if len(w) == len(PTS_SUPPORT):
+            return w
+    except (OSError, ValueError, KeyError):
+        pass
+    return np.ones(len(PTS_SUPPORT))
+
+
+def team_joint(pmf_m: np.ndarray, pmf_t: np.ndarray, w: np.ndarray | None = None, iters: int = 12) -> np.ndarray:
+    """P(home = h, away = a) over PTS_SUPPORT x PTS_SUPPORT, consistent with
+    the margin and total pmfs (iterative proportional fitting). M and T must
+    share parity, and the fitted pmfs disagree slightly on P(odd) (key numbers
+    3 and 7), so no grid matches both exactly: the margin is raked last and
+    matched exactly; the total's cdf ends up within ~0.1%."""
+    w = team_score_weights() if w is None else w
+    J = pmf_m[_GRID_M] * pmf_t[_GRID_T] * w[_H] * w[_A]
+    J /= J.sum()
+    for _ in range(iters):
+        for idx, target in ((_GRID_T, pmf_t), (_GRID_M, pmf_m)):
+            cur = np.bincount(idx.ravel(), J.ravel(), len(target))
+            ratio = np.divide(target, cur, out=np.zeros_like(target), where=cur > 1e-300)
+            J *= ratio[idx]
+        J /= J.sum()
+    return J
+
+
+def fit_team_score_weights(seasons=range(2019, 2026), rounds: int = 5) -> np.ndarray:
+    """Observed/expected count of each team score vs the joint model at each
+    game's nflverse line, iterated (expected depends on the weights)."""
+    import pandas as pd
+
+    import nflverse_data as nd
+    d = pd.concat([nd.load_schedules(s) for s in seasons])
+    d = d[d["result"].notna() & d["spread_line"].notna() & d["total_line"].notna()]
+    scores = np.clip(np.r_[d["home_score"], d["away_score"]].astype(int), 0, PTS_SUPPORT[-1])
+    obs = np.bincount(scores, minlength=len(PTS_SUPPORT)).astype(float)
+    wm, wt = key_weights()
+    lines = d.groupby(["spread_line", "total_line"]).size()
+    pmfs = [(margin_pmf(s, MARGIN_SD_PRIOR, wm)[0], total_pmf(t, TOTAL_SD_PRIOR, wt)[0], n)
+            for (s, t), n in lines.items()]
+    w = np.ones(len(PTS_SUPPORT))
+    for _ in range(rounds):
+        exp = np.zeros(len(PTS_SUPPORT))
+        for pm_, pt_, n in pmfs:
+            J = team_joint(pm_, pt_, w, iters=4)
+            exp += n * (J.sum(axis=1) + J.sum(axis=0))
+        w *= (obs + _KEY_PSEUDO) / (exp + _KEY_PSEUDO)
+    w /= np.average(w, weights=obs + 1)
+    return w
 
 
 def margin_pmf(mu, sd, weights: np.ndarray | None = None) -> np.ndarray:
@@ -316,22 +386,19 @@ class GameModel:
         return float(self.pmf_t[TOTAL_SUPPORT > x].sum())
 
     @property
-    def _pts_pmf(self) -> tuple[np.ndarray, np.ndarray]:
-        """pmf of T+M (= 2*home) and T-M (= 2*away), independent approx."""
-        cached = getattr(self, "_pts_cache", None)
+    def joint(self) -> np.ndarray:
+        """P(home = h, away = a) over PTS_SUPPORT (see team_joint)."""
+        cached = getattr(self, "_joint_cache", None)
         if cached is None:
-            conv_home = np.convolve(self.pmf_t, self.pmf_m)          # support T+M
-            conv_away = np.convolve(self.pmf_t, self.pmf_m[::-1])    # support T-M
-            lo = TOTAL_SUPPORT[0] + MARGIN_SUPPORT[0]
-            sup = np.arange(lo, lo + len(conv_home))
-            cached = (sup, conv_home, conv_away)
-            object.__setattr__(self, "_pts_cache", cached)
+            cached = team_joint(self.pmf_m, self.pmf_t)
+            object.__setattr__(self, "_joint_cache", cached)
         return cached
 
+    def team_points_pmf(self, team: str) -> np.ndarray:
+        return self.joint.sum(axis=1 if team == self.home else 0)
+
     def p_team_points_gt(self, team: str, x: float) -> float:
-        sup, home, away = self._pts_pmf
-        arr = home if team == self.home else away
-        return float(arr[sup > 2 * x].sum())
+        return float(self.team_points_pmf(team)[PTS_SUPPORT > x].sum())
 
     def implied_points(self) -> dict:
         return {self.home: (self.mu_t + self.mu_m) / 2, self.away: (self.mu_t - self.mu_m) / 2}
@@ -485,7 +552,8 @@ def confidence(m: dict, fit_rms: float | None = None, model_quality: float = 1.0
     width = (a - b) if (a and b) else 1.0
     vol = m.get("volume") or 0
     score = 0
-    score += 2 if vol >= 50_000 else 1 if vol >= 5_000 else 0
+    # under ~$1k traded a quote is mostly one market maker's guess
+    score += 2 if vol >= 50_000 else 1 if vol >= 5_000 else 0 if vol >= 1_000 else -1
     score += 2 if width <= 0.02 else 1 if width <= 0.05 else 0
     if fit_rms is not None:
         score += 1 if fit_rms <= 0.015 else 0 if fit_rms <= 0.03 else -1
@@ -782,3 +850,16 @@ def _kickoff_ts(nv: dict) -> float | None:
         return dt.replace(tzinfo=ZoneInfo("America/New_York")).timestamp()
     except Exception:
         return None
+
+
+if __name__ == "__main__":
+    import sys
+    if sys.argv[1:] == ["fit-team-weights"]:
+        w = fit_team_score_weights()
+        with open(TEAM_WEIGHTS_PATH, "w") as f:
+            json.dump({"seasons": "2019-2025", "support": "0-70",
+                       "weights": [round(float(x), 4) for x in w]}, f)
+        print("wrote", TEAM_WEIGHTS_PATH)
+        print(" ".join(f"{k}:{w[k]:.2f}" for k in range(10, 36)))
+    else:
+        print("usage: python fair_value.py fit-team-weights")

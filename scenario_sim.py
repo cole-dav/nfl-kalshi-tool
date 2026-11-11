@@ -1,9 +1,9 @@
 """
 Joint Monte Carlo for one game: margin + total -> team points -> player stats.
 
-  1. (M, T) drawn from the fair_value pmfs through a Gaussian copula with a
-     mild correlation (favorite's margin vs total, ~0.03 historically); T is
-     nudged by 1 when T+M is odd so both team scores are whole numbers.
+  1. (home, away) final scores drawn from the model's joint team-score pmf
+     (fair_value.team_joint: consistent with the fitted margin and total, with
+     team-score key numbers); M and T follow from them.
   2. Team-level latent factors per side, built from the normal scores of that
      team's points (zP) and its own margin (zS):
         pass volume  F = a*zP + b*zS + noise   (b < 0: trailing teams throw more;
@@ -168,16 +168,12 @@ def simulate(ev, props: dict | None = None, n: int = N_SIMS, seed: int | None = 
         seed = int(hashlib.sha1(ev.suffix.encode()).hexdigest()[:8], 16)
     rng = np.random.default_rng(seed)
 
-    # 1. margin & total via Gaussian copula
-    rho = fv.MT_RHO * (1 if model.mu_m >= 0 else -1)
-    z1 = rng.standard_normal(n)
-    z2 = rho * z1 + math.sqrt(1 - rho ** 2) * rng.standard_normal(n)
-    M = _pmf_quantile(model.pmf_m, fv.MARGIN_SUPPORT, fv.norm_cdf(z1)).astype(float)
-    T = _pmf_quantile(model.pmf_t, fv.TOTAL_SUPPORT, fv.norm_cdf(z2)).astype(float)
-    odd = ((T + M) % 2) != 0
-    T = np.where(odd, T + rng.choice([-1.0, 1.0], n), T)
-    T = np.maximum(T, np.abs(M))
-    home_pts, away_pts = (T + M) / 2, (T - M) / 2
+    # 1. final scores from the joint team-score pmf
+    J = model.joint
+    cells = rng.choice(J.size, size=n, p=J.ravel() / J.sum())
+    home_pts = fv.PTS_SUPPORT[cells // J.shape[1]].astype(float)
+    away_pts = fv.PTS_SUPPORT[cells % J.shape[1]].astype(float)
+    M, T = home_pts - away_pts, home_pts + away_pts
     pts = {model.home: home_pts, model.away: away_pts}
     sim = Sim(suffix=ev.suffix, away=ev.away, home=ev.home, n=n, M=M, T=T, pts=pts, as_of=ev.as_of)
 

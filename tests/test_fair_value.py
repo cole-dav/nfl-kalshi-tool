@@ -91,3 +91,25 @@ def test_edges_cost_rules():
 def test_norm_helpers():
     xs = np.array([-2.0, -0.5, 0.0, 1.3])
     assert np.allclose(fv.norm_ppf(fv.norm_cdf(xs)), xs, atol=1e-5)
+
+
+def test_team_joint_matches_margin_and_keeps_total():
+    wm, wt = fv.key_weights()
+    pm, pt = fv.margin_pmf(2.5, 12.7, wm)[0], fv.total_pmf(51.5, 13.1, wt)[0]
+    J = fv.team_joint(pm, pt)
+    assert abs(J.sum() - 1) < 1e-9
+    mm = np.bincount(fv._GRID_M.ravel(), J.ravel(), len(pm))
+    tt = np.bincount(fv._GRID_T.ravel(), J.ravel(), len(pt))
+    assert np.abs(np.cumsum(mm) - np.cumsum(pm)).max() < 1e-6
+    assert np.abs(np.cumsum(tt) - np.cumsum(pt)).max() < 0.003
+
+
+def test_team_points_are_whole_scores_with_key_numbers():
+    ms = synthetic_game(mu_home=-3.0)
+    model = fv.fit_game(ms, AWAY, HOME)
+    pmf = model.team_points_pmf(HOME)
+    assert abs(pmf.sum() - 1) < 1e-9
+    # 26.5 and 26.0 thresholds differ by exactly P(26): no half-point scores
+    assert abs(model.p_team_points_gt(HOME, 25.5) - model.p_team_points_gt(HOME, 26.5) - pmf[26]) < 1e-12
+    if fv.team_score_weights().std() > 0:      # fitted weights present
+        assert pmf[27] > pmf[26] and pmf[24] > pmf[25]
