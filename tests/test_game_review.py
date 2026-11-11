@@ -59,7 +59,9 @@ def isolated(tmp_path, monkeypatch):
 def test_facts_and_query_plays():
     f = gr.game_facts(PBP, SCHED.iloc[0])
     assert f["final"] == {"NE": 20, "DET": 24}
-    assert f["closing_line"] == {"favorite": "DET", "favored_by": 2.5, "total": 51.5}
+    assert f["against_closing_line"]["DET"] == {"line": "DET -2.5", "ats": "covered", "total_line": 51.5,
+                                                "combined": 44, "ou": "under"}
+    assert f["against_closing_line"]["NE"]["line"] == "NE +2.5" and f["against_closing_line"]["NE"]["ats"] == "failed"
     det = f["offense"]["DET"]
     assert det["rushing"]["by_direction"]["right"]["plays"] == 2
     assert det["rushing"]["by_direction"]["right"]["ypp"] == 2.5

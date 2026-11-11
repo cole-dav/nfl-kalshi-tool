@@ -226,14 +226,31 @@ def game_facts(pbp: pd.DataFrame, row: pd.Series) -> dict:
     big = g.dropna(subset=["wpa"]).assign(aw=lambda d: d["wpa"].abs()).nlargest(14, "aw").sort_index()
     return {
         "final": {_k(away): int(row["away_score"]), _k(home): int(row["home_score"])},
-        "closing_line": {"favorite": _k(home if (row.get("spread_line") or 0) >= 0 else away),
-                         "favored_by": _r(abs(row.get("spread_line") or 0), 1), "total": _r(row.get("total_line"), 1)},
+        "against_closing_line": {_k(away): _ats(row, away), _k(home): _ats(row, home)},
         "points_by_quarter": _by_quarter(g, home, away),
         "venue": {k: row.get(k) for k in ("roof", "surface", "temp", "wind")
                   if row.get(k) is not None and row.get(k) != "" and not pd.isna(row.get(k))},
         "offense": {_k(away): _offense(g, away), _k(home): _offense(g, home)},
         "biggest_plays_by_wpa": [_play_row(r) for _, r in big.iterrows()],
     }
+
+
+def _ats(r, team: str) -> dict:
+    """Closing line from `team`'s side (nflverse code) and how the game
+    graded against it, computed here so the model never does spread math."""
+    if pd.isna(r.get("spread_line")) or pd.isna(r.get("result")):
+        return {}
+    home = r["home_team"] == team
+    spread = -float(r["spread_line"]) if home else float(r["spread_line"])   # team's handicap, e.g. -6.5
+    margin = float(r["result"]) if home else -float(r["result"])
+    cover = margin + spread
+    out = {"line": f"{_k(team)} {spread:+g}" if spread else f"{_k(team)} PK",
+           "ats": "covered" if cover > 0 else "failed" if cover < 0 else "push"}
+    if not pd.isna(r.get("total_line")):
+        tot = int(r["home_score"] + r["away_score"])
+        out.update(total_line=float(r["total_line"]), combined=tot,
+                   ou="over" if tot > r["total_line"] else "under" if tot < r["total_line"] else "push")
+    return out
 
 
 def season_log(pbp: pd.DataFrame, sched: pd.DataFrame, team: str, before_week: int) -> list[dict]:
@@ -245,9 +262,10 @@ def season_log(pbp: pd.DataFrame, sched: pd.DataFrame, team: str, before_week: i
         home = r["home_team"] == team
         g = _scrimmage(pbp[pbp["game_id"] == r["game_id"]])
         off, dfn = g[g["posteam"] == team], g[g["defteam"] == team]
+        pf, pa = int(r["home_score"] if home else r["away_score"]), int(r["away_score"] if home else r["home_score"])
         out.append({"week": int(r["week"]), "opp": ("vs " if home else "@ ") + _k(r["away_team"] if home else r["home_team"]),
-                    "score": f"{int(r['home_score'] if home else r['away_score'])}-{int(r['away_score'] if home else r['home_score'])}",
-                    "favored_by": _r((r["spread_line"] if home else -r["spread_line"]), 1),
+                    "score": f"{pf}-{pa}", "result": "W" if pf > pa else "L" if pf < pa else "T",
+                    **_ats(r, team),
                     "off_epa_play": _r(off["epa"].mean(), 3), "def_epa_play_allowed": _r(dfn["epa"].mean(), 3),
                     "rush_ypc": _r(off[off["rush"] == 1]["yards_gained"].mean(), 1),
                     "ypa": _r(off[off["pass"] == 1]["yards_gained"].mean(), 1)})
@@ -360,7 +378,7 @@ What to do
 4. Lessons: 0-3 short lessons that generalize to future games (not recaps). Skip if nothing generalizes.
 5. Rewrite both teams' notebooks, merging the current notes with this game. Keep each under ~250 words with these sections: **Identity**, **Offense**, **Defense**, **Personnel**, **Trends to watch**, **Betting notes**. Tag new observations with the week, e.g. "(W10)". One game is a data point, not a trend: say how established each item is, and confirm, weaken or drop older items as the evidence says. If a team has no notebook yet, start one from this game and its season log.
 
-Only cite numbers from the data or your query results. Finish by calling publish_review exactly once (both teams in team_notes, by Kalshi code); don't write the review as a normal message."""
+Results against the spread and total (line, ats, ou) are precomputed in the data: use them as given, never redo spread math. Only cite numbers from the data or your query results. Finish by calling publish_review exactly once (both teams in team_notes, by Kalshi code); don't write the review as a normal message."""
 
 
 def _schedule_row(game_id: str) -> pd.Series:
