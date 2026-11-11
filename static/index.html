@@ -472,6 +472,23 @@ button.bb-side:hover{outline:1px solid var(--faint)}
 .wk-res.loss{color:var(--bg);background:var(--orange)}
 .wk-res.push,.wk-res.pend{color:var(--muted);border:1px solid var(--head-rule)}
 .wk-card{display:flex;align-items:center;flex-wrap:wrap;gap:6px 18px;padding:6px 10px;border:1px solid var(--border);background:var(--panel);font-size:11px;flex-shrink:0}
+.wk-asm{display:flex;flex-direction:column;gap:4px;font-size:11.5px;margin-bottom:4px;color:var(--label)}
+.wk-asm-row{display:grid;grid-template-columns:64px minmax(0,1fr);gap:2px 8px;align-items:baseline}
+.wk-asm-row .ev{grid-column:2;color:var(--dim);font-size:10.5px}
+.wk-vd{font-size:9px;font-weight:600;letter-spacing:0.06em;padding:1px 5px;text-align:center;white-space:nowrap;border:1px solid var(--head-rule);color:var(--muted)}
+.wk-vd.held{color:var(--bg);background:var(--blue);border-color:var(--blue)}
+.wk-vd.failed{color:var(--bg);background:var(--orange);border-color:var(--orange)}
+.wk-vd.mixed{color:var(--amber);border-color:var(--amber-ring)}
+.wk-review{margin:0 0 8px;padding:8px 10px;border:1px solid var(--amber-ring);background:var(--amber-soft);font-size:12px;line-height:1.5;color:var(--label)}
+.wk-review p,.wk-audit p,.wk-note-team p{margin:0 0 6px}
+.wk-review ul,.wk-audit ul,.wk-note-team ul{margin:0 0 6px;padding-left:16px}
+.wk-pass{padding:6px 8px;border:1px dashed var(--head-rule);font-size:11.5px;color:var(--muted);margin-bottom:8px}
+.wk-audit{border-top:1px solid var(--row-rule);padding:8px 12px;font-size:11.5px;line-height:1.5;color:var(--muted);max-height:420px;overflow:auto;background:var(--bg)}
+.wk-audit .tr{font-size:10.5px;color:var(--dim)}
+.wk-side-seg{align-self:flex-start;margin-bottom:6px}
+.wk-note-team{border-bottom:1px solid var(--row-rule);padding:8px 2px}
+.wk-note-team .hd{display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px;margin-bottom:4px}
+.wk-note-team .bd{font-size:11.5px;line-height:1.5;color:var(--label)}
 .wk-todo{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px dashed var(--head-rule);font-size:11.5px;color:var(--muted);flex-shrink:0}
 .wk-inj-grid{display:grid;grid-template-columns:26px minmax(0,1fr) 78px 44px 34px;gap:6px;align-items:center}
 .wk-inj-grid .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -657,7 +674,7 @@ const state = {
   tickets: [], activeId: null, kalshiOk: true, module: 'slate',
   games: [], activeGameId: null,
   slate: { loading: false, error: null, games: null, view: 'list', week: null, weeks: [] },
-  week: { week: null, loading: false, error: null, data: null, inj: null, injError: null, pane: 'feed', injFilter: 'report', writing: [], writeErr: {}, ab: false },
+  week: { week: null, loading: false, error: null, data: null, inj: null, injError: null, pane: 'feed', injFilter: 'report', writing: [], writeErr: {}, ab: false, side: 'inj', audits: {}, auditOpen: {} },
   book: { loading: false, error: null, data: null },
   session: { connected: false },
 };
@@ -5082,8 +5099,11 @@ function wkPostHtml(p, game, canWrite, model) {
         <div class="wk-chips">${p.key_injuries.map(k => `<span class="wk-chip">${teamLogo(k.team, 14)}<b data-open-player="${escapeHtml(k.player)}">${escapeHtml(k.player)}</b><span>${escapeHtml(k.impact)}</span></span>`).join('')}</div>` : ''}
       ${(p.key_matchups || []).length ? `<div class="wk-sec mono">KEY MATCHUPS</div>
         <div class="wk-mus">${p.key_matchups.map(m => `<span class="t">${escapeHtml(m.title)}</span><span class="n">${mdInline(m.note)}</span>`).join('')}</div>` : ''}
+      ${wkAssumptionsHtml(p)}
       ${(p.bets || []).length ? `<div class="wk-sec mono">RECOMMENDED BETS</div>
-        <div class="wk-bets">${p.bets.map((b, i) => wkBetHtml(b, p.event_ticker, i, model)).join('')}</div>` : ''}
+        <div class="wk-bets">${p.bets.map((b, i) => wkBetHtml(b, p.event_ticker, i, model)).join('')}</div>`
+        : p.pass_reason ? `<div class="wk-sec mono">RECOMMENDED BETS</div><div class="wk-pass"><b style="color:var(--on)">NO BET.</b> ${mdInline(p.pass_reason)}</div>` : ''}
+      ${wkReviewHtml(p)}
     </div>
     <div class="wk-foot mono">
       <span>ENGINE PREVIEW · ${escapeHtml(timeAgo(p.created_at))}</span>
@@ -5091,9 +5111,91 @@ function wkPostHtml(p, game, canWrite, model) {
       <span style="flex-grow:1"></span>
       ${canWrite && !model ? `<button type="button" class="wk-btn quiet" data-wk-write="${escapeHtml(p.event_ticker)}" ${busy ? 'disabled' : ''}>${busy ? 'REWRITING…' : 'REWRITE'}</button>
         <button type="button" class="wk-btn quiet" data-wk-delete="${escapeHtml(p.event_ticker)}" ${busy ? 'disabled' : ''}>DELETE</button>` : ''}
+      ${p.post_id ? `<button type="button" class="wk-btn quiet" data-wk-audit="${escapeHtml(p.post_id)}">${state.week.auditOpen[p.post_id] ? 'HIDE REASONING' : 'REASONING'}</button>` : ''}
       <button type="button" class="wk-btn quiet" data-open-game="${escapeHtml(p.event_ticker)}">OPEN GAME →</button>
     </div>
+    ${p.post_id && state.week.auditOpen[p.post_id] ? wkAuditHtml(p.post_id) : ''}
   </article>`;
+}
+
+const WK_VERDICT = { held: 'HELD', failed: 'FAILED', mixed: 'MIXED', untestable: 'N/A' };
+
+// The claims the bets depend on; after the game, each one's verdict from the
+// play-by-play review (game_review.py).
+function wkAssumptionsHtml(p) {
+  const asm = p.assumptions || [];
+  if (!asm.length) return '';
+  const checks = (p.review && p.review.checks) || [];
+  return `<div class="wk-sec mono">ASSUMPTIONS${checks.some(Boolean) ? ' · CHECKED AGAINST PLAY-BY-PLAY' : ''}</div>
+    <div class="wk-asm">${asm.map((a, i) => {
+      const c = checks[i];
+      return `<div class="wk-asm-row"><span class="wk-vd mono ${c ? escapeHtml(c.verdict) : ''}" title="${c ? '' : 'Checked after the game'}">${c ? (WK_VERDICT[c.verdict] || escapeHtml(c.verdict.toUpperCase())) : 'OPEN'}</span>
+        <span>${a.team ? `<b style="color:var(--on)">${escapeHtml(a.team)}</b> ` : ''}${mdInline(a.claim)}</span>
+        ${c ? `<span class="ev">${mdInline(c.evidence)}</span>` : ''}</div>`;
+    }).join('')}</div>`;
+}
+
+const WK_GRADE = { sound: 'var(--blue)', mixed: 'var(--amber)', flawed: 'var(--orange)' };
+
+function wkReviewHtml(p) {
+  const rv = p.review, g = rv && rv.game;
+  if (!g) return '';
+  const f = g.final || {};
+  return `<div class="wk-sec mono">POST-GAME REVIEW · FINAL ${escapeHtml(p.away)} ${f[p.away] ?? '?'} – ${escapeHtml(p.home)} ${f[p.home] ?? '?'}</div>
+    <div class="wk-review">${mdHtml(g.summary || '')}
+      ${rv.reasoning ? `<p><b style="color:${WK_GRADE[rv.reasoning.grade] || 'var(--on)'}">Reasoning: ${escapeHtml(rv.reasoning.grade)}.</b> ${mdInline(rv.reasoning.note)}</p>` : ''}
+      ${g.engine_review ? `<p><b style="color:var(--on)">Engine:</b> ${mdInline(g.engine_review)}</p>` : ''}
+      ${(g.lessons || []).length ? `<p style="margin-bottom:2px"><b style="color:var(--on)">Lessons</b></p><ul>${g.lessons.map(l => `<li>${mdInline(l)}</li>`).join('')}</ul>` : ''}
+    </div>`;
+}
+
+// How the preview was written: the model's reasoning summary and every
+// engine call it made (week_feed audits; older posts have none).
+function wkAuditHtml(pid) {
+  const a = state.week.audits[pid];
+  if (!a || a === 'loading') return `<div class="wk-audit">Loading reasoning…</div>`;
+  if (a.error) return `<div class="wk-audit">No reasoning was recorded for this preview (written before reasoning was saved).</div>`;
+  const thinking = (a.thinking || []).filter(t => t && t.trim());
+  return `<div class="wk-audit">
+    <div class="wk-sec mono" style="margin-top:0">REASONING SUMMARY · ${escapeHtml(WK_MODEL_LABEL(a.model))} · EFFORT ${escapeHtml(String(a.effort || '').toUpperCase())}</div>
+    ${thinking.length ? thinking.map(t => mdHtml(t)).join('') : '<p>The model wrote no reasoning summary for this run.</p>'}
+    <div class="wk-sec mono">ENGINE CALLS (${(a.trace || []).length})</div>
+    ${(a.trace || []).length ? a.trace.map(t => `<div class="tr mono">${escapeHtml(t)}</div>`).join('') : '<div class="tr mono">none: it used only the edges it was handed</div>'}
+  </div>`;
+}
+
+async function toggleAudit(pid) {
+  const w = state.week;
+  const rerender = () => { if (state.module === 'week') keepScroll(document.querySelector('#weekView .wk-feed'), renderWeek); };
+  w.auditOpen[pid] = !w.auditOpen[pid];
+  rerender();
+  if (!w.auditOpen[pid] || (w.audits[pid] && w.audits[pid] !== 'loading')) return;
+  w.audits[pid] = 'loading';
+  try {
+    const r = await fetch('/api/feed/audit?post_id=' + encodeURIComponent(pid));
+    w.audits[pid] = r.ok ? await r.json() : { error: 'not found' };
+  } catch (err) {
+    w.audits[pid] = { error: String(err) };
+  }
+  rerender();
+}
+
+// Scouting notebooks the post-game reviewer keeps on every team
+// (game_review.py); the preview writer reads them before each game.
+function wkNotesHtml() {
+  const d = state.week.data, notes = (d && d.team_notes) || {};
+  const teams = d ? [...new Set(d.games.flatMap(g => [g.away, g.home]))] : [];
+  const have = teams.filter(t => notes[t]);
+  const body = !d ? `<div class="empty">Loading…</div>` : have.length
+    ? have.map(t => `<div class="wk-note-team"><div class="hd">${teamLogo(t, 16)}${escapeHtml(t)}
+        <span class="mono" style="font-size:9.5px;color:var(--dim);font-weight:400">AFTER WEEK ${escapeHtml(String(notes[t].week))} · ${escapeHtml(timeAgo(notes[t].updated_at))}</span></div>
+        <div class="bd">${mdHtml(notes[t].notes)}</div></div>`).join('')
+      + (teams.length > have.length ? `<div class="mono" style="margin-top:8px;font-size:9.5px;color:var(--dim)">No notebook yet: ${teams.filter(t => !notes[t]).map(escapeHtml).join(', ')}</div>` : '')
+    : `<div class="empty">No team notebooks yet. After each game the reviewer checks the previews against the play-by-play and rewrites a notebook on both teams; the previews read them.</div>`;
+  return `<div class="panel">
+    <div class="panel-head"><span class="panel-title" style="display:flex;align-items:center">TEAM NOTES<span class="mono" style="margin-left:8px;font-size:9.5px;color:var(--dim)">${have.length}/${teams.length}</span></span></div>
+    <div class="panel-body" style="padding:4px 8px">${body}</div>
+  </div>`;
 }
 
 function wkFeedHtml() {
@@ -5204,12 +5306,13 @@ function renderWeek() {
   const weekBtn = (wk, glyph) => `<button type="button" class="week-step" ${wk ? `data-wk-week="${wk}" title="Week ${wk}"` : 'disabled'}>${glyph}</button>`;
   const canWrite = d && d.can_generate && d.chat_enabled;
   const missing = d ? d.games.filter(g => !g.has_post && !w.writing.includes(g.event_ticker)) : [];
-  const panes = `<span class="seg wk-panes">${[['feed', 'FEED'], ['inj', 'INJURIES']].map(([v, l]) => `<button type="button" class="${w.pane === v ? 'on' : ''}" data-wk-pane="${v}">${l}</button>`).join('')}</span>`;
+  const panes = `<span class="seg wk-panes">${[['feed', 'FEED'], ['inj', 'INJURIES · NOTES']].map(([v, l]) => `<button type="button" class="${w.pane === v ? 'on' : ''}" data-wk-pane="${v}">${l}</button>`).join('')}</span>`;
   let feed;
   if (w.error) feed = `<div class="empty" style="color:var(--orange)">${escapeHtml(w.error)}</div>`;
   else if (!d) feed = `<div class="empty">Loading week…</div>`;
   else feed = wkScorecardHtml(d.scorecard) + (w.ab && d.ab && Object.keys(d.ab).length ? wkAbHtml() : wkFeedHtml());
-  const inj = wkInjuriesHtml();
+  const inj = w.side === 'notes' ? { html: wkNotesHtml(), rows: [] } : wkInjuriesHtml();
+  const sideSeg = `<span class="seg wk-side-seg">${[['inj', 'INJURIES'], ['notes', 'TEAM NOTES']].map(([v, l]) => `<button type="button" class="${w.side === v ? 'on' : ''}" data-wk-side="${v}">${l}</button>`).join('')}</span>`;
   const abN = d && d.ab ? Object.keys(d.ab).length : 0;
   if (!abN) w.ab = false;
   const abSeg = abN ? `<span class="seg">${[[false, 'FEED'], [true, `A/B (${abN})`]].map(([v, l]) => `<button type="button" class="${w.ab === v ? 'on' : ''}" data-wk-ab="${v ? 1 : 0}">${l}</button>`).join('')}</span>` : '';
@@ -5226,7 +5329,7 @@ function renderWeek() {
     </div>
     <div class="wk-cols${w.ab ? ' ab' : ''}" data-pane="${w.ab ? 'feed' : w.pane}">
       <div class="wk-feed">${feed}</div>
-      <div class="wk-side">${inj.html}</div>
+      <div class="wk-side">${sideSeg}${inj.html}</div>
     </div>`;
   el.querySelectorAll('.wk-side [data-injp]').forEach(r => { r._inj = inj.rows[Number(r.dataset.injp)]; });
 }
@@ -5243,6 +5346,10 @@ function handleWeekClick(e) {
   if (paneT) { w.pane = paneT.dataset.wkPane; renderWeek(); return true; }
   const injT = e.target.closest('[data-wk-inj]');
   if (injT) { w.injFilter = injT.dataset.wkInj; renderWeek(); return true; }
+  const sideT = e.target.closest('[data-wk-side]');
+  if (sideT) { w.side = sideT.dataset.wkSide; renderWeek(); return true; }
+  const auditT = e.target.closest('[data-wk-audit]');
+  if (auditT) { toggleAudit(auditT.dataset.wkAudit); return true; }
   const writeT = e.target.closest('[data-wk-write]');
   if (writeT) { if (!writeT.disabled) writePreviews([writeT.dataset.wkWrite]); return true; }
   if (e.target.closest('[data-wk-writeall]')) {
