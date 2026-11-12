@@ -53,6 +53,13 @@ ssh propsterminal 'cd /opt/propsterminal/app && runuser -u propsterminal -- /opt
 #   week_feed.py notes [DET]                               # print notebooks
 ```
 
+`game_flags.py` flags outlier games (weather, QB changes, garbage time, stat
+extremes); the reviewer logs flagged stats as conditions, not trends, and the
+writer gets each team's flagged games as `season_outliers`.
+
+Planned, not built: Reddit post-game threads as fan reports for the reviewer,
+on the free Reddit API (user approved). Follow `docs/reddit-fan-reports.md`.
+
 Every recommended bet (live and A/B) is recorded in `data/feed/ledger.json`
 and graded by a server thread (`bet_ledger.py`) from Kalshi settlement 12h
 after its game ends; results show on the Week tab and at `/api/feed/results`.
