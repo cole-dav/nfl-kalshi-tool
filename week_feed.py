@@ -39,6 +39,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import bet_ledger as bl
 import engine_agent as ea
+import game_flags as gf
 import game_review as gr
 import madden_ratings as mr
 import nflverse_data as nd
@@ -171,7 +172,7 @@ def _attach_reviews(week: int, games: list[dict], posts: list[dict]) -> None:
     for g in games:
         r = by_game.get((g["away"], g["home"]))
         g["review"] = r and {k: r.get(k) for k in ("game_id", "final", "summary", "engine_review", "lessons",
-                                                    "model", "created_at")}
+                                                    "outlier_flags", "model", "created_at")}
     for p in posts:
         r = by_game.get((p.get("away"), p.get("home")))
         if not r or p.get("error"):
@@ -303,7 +304,7 @@ WRITER_TOOLS = [_writer_tool(t) for t in ea.TOOLS
 
 SYSTEM_PROMPT = """You write the game previews in the weekly feed of an NFL research tool for Kalshi prediction markets. Readers are bettors who want a sharp, honest take on each game and only the bets that hold up.
 
-Each request gives you one game's context: Kalshi lines, both injury reports with Madden OVR ratings (higher = better player; an absent 85+ starter matters, a backup's absence usually doesn't), depth-chart matchups with OVR gaps (positive ovr_edge favors the offense), tendency reads, the engine's top edges, a scouting notebook on each team written by the post-game reviewer after earlier games, and recent lessons from reviews of past previews.
+Each request gives you one game's context: Kalshi lines, both injury reports with Madden OVR ratings (higher = better player; an absent 85+ starter matters, a backup's absence usually doesn't), depth-chart matchups with OVR gaps (positive ovr_edge favors the offense), tendency reads, the engine's top edges, a scouting notebook on each team written by the post-game reviewer after earlier games, recent lessons from reviews of past previews, and season_outliers: each team's games this season that the box score misrepresents (weather, QB changes, garbage time, stat extremes). Season averages and tendency reads include those games, so discount them when one is skewing a number you lean on.
 
 What the engine is, and isn't
 - Its game-line fair values (moneyline, spread, total, team totals) come from a margin/total distribution fitted to Kalshi's own moneyline, spread and total prices, lightly blended toward the sportsbook line. It knows nothing about injuries, matchups or weather. An engine edge on a game line means that one Kalshi market disagrees with the rest of the game's markets. Sometimes that's real, often it's a stale or thin quote (check volume).
@@ -364,8 +365,21 @@ def prepare(event_ticker: str) -> tuple[dict, dict]:
     ctx["team_notebooks"] = {t: (lambda n: {"written_after_week": n.get("week"), "notes": n.get("notes")} if n
                                  else "no notebook yet")(gr.team_notes(t)) for t in (detail["away"], detail["home"])}
     ctx["recent_review_lessons"] = gr.recent_lessons()
+    ctx["season_outliers"] = season_outliers(detail["away"], detail["home"])
     ctx["now_utc"] = ea._iso(time.time())
     return detail, ctx
+
+
+def season_outliers(*teams: str) -> dict:
+    """Each team's flagged games this season (game_flags): weather, QB changes,
+    garbage time, stat extremes. Empty when play-by-play isn't available."""
+    try:
+        pbp, sched = nd.load_pbp(), nd.load_schedules()
+        return {t: gf.team_outliers(pbp, sched, nd.kalshi_to_nflverse_team(t), nd.nflverse_to_kalshi_team)
+                for t in teams}
+    except Exception:
+        traceback.print_exc()
+        return {}
 
 
 def run_writer(event_ticker: str, detail: dict, ctx: dict, client=None, model: str = MODEL,

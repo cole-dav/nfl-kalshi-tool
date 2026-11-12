@@ -5145,6 +5145,7 @@ function wkReviewHtml(p) {
     <div class="wk-review">${mdHtml(g.summary || '')}
       ${rv.reasoning ? `<p><b style="color:${WK_GRADE[rv.reasoning.grade] || 'var(--on)'}">Reasoning: ${escapeHtml(rv.reasoning.grade)}.</b> ${mdInline(rv.reasoning.note)}</p>` : ''}
       ${g.engine_review ? `<p><b style="color:var(--on)">Engine:</b> ${mdInline(g.engine_review)}</p>` : ''}
+      ${((g.outlier_flags || {}).flags || []).length ? `<p style="margin-bottom:2px"><b style="color:var(--amber)">Outlier game (${escapeHtml(g.outlier_flags.severity)}): read these stats with care</b></p><ul>${g.outlier_flags.flags.map(x => `<li>${x.team ? escapeHtml(x.team) + ': ' : ''}${escapeHtml(x.detail)}</li>`).join('')}</ul>` : ''}
       ${(g.lessons || []).length ? `<p style="margin-bottom:2px"><b style="color:var(--on)">Lessons</b></p><ul>${g.lessons.map(l => `<li>${mdInline(l)}</li>`).join('')}</ul>` : ''}
     </div>`;
 }

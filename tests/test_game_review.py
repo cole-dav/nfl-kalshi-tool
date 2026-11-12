@@ -98,6 +98,7 @@ def test_review_checks_assumptions_and_rewrites_notebooks():
     assert msgs.calls[0]["thinking"]["display"] == "summarized"
     assert '"matching": 2' in msgs.calls[1]["messages"][-1]["content"][0]["content"]
     assert r["thinking"] == ["Check the right-side runs."] and r["post_ids"] == ["p1"]
+    assert '"outlier_flags"' in sent and r["outlier_flags"]["severity"] in ("none", "minor", "major")
     notes = gr.all_notes()
     assert set(notes) == {"DET", "NE"} and notes["DET"]["week"] == 10
     assert gr.recent_lessons()[0]["lesson"] == "Thin team totals mislead."

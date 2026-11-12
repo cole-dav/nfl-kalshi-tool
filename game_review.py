@@ -34,6 +34,7 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 import engine_agent as ea
+import game_flags as gf
 import nflverse_data as nd
 
 MODEL = "claude-opus-5-5"
@@ -218,6 +219,13 @@ def _by_quarter(g: pd.DataFrame, home: str, away: str) -> dict:
     return {_k(t): v for t, v in out.items()}
 
 
+def outlier_flags(pbp: pd.DataFrame, row: pd.Series, tg: pd.DataFrame | None = None) -> dict:
+    """game_flags for one game, team codes in Kalshi form."""
+    f = gf.flags_for_game(pbp, row["game_id"], row, tg)
+    return {"severity": f["severity"],
+            "flags": [{**x, "team": _k(x["team"]) if x.get("team") else None} for x in f["flags"]]}
+
+
 def game_facts(pbp: pd.DataFrame, row: pd.Series) -> dict:
     gid, home, away = row["game_id"], row["home_team"], row["away_team"]
     g = pbp[pbp["game_id"] == gid]
@@ -232,6 +240,7 @@ def game_facts(pbp: pd.DataFrame, row: pd.Series) -> dict:
                   if row.get(k) is not None and row.get(k) != "" and not pd.isna(row.get(k))},
         "offense": {_k(away): _offense(g, away), _k(home): _offense(g, home)},
         "biggest_plays_by_wpa": [_play_row(r) for _, r in big.iterrows()],
+        "outlier_flags": outlier_flags(pbp, row),
     }
 
 
@@ -258,6 +267,7 @@ def season_log(pbp: pd.DataFrame, sched: pd.DataFrame, team: str, before_week: i
     rows = sched[((sched["home_team"] == team) | (sched["away_team"] == team)) & sched["result"].notna()
                  & (sched["week"] < before_week)].sort_values("week")
     out = []
+    tg = gf.team_games(pbp)
     for _, r in rows.iterrows():
         home = r["home_team"] == team
         g = _scrimmage(pbp[pbp["game_id"] == r["game_id"]])
@@ -269,6 +279,10 @@ def season_log(pbp: pd.DataFrame, sched: pd.DataFrame, team: str, before_week: i
                     "off_epa_play": _r(off["epa"].mean(), 3), "def_epa_play_allowed": _r(dfn["epa"].mean(), 3),
                     "rush_ypc": _r(off[off["rush"] == 1]["yards_gained"].mean(), 1),
                     "ypa": _r(off[off["pass"] == 1]["yards_gained"].mean(), 1)})
+        flags = [x["detail"] if x["team"] is None else f"{_k(x['team'])}: {x['detail']}"
+                 for x in gf.flags_for_game(pbp, r["game_id"], r, tg)["flags"] if x["team"] in (None, team)]
+        if flags:
+            out[-1]["outlier_flags"] = flags
     return out
 
 
@@ -367,7 +381,7 @@ REVIEW_TOOLS = [QUERY_TOOL, PUBLISH_REVIEW]
 
 REVIEW_PROMPT = """You review finished NFL games for the weekly feed of an NFL research tool for Kalshi prediction markets, and you keep a scouting notebook on every team. The previews you review were written before kickoff by models using the tool's quant engine; your reviews and notebooks are what they read before writing next week's previews, so the point is to make them smarter over time.
 
-You get: the final score and closing line, play-by-play facts for both offenses (splits, run direction, neutral-script pass rate, drive results, red zone, players, the biggest plays by win probability), each team's season game log, the current notebook for both teams, and, if the feed previewed this game, each preview: its write-up, the numbered assumptions it said its bets depended on, a summary of its reasoning, the engine tool calls it made, and its bets with graded results.
+You get: the final score and closing line, outlier flags, play-by-play facts for both offenses (splits, run direction, neutral-script pass rate, drive results, red zone, players, the biggest plays by win probability), each team's season game log, the current notebook for both teams, and, if the feed previewed this game, each preview: its write-up, the numbered assumptions it said its bets depended on, a summary of its reasoning, the engine tool calls it made, and its bets with graded results.
 
 About the engine: its game-line fair values are fitted only to Kalshi's own moneyline/spread/total prices (plus a small blend toward the sportsbook line). It knows nothing about injuries or matchups. An engine "edge" means one Kalshi market disagrees with the others, often a thin one. Judge it that way.
 
@@ -377,6 +391,8 @@ What to do
 3. Engine review: was the edge real, given the result and what the play-by-play shows about why?
 4. Lessons: 0-3 short lessons that generalize to future games (not recaps). Skip if nothing generalizes.
 5. Rewrite both teams' notebooks, merging the current notes with this game. Keep each under ~250 words with these sections: **Identity**, **Offense**, **Defense**, **Personnel**, **Trends to watch**, **Betting notes**. Tag new observations with the week, e.g. "(W10)". One game is a data point, not a trend: say how established each item is, and confirm, weaken or drop older items as the evidence says. If a team has no notebook yet, start one from this game and its season log.
+
+Outlier flags: facts.outlier_flags marks what made this game unrepresentative (rain, snow or wind; a QB change; garbage time; a turnover avalanche; a team stat far outside both the league's range and its own other games), and the season logs carry the same flags on earlier games. A flagged stat is a fact about this game, not the team: in the notebooks write it as such ("W8: 4 pass attempts in heavy rain -- conditions, not identity") and don't let it confirm or overturn a trend; base trends on the unflagged games. Assumptions the conditions made moot are "untestable", not "failed". If the cause was knowable before kickoff (a forecast, an announced starter), a lesson about checking for it can be worth writing; the outlier itself is not a lesson.
 
 Results against the spread and total (line, ats, ou) are precomputed in the data: use them as given, never redo spread math. Only cite numbers from the data or your query results. Finish by calling publish_review exactly once (both teams in team_notes, by Kalshi code); don't write the review as a normal message."""
 
@@ -513,7 +529,8 @@ def review_game(game_id: str, client=None, model: str = MODEL, effort: str = EFF
         tool_uses = [b for b in content if getattr(b, "type", None) == "tool_use"]
         pub = next((b for b in tool_uses if b.name == "publish_review"), None)
         if pub is not None:
-            return _save_review(row, pub.input, posts, served, effort, thinking, trace, usage, t0, wf)
+            return _save_review(row, pub.input, posts, served, effort, thinking, trace, usage, t0, wf,
+                                facts.get("outlier_flags"))
         if stop != "tool_use" or not tool_uses:
             raise ea.EngineError("the reviewer finished without publishing")
         results = []
@@ -534,7 +551,7 @@ def review_game(game_id: str, client=None, model: str = MODEL, effort: str = EFF
     raise ea.EngineError("stopped after the maximum number of tool calls without publishing")
 
 
-def _save_review(row, inp, posts, served, effort, thinking, trace, usage, t0, wf) -> dict:
+def _save_review(row, inp, posts, served, effort, thinking, trace, usage, t0, wf, ctx_flags=None) -> dict:
     away, home = _k(row["away_team"]), _k(row["home_team"])
     season, week = int(row["season"]), int(row["week"])
     teams = {away, home}
@@ -547,6 +564,7 @@ def _save_review(row, inp, posts, served, effort, thinking, trace, usage, t0, wf
         "summary": inp.get("summary") or "", "assumption_checks": inp.get("assumption_checks") or [],
         "reasoning_review": inp.get("reasoning_review") or [], "engine_review": inp.get("engine_review") or "",
         "lessons": (inp.get("lessons") or [])[:3],
+        "outlier_flags": ctx_flags,
         "model": served, "effort": effort, "created_at": ea._iso(time.time()),
         "thinking": thinking, "trace": trace,
         "stats": {**usage, "cost_usd": wf._usage_cost(usage, served), "seconds": round(time.time() - t0)},
