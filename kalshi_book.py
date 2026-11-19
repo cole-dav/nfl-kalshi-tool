@@ -19,7 +19,7 @@ from typing import Any, Iterable
 
 import requests
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.asymmetric import ed25519, padding
 
 KALSHI_BASE_URL = "https://api.elections.kalshi.com/trade-api/v2"
 
@@ -293,14 +293,19 @@ class KalshiClient:
     def _sign(self, timestamp_ms: str, method: str, path: str) -> str:
         """Kalshi signs the concatenation of timestamp + HTTP method + path
         (path only, no query string, must include the /trade-api/v2 prefix)
-        using RSA-PSS with SHA256 and MGF1(SHA256), salt length = digest size.
+        using RSA-PSS with SHA256 and MGF1(SHA256), salt length = digest size
+        (RSA keys), or plain Ed25519 (Ed25519 keys).
         """
         message = f"{timestamp_ms}{method.upper()}{path}".encode("utf-8")
-        signature = self._private_key.sign(
-            message,
-            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=hashes.SHA256().digest_size),
-            hashes.SHA256(),
-        )
+        if isinstance(self._private_key, ed25519.Ed25519PrivateKey):
+            # newer Kalshi keys are Ed25519: plain signature over the same message
+            signature = self._private_key.sign(message)
+        else:
+            signature = self._private_key.sign(
+                message,
+                padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=hashes.SHA256().digest_size),
+                hashes.SHA256(),
+            )
         return base64.b64encode(signature).decode("utf-8")
 
     def _headers(self, method: str, path: str) -> dict[str, str]:
