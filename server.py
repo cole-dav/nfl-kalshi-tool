@@ -483,6 +483,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "since/until must be ISO timestamps"}, status=400)
             return
 
+        if parsed.path == "/api/feed/grades":
+            # Graded bets for one week, sliced by model / prompt version / market, with review verdicts.
+            week = (parse_qs(parsed.query).get("week") or [""])[0].strip()
+            self._send_json(wf.grades(int(week) if week.isdigit() else None))
+            return
+
         if parsed.path in ("/api/feed/audit", "/api/feed/review"):
             # How a preview was written (reasoning summary, engine calls) or a
             # game's full post-game review, including the reviewer's reasoning.

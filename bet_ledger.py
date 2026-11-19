@@ -93,6 +93,7 @@ def record(post: dict, source: str) -> int:
                 "matchup": f"{post['away']} @ {post['home']}", "week": post.get("week"),
                 "kickoff": post.get("kickoff"), "posted_at": post.get("created_at"),
                 "model": post.get("model"), "effort": post.get("effort"), "sources": [source],
+                "prompt_version": post.get("prompt_version"),
                 "title": b.get("title"), "kind": b.get("kind") or "single", "legs": legs,
                 "price": b.get("parlay_cost") if len(legs) > 1 else legs[0].get("cost"),
                 "fair": b.get("joint_fair") if len(legs) > 1 else legs[0].get("fair"),

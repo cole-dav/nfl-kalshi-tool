@@ -143,3 +143,34 @@ def test_cli_review_and_notes(monkeypatch, capsys):
     gr._write_notes([{"team": "DET", "notes": "run-first"}], 10, 2026, GID)
     assert wf.main(["notes", "det"]) == 0
     assert "run-first" in capsys.readouterr().out
+
+
+def test_grades_slices_by_model_version_and_market():
+    def bet(pid, i, model, ticker, outcome, price, fair, version=None):
+        return {"id": f"{pid}:{i}", "post_id": pid, "event_ticker": "KXNFLGAME-26NOV15NEDET", "matchup": "NE @ DET",
+                "week": 10, "kickoff": "2026-11-15T14:30:00+00:00", "model": model, "sources": ["ab"],
+                "title": "t", "kind": "single", "legs": [{"market_ticker": ticker, "side": "no", "cost": price, "fair": fair}],
+                "price": price, "fair": fair, "graded_at": "2026-11-16T12:00:00+00:00", "outcome": outcome,
+                "pnl": (1 / price - 1) if outcome == "win" else -1.0, "prompt_version": version}
+    ledger = {b["id"]: b for b in [
+        bet("old1", 0, "claude-opus-5-5", "KXNFLSPREAD-26NOV15NEDET-DET3", "loss", 0.5, 0.55),
+        bet("old1", 1, "claude-opus-5-5", "KXNFLTEAMTOTAL-26NOV15NEDET-DET27", "win", 0.45, 0.49),
+        bet("new1", 0, "claude-opus-5-5", "KXNFLTD-26NOV15NEDET-DETASTBROWN14-1", "win", 0.5, 0.58),
+        bet("new2", 0, "claude-sonnet-5-5", "KXNFLTD-26NOV15NEDET-DETASTBROWN14-1", "loss", 0.5, 0.58, version=2)]}
+    bl._save(ledger)
+    gr.save_audit("new1", {"thinking": []})          # v2 run recorded before the field existed
+    gr._save(gr.REVIEWS_PATH, {GID: {"game_id": GID, "week": 10, "away": "NE", "home": "DET", "matchup": "NE @ DET",
+                                     "final": {"NE": 20, "DET": 24}, "summary": "s", "lessons": [],
+                                     "assumption_checks": [{"post_id": "new1", "index": 0, "verdict": "held", "evidence": "e"}],
+                                     "reasoning_review": [{"post_id": "new2", "grade": "sound", "note": "n"}]}})
+    g = wf.grades()
+    assert g["week"] == 10 and g["overall"]["w"] == 2 and g["overall"]["l"] == 2
+    by = {(r["model"], r["prompt_version"]): r for r in g["by_model"]}
+    assert by[("claude-opus-5-5", 1)]["n"] == 2 and by[("claude-opus-5-5", 2)]["w"] == 1
+    assert by[("claude-sonnet-5-5", 2)]["l"] == 1
+    assert abs(by[("claude-opus-5-5", 1)]["expected_w"] - 1.04) < 1e-9
+    fam = {r["family"]: r for r in g["by_family"]}
+    assert fam["Anytime TD"]["n"] == 2 and fam["Spread"]["l"] == 1 and fam["Team total"]["w"] == 1
+    assert g["assumptions"] == {"claude-opus-5-5|2": {"held": 1}}
+    assert g["reasoning"] == {"claude-sonnet-5-5|2": {"sound": 1}}
+    assert len(g["games"]) == 1 and len(g["bets"]) == 4

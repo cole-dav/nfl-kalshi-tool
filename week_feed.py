@@ -45,6 +45,9 @@ import nflverse_data as nd
 
 MODEL = "claude-opus-5-5"
 EFFORT = "medium"
+# Bump when the writer prompt changes meaningfully; results split by it.
+# 1: engine-led picks (to 2026-11-11). 2: edge + football case, may pass, assumptions, notebooks.
+PROMPT_VERSION = 2
 MAX_TOKENS = 16000
 MAX_TOOL_ITERS = 10
 FEED_PATH = os.path.join(os.path.dirname(__file__), "data", "feed", "posts.json")
@@ -183,6 +186,86 @@ def _attach_reviews(week: int, games: list[dict], posts: list[dict]) -> None:
                        "reasoning": grade and {"grade": grade["grade"], "note": grade["note"]},
                        "game": next((g["review"] for g in games if g["away"] == p.get("away")
                                      and g["home"] == p.get("home")), None)}
+
+
+# -- graded results ---------------------------------------------------------------------------
+
+_FAMILY = {"GAME": "Moneyline", "SPREAD": "Spread", "TOTAL": "Total", "TEAMTOTAL": "Team total",
+           "TD": "Anytime TD", "RECYDS": "Rec yards", "REC": "Receptions", "RSHYDS": "Rush yards",
+           "PASSYDS": "Pass yards", "PASSCOMP": "Completions", "PASSINT": "Interceptions", "PASSTDS": "Pass TDs"}
+
+
+def _bet_family(b: dict) -> str:
+    if len(b["legs"]) > 1:
+        return "Ladder" if b["kind"] == "ladder" else "Parlay"
+    fam = b["legs"][0]["market_ticker"].split("-")[0].replace("KXNFL", "")
+    return _FAMILY.get(fam, fam.title())
+
+
+def _prompt_version(b: dict) -> int:
+    # bets recorded before the field existed: v2 runs are the ones with an audit
+    return b.get("prompt_version") or (2 if gr.load_audit(b["post_id"]) else 1)
+
+
+def _slice(bets: list[dict]) -> dict:
+    done = [b for b in bets if b["graded_at"]]
+    w = sum(b["outcome"] == "win" for b in done)
+    l = sum(b["outcome"] == "loss" for b in done)
+    staked = sum(bl._stake(b) for b in done)
+    pnl = round(sum(b["pnl"] for b in done), 4)
+    singles = [b for b in done if b["outcome"] != "push" and b.get("fair") is not None and bl._stake(b) == 1]
+    return {"n": len(bets), "graded": len(done), "w": w, "l": l, "p": len(done) - w - l, "pnl": pnl,
+            "staked": staked, "roi": round(pnl / staked, 4) if staked else None,
+            "expected_w": round(sum(b["fair"] for b in singles), 2) if singles else None,
+            "avg_edge": round(sum(b["fair"] - b["price"] for b in singles) / len(singles), 4) if singles else None}
+
+
+def grades(week: int | None = None) -> dict:
+    """Graded bets for one week (default: the latest with any graded bet),
+    sliced by model x prompt version and by market type, with the
+    post-game reviews' assumption verdicts and reasoning grades."""
+    ledger = list(bl._load().values())
+    rv = gr.reviews()
+    weeks = sorted({b["week"] for b in ledger if b.get("week")} | {r["week"] for r in rv.values() if r.get("week")})
+    if week is None:
+        graded = [b["week"] for b in ledger if b["graded_at"] and b.get("week")]
+        week = max(graded) if graded else (weeks[-1] if weeks else None)
+    bets = sorted((b for b in ledger if b.get("week") == week),
+                  key=lambda b: (b.get("kickoff") or "", b["matchup"], b.get("model") or "", b["id"]))
+    for b in bets:
+        b["prompt_version"] = _prompt_version(b)
+        b["family"] = _bet_family(b)
+    by_model, by_family = {}, {}
+    for b in bets:
+        by_model.setdefault(((b.get("model") or "?"), b["prompt_version"]), []).append(b)
+        by_family.setdefault(b["family"], []).append(b)
+    post_model = {b["post_id"]: (b.get("model"), b["prompt_version"]) for b in ledger}
+    for src in (_load(), *(e["variants"] for e in _load(AB_PATH).values())):
+        for p in src.values():
+            if p.get("post_id") and not p.get("error"):
+                post_model.setdefault(p["post_id"], (p.get("model"), p.get("prompt_version") or 2))
+    checks, reasoning, games = {}, {}, []
+    for r in sorted((r for r in rv.values() if r.get("week") == week), key=lambda r: r["game_id"]):
+        for c in r.get("assumption_checks") or []:
+            key = "%s|%s" % post_model.get(c.get("post_id"), ("?", 2))
+            checks.setdefault(key, {}).setdefault(c["verdict"], 0)
+            checks[key][c["verdict"]] += 1
+        for c in r.get("reasoning_review") or []:
+            key = "%s|%s" % post_model.get(c.get("post_id"), ("?", 2))
+            reasoning.setdefault(key, {}).setdefault(c["grade"], 0)
+            reasoning[key][c["grade"]] += 1
+        games.append({k: r.get(k) for k in ("game_id", "matchup", "away", "home", "final", "summary",
+                                             "engine_review", "lessons", "reasoning_review", "assumption_checks")})
+    slim = [{k: b.get(k) for k in ("id", "post_id", "matchup", "kickoff", "model", "prompt_version", "family",
+                                   "sources", "title", "kind", "legs", "price", "fair", "outcome", "pnl",
+                                   "record", "graded_at", "due_at")} for b in bets]
+    return {"week": week, "weeks": weeks, "overall": _slice(bets),
+            "by_model": [{"model": m, "prompt_version": v, **_slice(bs)} for (m, v), bs in sorted(by_model.items())],
+            "by_family": sorted(({"family": f, **_slice(bs)} for f, bs in by_family.items()),
+                                key=lambda r: (-r["n"], r["family"])),
+            "assumptions": checks, "reasoning": reasoning, "games": games, "bets": slim,
+            "prompt_versions": {"1": "Engine-led: bet the engine's top edge, story written around it",
+                                "2": "Edge + football case must agree, may pass, assumptions, team notebooks"}}
 
 
 # -- game context handed to the model -------------------------------------------------------
@@ -495,7 +578,8 @@ def _build_post(event_ticker: str, detail: dict, inp: dict, slip: dict) -> dict:
     bets = [ea._price_proposal(b, slip) for b in (inp.get("bets") or [])[:3]]
     week, kickoff = _schedule(detail["away"], detail["home"])
     return {
-        "post_id": uuid.uuid4().hex[:12], "event_ticker": event_ticker, "away": detail["away"], "home": detail["home"],
+        "post_id": uuid.uuid4().hex[:12], "prompt_version": PROMPT_VERSION,
+        "event_ticker": event_ticker, "away": detail["away"], "home": detail["home"],
         "kickoff": kickoff, "week": week,
         "created_at": ea._iso(time.time()),
         "headline": inp.get("headline") or "", "lean": inp.get("lean") or "",
