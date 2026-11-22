@@ -38,11 +38,21 @@ ssh propsterminal 'cd /opt/propsterminal/app && runuser -u propsterminal -- /opt
 ```
 
 Automatic: with `FEED_AUTO_GENERATE=1` in the server `.env`, the server writes
-each game's preview `FEED_AUTO_LEAD_HOURS` (default 5) before kickoff. Set
-`FEED_AUTO_AB` to a comma-separated list of models for an A/B run and
-`FEED_AUTO_LIVE_MODEL` to publish one model's version to the live feed.
+the whole next week's previews at 10:00 ET on Tuesday, after Monday night's game
+(`FEED_AUTO_LEAD_HOURS` instead writes each game that many hours before
+kickoff). Set `FEED_AUTO_AB` to a comma-separated list of models for an A/B run
+and `FEED_AUTO_LIVE_MODEL` to publish one model's version to the live feed.
 `week_feed.py generate --due` runs one round by hand, and plain `generate` skips
-games that have already kicked off. Cloud Claude sessions can't SSH to the VPS,
+games that have already kicked off.
+
+Nightly injury heartbeat (`injury_watch.py`, same thread, at
+`FEED_INJURY_HOUR_ET`, default 22): compares every upcoming preview's injury
+statuses with the ones it was written on, logs changes on the Week tab, and
+rewrites the preview when a key player (OVR 82+, a QB, or one the preview named)
+crosses between playing and not, at most twice per game and not within an
+hour of kickoff. The old version's bets are marked `superseded_at` in the ledger
+and never graded. By hand: `week_feed.py injuries [--dry-run]`. Store:
+`data/feed/injury_watch.json`. Cloud Claude sessions can't SSH to the VPS,
 so automation has to live on the server, not in a scheduled cloud task.
 
 Each preview lists the assumptions its bets depend on and may pass (no bet).

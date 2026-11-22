@@ -179,9 +179,21 @@ def _utc(h, m=0, d=22):
     return datetime(2026, 11, d, h, m, tzinfo=timezone.utc)
 
 
-def test_due_previews_window_and_dedupe():
-    assert wf.due_previews(OV, _utc(12, 59)) == []                  # more than 5h out
-    assert wf.due_previews(OV, _utc(13, 0)) == ["KXNFLGAME-SUN"]    # 5h before; THU already played
+def test_window_opens_tuesday_morning_et(monkeypatch):
+    monkeypatch.delenv("FEED_AUTO_LEAD_HOURS", raising=False)
+    tue = datetime(2026, 11, 17, 15, 0, tzinfo=timezone.utc)                 # 10:00 ET (EST)
+    assert wf.window_open(_utc(18, d=22)) == tue                            # Sunday 1pm
+    assert wf.window_open(datetime(2026, 11, 20, 1, 15, tzinfo=timezone.utc)) == tue   # Thursday 8:15pm ET
+    assert wf.window_open(datetime(2026, 11, 24, 1, 15, tzinfo=timezone.utc)) == tue   # Monday night
+    monkeypatch.setenv("FEED_AUTO_LEAD_HOURS", "5")
+    assert wf.window_open(_utc(18)) == _utc(13)
+
+
+def test_due_previews_window_and_dedupe(monkeypatch):
+    monkeypatch.delenv("FEED_AUTO_LEAD_HOURS", raising=False)
+    assert wf.due_previews(OV, datetime(2026, 11, 17, 14, 59, tzinfo=timezone.utc)) == []   # Tue before 10 ET
+    assert wf.due_previews(OV, datetime(2026, 11, 17, 15, 0, tzinfo=timezone.utc)) == ["KXNFLGAME-SUN", "KXNFLGAME-THU"]
+    assert wf.due_previews(OV, _utc(13)) == ["KXNFLGAME-SUN"]       # Sunday morning; THU already played
     assert wf.due_previews(OV, _utc(17, 45)) == []                  # inside 20 minutes
     wf.save_post({"event_ticker": "KXNFLGAME-SUN", "post_id": "x"})
     assert wf.due_previews(OV, _utc(14)) == []                      # live post exists
@@ -192,6 +204,7 @@ def test_due_previews_window_and_dedupe():
 def test_generate_due_runs_ab_then_publishes(monkeypatch):
     import week_overview as wo
     monkeypatch.setattr(wo, "build_week_overview", lambda week=None: OV)
+    monkeypatch.delenv("FEED_AUTO_LEAD_HOURS", raising=False)
     monkeypatch.setenv("FEED_AUTO_AB", "claude-sonnet-5-5, claude-opus-5-5")
     monkeypatch.setenv("FEED_AUTO_LIVE_MODEL", "claude-opus-5-5")
     monkeypatch.setattr(wf, "_auto_tries", {})

@@ -43,6 +43,7 @@ import bet_ledger as bl
 import engine_agent as ea
 import game_flags as gf
 import game_review as gr
+import injury_watch as iw
 import madden_ratings as mr
 import nflverse_data as nd
 
@@ -144,7 +145,8 @@ def feed(overview: dict) -> dict:
     for g in overview["games"]:
         games.append({"event_ticker": g["event_ticker"], "away": g["away"], "home": g["home"],
                       "kickoff": g.get("kickoff"), "schedule": g.get("schedule"), "records": g.get("records"),
-                      "has_post": g["event_ticker"] in posts})
+                      "has_post": g["event_ticker"] in posts,
+                      "injury_updates": iw.updates_for(g["event_ticker"])})
         if g["event_ticker"] in posts:
             out.append(posts[g["event_ticker"]])
     ab = _load(AB_PATH)
@@ -368,6 +370,17 @@ def prepare(event_ticker: str) -> tuple[dict, dict]:
                                  else "no notebook yet")(gr.team_notes(t)) for t in (detail["away"], detail["home"])}
     ctx["recent_review_lessons"] = gr.recent_lessons()
     ctx["season_outliers"] = season_outliers(detail["away"], detail["home"])
+    try:
+        report_week = int(nd.load_injuries_df()["week"].max())
+        game_week = _schedule(detail["away"], detail["home"])[0]
+        if game_week and report_week < game_week:
+            ctx["injury_report_note"] = (
+                f"The injuries above are from the week {report_week} report: this week's (week {game_week}) "
+                "reports start Wednesday and game statuses come out Friday. Treat last week's statuses as "
+                "provisional; the feed re-checks injuries nightly and rewrites this preview if a key player's "
+                "status changes.")
+    except Exception:
+        pass
     ctx["now_utc"] = ea._iso(time.time())
     return detail, ctx
 
@@ -453,6 +466,7 @@ def write_preview(event_ticker: str, client=None, model: str = MODEL, effort: st
     post = run_writer(event_ticker, detail, ctx, client, model, effort)
     save_post(post)
     bl.record(post, "live")
+    iw.note_written(event_ticker, detail["away"], detail["home"])
     return post
 
 
@@ -478,6 +492,8 @@ def write_ab(event_ticker: str, models: list[str], client=None, effort: str = EF
     for p in out.values():
         if not p.get("error"):
             bl.record(p, "ab")
+    if any(not p.get("error") for p in out.values()):
+        iw.note_written(event_ticker, detail["away"], detail["home"])
     return out
 
 
@@ -498,8 +514,20 @@ AUTO_MIN_BEFORE = timedelta(minutes=20)     # too close to kickoff to be worth w
 AUTO_MAX_TRIES = 2
 
 
-def _auto_lead() -> timedelta:
-    return timedelta(hours=float(os.environ.get("FEED_AUTO_LEAD_HOURS") or 5))
+AUTO_OPEN_HOUR_ET = 10      # Tuesday 10:00 ET, after Monday night's game
+
+
+def window_open(ko: datetime) -> datetime:
+    """When a game's preview becomes due: 10:00 ET on the Tuesday of its game
+    week (Thursday through Monday games all open the Tuesday after the last
+    week's Monday game), or FEED_AUTO_LEAD_HOURS before kickoff when that's set."""
+    lead = os.environ.get("FEED_AUTO_LEAD_HOURS")
+    if lead:
+        return ko - timedelta(hours=float(lead))
+    local = ko.astimezone(ZoneInfo("America/New_York"))
+    days = (local.weekday() - 1) % 7 or 7          # back to the Tuesday before game day
+    tue = (local - timedelta(days=days)).replace(hour=AUTO_OPEN_HOUR_ET, minute=0, second=0, microsecond=0)
+    return tue.astimezone(timezone.utc)
 
 
 def _auto_models() -> list[str]:
@@ -521,20 +549,31 @@ def started(g: dict, now: datetime | None = None) -> bool:
     return ko is not None and (now or datetime.now(timezone.utc)) >= ko
 
 
-def due_previews(overview: dict, now: datetime | None = None, models: list[str] | None = None,
-                 lead: timedelta | None = None) -> list[str]:
-    """Event tickers whose kickoff is within `lead` (and more than AUTO_MIN_BEFORE
-    away) that don't have a preview yet: an A/B entry when `models` is set,
+def due_previews(overview: dict, now: datetime | None = None, models: list[str] | None = None) -> list[str]:
+    """Event tickers past their window_open (and more than AUTO_MIN_BEFORE before
+    kickoff) that don't have a preview yet: an A/B entry when `models` is set,
     otherwise a live post."""
-    now, lead = now or datetime.now(timezone.utc), lead or _auto_lead()
+    now = now or datetime.now(timezone.utc)
     have = _load(AB_PATH if models else FEED_PATH)
     out = []
     for g in overview.get("games") or []:
         ko = game_kickoff(g)
-        if ko is None or g["event_ticker"] in have or not (ko - lead <= now < ko - AUTO_MIN_BEFORE):
+        if ko is None or g["event_ticker"] in have or not (window_open(ko) <= now < ko - AUTO_MIN_BEFORE):
             continue
         out.append(g["event_ticker"])
     return out
+
+
+def _upcoming_games() -> dict:
+    """Games of the earliest two weeks with open Kalshi markets: on Tuesday
+    morning Monday night's market can still be open, which keeps the old week
+    first in build_week_overview."""
+    import week_overview as wo
+    ov = wo.build_week_overview()
+    games = list(ov.get("games") or [])
+    for w in (ov.get("weeks") or [])[1:2]:
+        games += wo.build_week_overview(w).get("games") or []
+    return {"games": games}
 
 
 _auto_tries: dict[str, int] = {}
@@ -544,9 +583,8 @@ def generate_due(now: datetime | None = None) -> list[str]:
     """Write every due preview once. With FEED_AUTO_AB set, runs the A/B and
     then publishes FEED_AUTO_LIVE_MODEL's version (if set) to the live feed.
     Returns one log line per game."""
-    import week_overview as wo
     models, live = _auto_models(), (os.environ.get("FEED_AUTO_LIVE_MODEL") or "").strip()
-    due = [ev for ev in due_previews(wo.build_week_overview(), now, models)
+    due = [ev for ev in due_previews(_upcoming_games(), now, models)
            if _auto_tries.get(ev, 0) < AUTO_MAX_TRIES]
 
     def one(ev):
@@ -572,8 +610,9 @@ def generate_due(now: datetime | None = None) -> list[str]:
 
 
 def generate_loop() -> None:
-    """Server thread (FEED_AUTO_GENERATE=1): write each game's preview
-    FEED_AUTO_LEAD_HOURS (default 5) before kickoff."""
+    """Server thread (FEED_AUTO_GENERATE=1): write each game's preview once its
+    window opens (Tuesday 10:00 ET; see window_open), and run the nightly
+    injury heartbeat (injury_watch, FEED_INJURY_HOUR_ET)."""
     if os.environ.get("FEED_AUTO_GENERATE") != "1":
         return
     time.sleep(180)
@@ -582,6 +621,8 @@ def generate_loop() -> None:
             if ea.chat_enabled():
                 for line in generate_due():
                     print(f"week_feed auto: {line}", flush=True)
+                for line in iw.heartbeat():
+                    print(f"injury heartbeat: {line}", flush=True)
         except Exception:
             traceback.print_exc()
         time.sleep(AUTO_POLL_SECONDS)
@@ -674,6 +715,8 @@ def main(argv=None):
     g.add_argument("--parallel", type=int, default=3, help="games written at once")
     g.add_argument("--due", action="store_true",
                    help="what the server's auto-generate would write now (FEED_AUTO_* settings), then exit")
+    ij = sub.add_parser("injuries", help="run the injury heartbeat now: log status changes, rewrite on material ones")
+    ij.add_argument("--dry-run", action="store_true", help="print changes without saving or rewriting")
     sub.add_parser("backfill-ledger", help="record bets from posts written before the ledger existed")
     sub.add_parser("grade", help="grade due bets now and print the last 24h of results")
     rv = sub.add_parser("review", help="review finished games against play-by-play and update team notebooks")
@@ -720,6 +763,22 @@ def main(argv=None):
             for t, n in sorted(notes.items()):
                 print(f"  {t}: after week {n['week']} ({len(n.get('history') or [])} earlier versions)")
         return 0
+    if args.cmd == "injuries":
+        if args.dry_run:
+            watch = iw._load()
+            posts = _load()
+            for ev, p in posts.items():
+                ko = bl._parse(p.get("kickoff"))
+                base = (watch.get(ev) or {}).get("baseline")
+                if ko and ko > datetime.now(timezone.utc) and base:
+                    cur = {**iw.snapshot(p["away"]), **iw.snapshot(p["home"])}
+                    for c in iw.diff(base, cur, iw._named(p)):
+                        print(f"  {ev}: {c['player']} ({c['team']} {c['pos']} {c['ovr']}) {c['from']} -> {c['to']}"
+                              + (" MATERIAL" if c["material"] else ""))
+            return 0
+        lines = iw.heartbeat(force=True)
+        print("\n".join(f"  {x}" for x in lines) or "no injury changes")
+        return 1 if any("FAILED" in x for x in lines) else 0
     if args.cmd == "backfill-ledger":
         print(f"recorded {backfill_ledger()} bet(s)")
         return 0

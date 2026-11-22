@@ -159,7 +159,7 @@ def grade_due(now: datetime | None = None, idx: MarketIndex | None = None) -> in
     now = now or _now()
     with _lock:
         ledger = _load()
-    pending = [b for b in ledger.values() if not b["graded_at"]]
+    pending = [b for b in ledger.values() if not b["graded_at"] and not b.get("superseded_at")]
     if not pending:
         return 0
     idx = idx or MarketIndex()
@@ -289,14 +289,30 @@ def scorecard(bets: list[dict]) -> list[dict]:
 
 
 def week_bets(event_tickers: set[str]) -> list[dict]:
-    return [b for b in _load().values() if b["event_ticker"] in event_tickers]
+    return [b for b in _load().values() if b["event_ticker"] in event_tickers and not b.get("superseded_at")]
+
+
+def supersede(post_ids: list[str]) -> int:
+    """Withdraw the ungraded bets of replaced preview versions (an injury
+    rewrite): they stay in the ledger, marked, but are never graded or scored."""
+    ids = {p for p in post_ids if p}
+    n = 0
+    with _lock:
+        ledger = _load()
+        for b in ledger.values():
+            if b["post_id"] in ids and not b["graded_at"] and not b.get("superseded_at"):
+                b["superseded_at"] = _iso(_now())
+                n += 1
+        if n:
+            _save(ledger)
+    return n
 
 
 def results(since: datetime, until: datetime) -> dict:
     """Bets graded in [since, until), grouped by game, with an email
     subject/body ready to send (empty when nothing was graded)."""
     bets = [b for b in _load().values()
-            if b["graded_at"] and since <= _parse(b["graded_at"]) < until]
+            if b["graded_at"] and not b.get("superseded_at") and since <= _parse(b["graded_at"]) < until]
     bets.sort(key=lambda b: (b.get("kickoff") or "", b["event_ticker"], _label(b), b["id"]))
     out = {"since": _iso(since), "until": _iso(until), "count": len(bets), "bets": bets,
            "scorecard": scorecard(bets), "report": ""}

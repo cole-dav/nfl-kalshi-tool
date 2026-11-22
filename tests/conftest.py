@@ -23,6 +23,15 @@ def flat_key_weights(monkeypatch):
     monkeypatch.setattr(fv, "_key_weights_from_history", boom)
 
 
+@pytest.fixture(autouse=True)
+def isolated_injury_watch(monkeypatch, tmp_path):
+    """Hermetic: the injury heartbeat's store goes to tmp and its injury
+    snapshot is empty unless a test sets one."""
+    import injury_watch as iw
+    monkeypatch.setattr(iw, "WATCH_PATH", str(tmp_path / "injury_watch.json"))
+    monkeypatch.setattr(iw, "snapshot", lambda team: {})
+
+
 def raw_market(series: str, last: str, strike: float | None, bid: float, ask: float, volume: float = 50_000,
                player: str | None = None) -> dict:
     m = {

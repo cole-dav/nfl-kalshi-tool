@@ -5097,6 +5097,7 @@ function wkPostHtml(p, game, canWrite, model) {
       <div class="wk-wu">${mdHtml(p.writeup)}</div>
       ${(p.key_injuries || []).length ? `<div class="wk-sec mono">KEY INJURIES</div>
         <div class="wk-chips">${p.key_injuries.map(k => `<span class="wk-chip">${teamLogo(k.team, 14)}<b data-open-player="${escapeHtml(k.player)}">${escapeHtml(k.player)}</b><span>${escapeHtml(k.impact)}</span></span>`).join('')}</div>` : ''}
+      ${wkInjuryUpdatesHtml(game)}
       ${(p.key_matchups || []).length ? `<div class="wk-sec mono">KEY MATCHUPS</div>
         <div class="wk-mus">${p.key_matchups.map(m => `<span class="t">${escapeHtml(m.title)}</span><span class="n">${mdInline(m.note)}</span>`).join('')}</div>` : ''}
       ${wkAssumptionsHtml(p)}
@@ -5136,6 +5137,17 @@ function wkAssumptionsHtml(p) {
 }
 
 const WK_GRADE = { sound: 'var(--blue)', mixed: 'var(--amber)', flawed: 'var(--orange)' };
+
+// Nightly injury heartbeat (injury_watch.py): status changes since the
+// preview was written, and whether they triggered a rewrite.
+function wkInjuryUpdatesHtml(game) {
+  const ups = (game && game.injury_updates) || [];
+  if (!ups.length) return '';
+  const act = { rewritten: 'var(--blue)', noted: 'var(--muted)', 'rewrite failed': 'var(--orange)' };
+  return `<div class="wk-sec mono">INJURY UPDATES</div><ul class="wk-review" style="margin-top:0">${ups.slice().reverse().map(u =>
+    `<li><span class="mono" style="color:${act[u.action] || 'var(--muted)'}">${escapeHtml(formatKickoff(u.at))} · ${escapeHtml(u.action.toUpperCase())}</span> ${
+      u.changes.map(c => `${c.material ? '<b>' : ''}${escapeHtml(c.player)}${c.material ? '</b>' : ''} (${escapeHtml(c.team || '')} ${escapeHtml(c.pos || '')}${c.ovr ? ' ' + c.ovr : ''}) ${escapeHtml(c.from)} → ${escapeHtml(c.to)}`).join('; ')}</li>`).join('')}</ul>`;
+}
 
 function wkReviewHtml(p) {
   const rv = p.review, g = rv && rv.game;
