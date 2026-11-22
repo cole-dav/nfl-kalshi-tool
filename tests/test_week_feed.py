@@ -162,3 +162,61 @@ def test_write_ab_runs_models_independently_and_promotes():
     assert wf._load()[EVENT]["headline"] == "Sonnet take"
     with pytest.raises(ea.EngineError):
         wf.promote(EVENT, "claude-opus-5-5")
+
+
+# -- automatic generation ------------------------------------------------------------------
+
+from datetime import datetime, timezone  # noqa: E402
+
+SUN_1PM = {"gameday": "2026-11-22", "gametime": "13:00", "week": 11}       # 18:00 UTC
+THU = {"gameday": "2026-11-19", "gametime": "20:15", "week": 11}
+OV = {"games": [{"event_ticker": "KXNFLGAME-SUN", "schedule": SUN_1PM},
+                {"event_ticker": "KXNFLGAME-THU", "schedule": THU},
+                {"event_ticker": "KXNFLGAME-NOSCHED", "schedule": None}]}
+
+
+def _utc(h, m=0, d=22):
+    return datetime(2026, 11, d, h, m, tzinfo=timezone.utc)
+
+
+def test_due_previews_window_and_dedupe():
+    assert wf.due_previews(OV, _utc(12, 59)) == []                  # more than 5h out
+    assert wf.due_previews(OV, _utc(13, 0)) == ["KXNFLGAME-SUN"]    # 5h before; THU already played
+    assert wf.due_previews(OV, _utc(17, 45)) == []                  # inside 20 minutes
+    wf.save_post({"event_ticker": "KXNFLGAME-SUN", "post_id": "x"})
+    assert wf.due_previews(OV, _utc(14)) == []                      # live post exists
+    assert wf.due_previews(OV, _utc(14), models=["a", "b"]) == ["KXNFLGAME-SUN"]   # A/B store is separate
+    assert wf.started(OV["games"][1], _utc(12)) and not wf.started(OV["games"][0], _utc(12))
+
+
+def test_generate_due_runs_ab_then_publishes(monkeypatch):
+    import week_overview as wo
+    monkeypatch.setattr(wo, "build_week_overview", lambda week=None: OV)
+    monkeypatch.setenv("FEED_AUTO_AB", "claude-sonnet-5-5, claude-opus-5-5")
+    monkeypatch.setenv("FEED_AUTO_LIVE_MODEL", "claude-opus-5-5")
+    monkeypatch.setattr(wf, "_auto_tries", {})
+    calls = []
+
+    def fake_ab(ev, models, client=None, effort=None):
+        calls.append((ev, models))
+        out = {m: {"event_ticker": ev, "post_id": m[-3:].replace("-", ""), "model": m, "bets": []} for m in models}
+        wf._save({ev: {"models": models, "variants": out}}, wf.AB_PATH)
+        return out
+
+    monkeypatch.setattr(wf, "write_ab", fake_ab)
+    lines = wf.generate_due(_utc(14))
+    assert calls == [("KXNFLGAME-SUN", ["claude-sonnet-5-5", "claude-opus-5-5"])]
+    assert "published claude-opus-5-5" in lines[0]
+    assert wf._load()["KXNFLGAME-SUN"]["model"] == "claude-opus-5-5"
+    assert wf.generate_due(_utc(14)) == []                          # A/B entry now exists
+
+
+def test_generate_due_gives_up_after_two_failures(monkeypatch):
+    import week_overview as wo
+    monkeypatch.setattr(wo, "build_week_overview", lambda week=None: OV)
+    monkeypatch.delenv("FEED_AUTO_AB", raising=False)
+    monkeypatch.setattr(wf, "_auto_tries", {})
+    monkeypatch.setattr(wf, "write_preview", lambda ev: (_ for _ in ()).throw(wf.ea.EngineError("boom")))
+    assert wf.generate_due(_utc(14)) == ["KXNFLGAME-SUN: FAILED boom"]
+    assert len(wf.generate_due(_utc(14))) == 1
+    assert wf.generate_due(_utc(14)) == []

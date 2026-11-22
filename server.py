@@ -869,6 +869,7 @@ def main():
     threading.Thread(target=_player_warmer, daemon=True, name="player-warmer").start()
     threading.Thread(target=bl.grader_loop, daemon=True, name="bet-grader").start()
     threading.Thread(target=gr.review_loop, daemon=True, name="game-reviewer").start()  # FEED_AUTO_REVIEW=1
+    threading.Thread(target=wf.generate_loop, daemon=True, name="feed-writer").start()  # FEED_AUTO_GENERATE=1
     print(f"Serving on http://{host}:{port}")
     try:
         server.serve_forever()

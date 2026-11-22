@@ -36,6 +36,8 @@ import time
 import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import bet_ledger as bl
 import engine_agent as ea
@@ -489,6 +491,102 @@ def promote(event_ticker: str, model: str) -> dict:
     return variant
 
 
+# -- automatic generation (server thread, FEED_AUTO_GENERATE=1) --------------------------------
+
+AUTO_POLL_SECONDS = 1200
+AUTO_MIN_BEFORE = timedelta(minutes=20)     # too close to kickoff to be worth writing
+AUTO_MAX_TRIES = 2
+
+
+def _auto_lead() -> timedelta:
+    return timedelta(hours=float(os.environ.get("FEED_AUTO_LEAD_HOURS") or 5))
+
+
+def _auto_models() -> list[str]:
+    return [m.strip() for m in (os.environ.get("FEED_AUTO_AB") or "").split(",") if m.strip()]
+
+
+def game_kickoff(g: dict) -> datetime | None:
+    """Real kickoff (UTC) of a build_week_overview game, from its nflverse schedule."""
+    s = g.get("schedule") or {}
+    try:
+        return datetime.fromisoformat(f"{s['gameday']}T{s.get('gametime') or '13:00'}") \
+            .replace(tzinfo=ZoneInfo("America/New_York")).astimezone(timezone.utc)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def started(g: dict, now: datetime | None = None) -> bool:
+    ko = game_kickoff(g)
+    return ko is not None and (now or datetime.now(timezone.utc)) >= ko
+
+
+def due_previews(overview: dict, now: datetime | None = None, models: list[str] | None = None,
+                 lead: timedelta | None = None) -> list[str]:
+    """Event tickers whose kickoff is within `lead` (and more than AUTO_MIN_BEFORE
+    away) that don't have a preview yet: an A/B entry when `models` is set,
+    otherwise a live post."""
+    now, lead = now or datetime.now(timezone.utc), lead or _auto_lead()
+    have = _load(AB_PATH if models else FEED_PATH)
+    out = []
+    for g in overview.get("games") or []:
+        ko = game_kickoff(g)
+        if ko is None or g["event_ticker"] in have or not (ko - lead <= now < ko - AUTO_MIN_BEFORE):
+            continue
+        out.append(g["event_ticker"])
+    return out
+
+
+_auto_tries: dict[str, int] = {}
+
+
+def generate_due(now: datetime | None = None) -> list[str]:
+    """Write every due preview once. With FEED_AUTO_AB set, runs the A/B and
+    then publishes FEED_AUTO_LIVE_MODEL's version (if set) to the live feed.
+    Returns one log line per game."""
+    import week_overview as wo
+    models, live = _auto_models(), (os.environ.get("FEED_AUTO_LIVE_MODEL") or "").strip()
+    due = [ev for ev in due_previews(wo.build_week_overview(), now, models)
+           if _auto_tries.get(ev, 0) < AUTO_MAX_TRIES]
+
+    def one(ev):
+        _auto_tries[ev] = _auto_tries.get(ev, 0) + 1
+        try:
+            if not models:
+                p = write_preview(ev)
+                return f"{ev}: live {p['model']} ({len(p['bets'])} bets, ${p['stats']['cost_usd']:.3f})"
+            out = write_ab(ev, models)
+            line = f"{ev}: A/B " + ", ".join(f"{m} " + ("FAILED" if p.get("error") else f"{len(p['bets'])} bets")
+                                             for m, p in out.items())
+            if live and live in out and not out[live].get("error"):
+                promote(ev, live)
+                line += f"; published {live}"
+            return line
+        except Exception as e:
+            if not isinstance(e, ea.EngineError):
+                traceback.print_exc()
+            return f"{ev}: FAILED {e}"
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        return list(pool.map(one, due))
+
+
+def generate_loop() -> None:
+    """Server thread (FEED_AUTO_GENERATE=1): write each game's preview
+    FEED_AUTO_LEAD_HOURS (default 5) before kickoff."""
+    if os.environ.get("FEED_AUTO_GENERATE") != "1":
+        return
+    time.sleep(180)
+    while True:
+        try:
+            if ea.chat_enabled():
+                for line in generate_due():
+                    print(f"week_feed auto: {line}", flush=True)
+        except Exception:
+            traceback.print_exc()
+        time.sleep(AUTO_POLL_SECONDS)
+
+
 def _schedule(away: str, home: str) -> tuple[int | None, str | None]:
     """(week, kickoff as UTC ISO) from the nflverse schedule. Kalshi's own
     kickoff field is a market-close window (about two days late), so the
@@ -574,6 +672,8 @@ def main(argv=None):
     g.add_argument("--effort", default=EFFORT, choices=["low", "medium", "high", "xhigh", "max"])
     g.add_argument("--ab", help="comma-separated models to compare side by side (A/B store, not the live feed)")
     g.add_argument("--parallel", type=int, default=3, help="games written at once")
+    g.add_argument("--due", action="store_true",
+                   help="what the server's auto-generate would write now (FEED_AUTO_* settings), then exit")
     sub.add_parser("backfill-ledger", help="record bets from posts written before the ledger existed")
     sub.add_parser("grade", help="grade due bets now and print the last 24h of results")
     rv = sub.add_parser("review", help="review finished games against play-by-play and update team notebooks")
@@ -629,14 +729,20 @@ def main(argv=None):
         print(bl.results(now - bl.timedelta(hours=24), now)["report"] or "nothing graded in the last 24h")
         return 0
 
+    if args.due:
+        lines = generate_due()
+        print("\n".join(f"  {x}" for x in lines) or "nothing due")
+        return 1 if any("FAILED" in x for x in lines) else 0
     models = [m.strip() for m in args.ab.split(",") if m.strip()] if args.ab else None
     if args.event:
         events = [args.event]
     else:
         ov = wo.build_week_overview(args.week)
         have = _load(AB_PATH if models else FEED_PATH)
-        events = [x["event_ticker"] for x in ov["games"] if not (args.missing and x["event_ticker"] in have)]
-        print(f"Week {ov['week']}: {len(events)} game(s)")
+        late = [x["event_ticker"] for x in ov["games"] if started(x)]
+        events = [x["event_ticker"] for x in ov["games"]
+                  if not (args.missing and x["event_ticker"] in have) and x["event_ticker"] not in late]
+        print(f"Week {ov['week']}: {len(events)} game(s)" + (f", skipping {len(late)} already started" if late else ""))
 
     def one(ev):
         t0 = time.time()

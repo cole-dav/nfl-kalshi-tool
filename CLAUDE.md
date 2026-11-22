@@ -37,6 +37,14 @@ ssh propsterminal 'cd /opt/propsterminal/app && runuser -u propsterminal -- /opt
 #   week_feed.py promote --model claude-sonnet-5-5 [--event KXNFLGAME-...]
 ```
 
+Automatic: with `FEED_AUTO_GENERATE=1` in the server `.env`, the server writes
+each game's preview `FEED_AUTO_LEAD_HOURS` (default 5) before kickoff. Set
+`FEED_AUTO_AB` to a comma-separated list of models for an A/B run and
+`FEED_AUTO_LIVE_MODEL` to publish one model's version to the live feed.
+`week_feed.py generate --due` runs one round by hand, and plain `generate` skips
+games that have already kicked off. Cloud Claude sessions can't SSH to the VPS,
+so automation has to live on the server, not in a scheduled cloud task.
+
 Each preview lists the assumptions its bets depend on and may pass (no bet).
 Its reasoning summary, engine calls and context are saved to
 `data/feed/audits/<post_id>.json` (REASONING button on the Week tab).
